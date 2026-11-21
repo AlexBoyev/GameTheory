@@ -14,7 +14,7 @@ from typing import Any
 from app.ai.gametheory.ledger import SocialLedger
 from app.ai.minds import MindRegistry
 from app.sim.engine import SimulationEngine
-from app.sim.entities import Agent
+from app.sim.entities import Agent, BrainType
 from app.sim.worldgen.terrain import biome_names
 
 DEFAULT_AGENT_LIMIT = 500
@@ -230,7 +230,22 @@ class WorldQueries:
             if mind is not None
             else []
         )
-        payload["llm"] = None
+        # Only deliberative agents get an `llm` block; for everyone else it
+        # is absent rather than empty, so the inspector can tell the
+        # difference between "has no thoughts" and "does not think".
+        payload["llm"] = (
+            {
+                "thought": mind.intention.thought if mind.intention else agent.thought,
+                "goal": mind.intention.goal if mind.intention else agent.goal,
+                "plan": list(mind.intention.skills) if mind.intention else [],
+                "say": mind.intention.say if mind.intention else None,
+                "beliefs": list(mind.memory.beliefs),
+                "last_prompt": mind.last_prompt or None,
+                "last_response": mind.last_response or None,
+            }
+            if mind is not None and agent.brain_type is BrainType.LLM
+            else None
+        )
         return payload
 
     @staticmethod

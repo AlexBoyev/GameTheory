@@ -16,6 +16,7 @@ import type {
   FrameData,
   HelloData,
   Legend,
+  SpeechData,
   TerrainMeta,
   WorldConfig,
 } from '@/api/types';
@@ -67,6 +68,14 @@ export interface SimStoreState {
   /** Newest first, capped - this is the event feed. */
   events: EventItem[];
 
+  /**
+   * What agents are saying out loud, by agent id.
+   *
+   * Separate from the event feed because a bubble has its own lifetime: the
+   * feed keeps a line forever, the bubble over a head expires.
+   */
+  speech: SpeechLine[];
+
   setConnection: (connection: ConnectionStatus) => void;
   ingest: (envelope: Envelope) => void;
   clearWorld: () => void;
@@ -75,6 +84,16 @@ export interface SimStoreState {
 }
 
 export const MAX_FEED_EVENTS = 300;
+
+/** How many bubbles can be on screen at once. */
+export const MAX_SPEECH = 8;
+
+export interface SpeechLine {
+  agentId: number;
+  text: string;
+  /** `performance.now()` after which the bubble is gone. */
+  until: number;
+}
 
 const INITIAL = {
   connection: 'idle' as ConnectionStatus,
@@ -100,6 +119,7 @@ const INITIAL = {
   resourceAmounts: new Map<number, number>(),
   resourceVersion: 0,
   events: [] as EventItem[],
+  speech: [] as SpeechLine[],
 };
 
 /** Decode the flat resource array from `hello` into nodes plus amounts. */
@@ -133,7 +153,8 @@ export const useSimStore = create<SimStoreState>((set) => ({
 
   setConnection: (connection) => set({ connection }),
 
-  clearWorld: () => set({ previousFrame: null, currentFrame: null, framesReceived: 0 }),
+  clearWorld: () =>
+    set({ previousFrame: null, currentFrame: null, framesReceived: 0, speech: [] }),
 
   seedEvents: (items) => set({ events: items.slice(0, MAX_FEED_EVENTS) }),
 
@@ -221,13 +242,32 @@ export const useSimStore = create<SimStoreState>((set) => ({
         }));
         break;
       }
+      case 'speech': {
+        const data = envelope.data as unknown as SpeechData;
+        if (!data.text) break;
+        const line: SpeechLine = {
+          agentId: data.agent,
+          text: data.text,
+          until: performance.now() + (data.ttl ?? 6) * 1000,
+        };
+        set((state) => ({
+          // One bubble per agent: a second line replaces the first rather
+          // than stacking two over the same head.
+          speech: [line, ...state.speech.filter((item) => item.agentId !== line.agentId)].slice(
+            0,
+            MAX_SPEECH,
+          ),
+        }));
+        break;
+      }
       case 'error': {
         const data = envelope.data as unknown as { message?: string };
         set({ lastError: data.message ?? 'unknown error' });
         break;
       }
       default:
-        // metrics / speech / agent_detail land in later phases.
+        // `metrics` is polled over REST by useSocietyPolling; `agent_detail`
+        // is handled by the subscription in useAgentDetail.
         break;
     }
   },

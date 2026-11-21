@@ -8,6 +8,7 @@ agent. Memory, the decision trace and the running skill live here, because
 from dataclasses import dataclass, field
 
 from app.ai.brains.base import ScoredOption
+from app.ai.llm.schemas import Intention
 from app.ai.memory import AgentMemory
 from app.ai.perception import Observation
 from app.ai.skills.base import SkillRun
@@ -35,6 +36,37 @@ class Mind:
     run: SkillRun | None = None
     cooldowns: dict[str, float] = field(default_factory=dict)
     last_decision_s: float = -1.0
+
+    intention: Intention | None = None
+    """What the deliberative layer last decided to try, if anything.
+
+    It biases utility scores rather than overriding them, so a starving
+    schemer still eats first (SPEC 7.2). `None` for every utility-only agent,
+    which is most of them.
+    """
+    intention_until_s: float = 0.0
+    """Sim-time the intention stops counting. A plan nobody acted on expires
+    rather than steering an agent through a world that has since changed."""
+    llm_requested_s: float = -1.0
+    """When this agent last had a deliberation posted, for rate limiting."""
+    reflected_at_important: int = 0
+    """`memory.important_remembered` when this agent last reflected."""
+    last_prompt: str = ""
+    last_response: str = ""
+
+    def set_intention(self, intention: Intention, now_s: float, lifetime_s: float) -> None:
+        """Install a plan and start its clock."""
+        self.intention = intention
+        self.intention_until_s = now_s + lifetime_s
+
+    def active_intention(self, now_s: float) -> Intention | None:
+        """The intention if it is still live, else None (clearing it)."""
+        if self.intention is None:
+            return None
+        if now_s > self.intention_until_s:
+            self.intention = None
+            return None
+        return self.intention
 
     false_lead: tuple[float, float] | None = None
     """Somewhere an agent has been told there is food, where there is none.

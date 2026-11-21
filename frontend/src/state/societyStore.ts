@@ -8,7 +8,7 @@
 
 import { create } from 'zustand';
 
-import type { MetricPoint, Shelter, Tribe, TrustEdge } from '@/api/types';
+import type { LlmStatus, MetricPoint, Shelter, Tribe, TrustEdge } from '@/api/types';
 
 export interface SocietyStoreState {
   tribes: Tribe[];
@@ -17,11 +17,20 @@ export interface SocietyStoreState {
   /** Edges above the threshold before truncation, so the UI can say "of N". */
   trustTotal: number;
   metrics: MetricPoint[];
+  /**
+   * Last known state of the deliberative layer, or null before the first poll.
+   *
+   * Lives here rather than in the LLM panel so the warning banner does not
+   * depend on that panel being open - the whole point of it is to be seen
+   * when you have not gone looking.
+   */
+  llm: LlmStatus | null;
 
   setTribes: (tribes: Tribe[]) => void;
   setShelters: (shelters: Shelter[]) => void;
   setTrust: (edges: TrustEdge[], total: number) => void;
   setMetrics: (points: MetricPoint[]) => void;
+  setLlm: (status: LlmStatus) => void;
   tribeById: (id: number | null | undefined) => Tribe | undefined;
   reset: () => void;
 }
@@ -32,12 +41,16 @@ export const useSocietyStore = create<SocietyStoreState>((set, get) => ({
   trustEdges: [],
   trustTotal: 0,
   metrics: [],
+  llm: null,
 
   setTribes: (tribes) => set({ tribes }),
   setShelters: (shelters) => set({ shelters }),
   setTrust: (trustEdges, trustTotal) => set({ trustEdges, trustTotal }),
   setMetrics: (metrics) => set({ metrics }),
+  setLlm: (llm) => set({ llm }),
   tribeById: (id) =>
     id === null || id === undefined ? undefined : get().tribes.find((tribe) => tribe.id === id),
+  // `llm` is deliberately kept: the provider does not change because the
+  // world was rebuilt.
   reset: () => set({ tribes: [], shelters: [], trustEdges: [], trustTotal: 0, metrics: [] }),
 }));

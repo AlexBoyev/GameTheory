@@ -43,6 +43,18 @@ class PromptBuilder:
         return self._env.get_template(template).render(**context)
 
     def build_intention_prompt(self, context: dict[str, Any]) -> str:
-        """Build the per-tick deliberation prompt. Implemented in Phase 5."""
-        msg = "PromptBuilder.build_intention_prompt() arrives in Phase 5 (LLM minds)"
-        raise NotImplementedError(msg)
+        """Build the deliberation prompt from an agent's situation.
+
+        `context` is a plain snapshot taken on the engine thread (see
+        `ai.llm.snapshot`), never live entities: by the time this renders, the
+        world has moved on.
+        """
+        return self.render("intention.j2", **context).strip()
+
+    def build_reflection_prompt(self, context: dict[str, Any]) -> str:
+        """Build the prompt that turns recent events into durable beliefs."""
+        return self.render("reflection.j2", **context).strip()
+
+    def over_budget(self, prompt: str) -> bool:
+        """Whether `prompt` exceeds the token budget worth warning about."""
+        return estimate_tokens(prompt) > TOKEN_BUDGET

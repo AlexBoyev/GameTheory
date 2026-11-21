@@ -360,6 +360,8 @@ Every N ticks: population (total / by tribe / by strategy), births, deaths by ca
 
 "Every N ticks" means *at least* N ticks have elapsed since the last sample — not `tick % N == 0`. Sampling runs on the broadcast thread (so the engine never pays for it), and the broadcast only sees the ticks that land on a 20 Hz frame; at 25× those are ~12 ticks apart, so a divisibility test misses nearly every window. Coups are reported as attempts and successes separately — most challenges fail. See ADR 0003.
 
+**As built (Phase 5).** The simulation never awaits a model: the engine thread posts a plain-data `PromptContext` into an `IntentionBroker` and collects whatever has come back since the last tick, while an `LLMPump` on the event loop does all the waiting. A returned `Intention` *biases* utility scores (+0.35 for 45 sim-seconds) rather than choosing an action, so a starving schemer still eats first and switching the model off mid-run changes nothing but the absence of a thought. Replies are stamped with the world uid and dropped if the world was rebuilt meanwhile. Above the speed threshold the service stretches or suspends deliberation. Default provider is an in-process deterministic mock, so no model need be installed. See ADR 0004.
+
 ## 11. Persistence
 SQLite (SQLModel) in `./data/gametheory.db` (Docker volume): runs, metrics, snapshots (full world state JSON, gzipped), capped events table.
 

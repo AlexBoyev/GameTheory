@@ -25,6 +25,7 @@ export type ActionId =
   | 'toggleSpeech'
   | 'toggleCharts'
   | 'toggleLog'
+  | 'toggleLlm'
   | 'toggleHelp';
 
 export interface Keybinding {
@@ -55,6 +56,7 @@ export const KEYBINDINGS: readonly Keybinding[] = [
   { key: 'b', action: 'toggleSpeech', label: 'Speech bubbles', group: 'overlays' },
   { key: 'c', action: 'toggleCharts', label: 'Charts panel', group: 'overlays' },
   { key: 'l', action: 'toggleLog', label: 'Event log', group: 'overlays' },
+  { key: 'm', action: 'toggleLlm', label: 'LLM minds monitor', group: 'overlays' },
   { key: '?', action: 'toggleHelp', label: 'This help', group: 'overlays' },
 ];
 

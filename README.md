@@ -13,33 +13,42 @@ Runs entirely on `localhost`. **No paid services, no API keys, no cloud AI.**
 - Build plan: [`docs/PROMPTS.md`](docs/PROMPTS.md)
 - Architecture decisions: [`docs/adr/`](docs/adr/) - [0001 architecture](docs/adr/0001-architecture.md),
   [0002 simulation core](docs/adr/0002-simulation-core.md),
-  [0003 game theory and tribes](docs/adr/0003-game-theory-and-tribes.md)
+  [0003 game theory and tribes](docs/adr/0003-game-theory-and-tribes.md),
+  [0004 LLM minds](docs/adr/0004-llm-minds.md)
 - Working rules for Claude Code: [`CLAUDE.md`](CLAUDE.md)
 
 ---
 
-## Status: Phase 4 of 7 (game theory, manipulation and tribes)
+## Status: Phase 5 of 7 (LLM minds)
 
 What works right now:
 
 | Works | Not yet |
 | --- | --- |
-| **A real simulation**: seeded island, resources with regrowth, day/night, seasons | LLM minds and speech bubbles with real dialogue (Phase 5) |
-| Agents with needs, traits, inventory, ageing and named death causes | Snapshots you can reload, god tools, presets with real values (Phase 6) |
-| **31 skills**: survival, building, social, manipulation, combat and tribe actions | Minimap, tournament report, polish pass (Phase 6-7) |
+| **A real simulation**: seeded island, resources with regrowth, day/night, seasons | Snapshots you can reload, god tools, presets with real values (Phase 6) |
+| Agents with needs, traits, inventory, ageing and named death causes | New World dialog, minimap, screenshot, heatmap, name tags (Phase 6) |
+| **31 skills**: survival, building, social, manipulation, combat and tribe actions | Tournament report, senior review pass (Phase 6-7) |
 | Utility AI with response curves, softmax personality and a top-3 decision trace | |
+| **Deliberative minds**: goals, plans, spoken lines and beliefs, via local Ollama **or an offline mock** | |
+| LLM monitor: provider, reachability, call log with real prompts and replies | |
 | **Five games**: Prisoner's Dilemma, Stag Hunt, Hawk-Dove, Ultimatum, Public Goods | |
 | **Ten strategies** from AlwaysCooperate to Detective, inherited with mutation | |
 | **Trust you earn and reputation you only hear about**, gossip, lies, lie detection | |
 | **Tribes** that are founded and joined, with leaders, storage, territory, coups, wars and peace | |
 | Shelters that get built, reproduction with trait blending, deaths with causes | |
 | Engine on a worker thread: pause / play / 1x-50x / MAX / step / reset | |
-| Full UI: inspector, event feed with filters, charts, overlays, URL state, help | |
-| 7 layering contracts, **202 backend tests**, 21 frontend tests | |
+| Full UI: inspector, event feed with filters, charts, overlays, speech bubbles, URL state, help | |
+| 7 layering contracts, **276 backend tests**, 31 frontend tests | |
 
 `GET /api/sim/state` reports `"placeholder": false`. Determinism is
 machine-checked: same seed, same world, to the bit, after 1,000 ticks of the
-full pipeline, with the LLM off.
+full pipeline, with the LLM off. (With it on, replies arrive on the event loop
+and no seed controls that timing - set `llm_agents: 0` for a reproducible run.)
+
+**No model is required.** The default provider is an in-process mock that
+builds a deterministic plan from the prompt, so goals, speech bubbles and the
+monitor all work with nothing installed. See
+[Using a real model](#using-a-real-model-optional) to point it at Ollama.
 
 ### What a world actually does
 
@@ -63,11 +72,17 @@ From a 25x run on the default seed (1337), around tick 10,000 - read from
 are for the **full Phase 4 pipeline** - encounters, gossip and tribes included,
 which is roughly twice the per-tick work of Phase 2:
 
-| Agents | Ticks/sec | vs realtime (1x = 10 ticks/s) | Phase 2 was |
+| Agents | Ticks/sec | vs realtime (1x = 10 ticks/s) | Phase 4 was |
 | --- | --- | --- | --- |
-| 100 | 341 | 34x | 618 |
-| 500 | 42 | 4.2x | 85 |
-| 1000 | 17 | 1.7x | 37 |
+| 100 | 283 | 28x | 341 |
+| 500 | 50 | 5.0x | 42 |
+| 1000 | 22 | 2.2x | 17 |
+
+500 and 1,000 agents got *faster* than Phase 4 despite the deliberative layer
+being added, because a property test found a real bug in the spatial hash on
+the way (see below) and fixing it also made the hot path cheaper. The 100-agent
+case is slower because four deliberative agents are 4% of a small world and
+0.4% of a large one.
 
 The default world of 120 agents therefore runs comfortably at any preset up to
 25x. At 500 agents the sustainable preset is 5x; at 1,000 it is 1x. Presets
@@ -80,10 +95,63 @@ population survives 6,000-12,000 ticks across seeds, with occasional
 starvation as the remaining pressure. See
 [`docs/adr/0002-simulation-core.md`](docs/adr/0002-simulation-core.md) for the
 two balance bugs that made the first cut of the simulation kill 88% of its
-population while every unit test passed, and
+population while every unit test passed,
 [`docs/adr/0003-game-theory-and-tribes.md`](docs/adr/0003-game-theory-and-tribes.md)
 for the metrics-sampling and coup-accounting bugs that only a running world
-exposed.
+exposed, and [`docs/adr/0004-llm-minds.md`](docs/adr/0004-llm-minds.md) for a
+runtime setting that was tested, documented, settable from the API - and wired
+to nothing at all.
+
+The neighbour search had a real correctness bug until Phase 5: it scanned a
+span of cells around the query's *cell*, when the query point can sit anywhere
+inside that cell, so an agent standing within a whisker of a cell border could
+not see a neighbour at the edge of its vision. Hypothesis found it; the fix
+(derive the cell range from the circle's bounding box) is both correct and
+about 20% faster at 500+ agents, because the exact box is often 2x2 cells
+where a span was always at least 3x3.
+
+---
+
+## Using a real model (optional)
+
+Everything above works with no model installed - the default provider is an
+in-process mock. To let a few agents think with a real local model instead:
+
+```powershell
+# 1. Install Ollama for Windows (I will not install it for you):
+#    https://ollama.com/download
+#    Then, in a new terminal:
+
+ollama pull qwen3:8b            # ~5 GB, good instruction following
+# or, on a smaller machine:
+ollama pull qwen3:4b            # ~2.5 GB
+# or smaller still:
+ollama pull llama3.2:3b         # ~2 GB
+
+ollama list                     # confirm it is there
+curl http://localhost:11434/api/tags   # confirm the daemon answers
+```
+
+Then either switch provider at runtime in the **LLM minds** panel (`m`), or
+set it before starting in `.env`:
+
+```ini
+LLM_PROVIDER=ollama
+OLLAMA_MODEL=qwen3:8b
+OLLAMA_URL=http://localhost:11434
+LLM_MAX_CONCURRENCY=1
+LLM_MAX_CALLS_PER_MIN=30
+LLM_HIGH_SPEED_POLICY=reduced
+```
+
+How many agents deliberate is a world setting, not a process one -
+`llm_agents` in `backend/config/default.yaml` (4 by default, up to 64). Raise
+it and lower `LLM_MIN_INTERVAL_SIM_S` for a noisier island; a local 8B model
+on one GPU will comfortably keep a handful of agents thinking.
+
+Nothing here reaches the public internet, and there is no API key anywhere in
+the project. If the daemon is not running you get a banner saying so, agents
+carry on with utility AI, and the circuit breaker stops the retry storm.
 
 ---
 
@@ -131,6 +199,9 @@ python driver.py
 | `python driver.py --port 8001` | Pin the backend port (default: first free from 8000) |
 | `python driver.py --no-frontend` | Backend only |
 | `python driver.py --no-reload` | Do not restart the backend when its sources change |
+
+Keyboard: `m` opens the LLM minds monitor, `c` the charts, `l` the event log,
+`b` toggles speech bubbles, `?` lists everything.
 | `python driver.py --install` | Install dependencies and exit |
 
 It needs nothing but the system Python - stdlib only - and Ctrl+C stops both

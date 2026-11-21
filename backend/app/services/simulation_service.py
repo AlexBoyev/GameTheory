@@ -22,6 +22,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any
 
+from app.ai.llm.broker import IntentionBroker
 from app.ai.llm.gateway import LLMGateway, LLMStatus
 from app.ai.skills.registry import SkillRegistry
 from app.core.logging import get_logger
@@ -42,7 +43,7 @@ from app.sim.engine import (
     Start,
     Step,
 )
-from app.sim.events import SimEvent
+from app.sim.events import EventType, SimEvent
 from app.sim.frames import WorldFrame, encode_resources
 
 Subscriber = Callable[[Envelope], Awaitable[None]]
@@ -118,6 +119,11 @@ class SimulationService:
     def skills(self) -> SkillRegistry:
         """The skill registry the running pipeline uses."""
         return self._bundle.skills
+
+    @property
+    def broker(self) -> IntentionBroker:
+        """The mailbox the LLM pump works from."""
+        return self._bundle.broker
 
     @property
     def config(self) -> WorldConfig:
@@ -284,6 +290,10 @@ class SimulationService:
         self._last_amounts.clear()
         self._recent_events.clear()
         self._last_sampled_tick = -1
+        # Deliberations in flight belong to the world being thrown away. The
+        # broker also stamps a world uid, so a reply that is already on its
+        # way back is dropped rather than applied to the new world.
+        self._bundle.broker.clear()
         if self._metrics is not None:
             self._metrics.clear()
         state = await self._submit(Reset(seed=seed, config=config))
@@ -334,8 +344,22 @@ class SimulationService:
             frame = self._latest_frame()
             if frame is not None:
                 await self.broadcast(self._frame_envelope(frame))
+                self._apply_speed_policy(frame.speed)
                 await self._maybe_sample(frame.tick)
             await self._drain_events()
+
+    def _apply_speed_policy(self, speed: float) -> None:
+        """Tell the deliberative layer how often to think at this speed.
+
+        Deliberation is the one part of the tick whose cost is not ours to
+        control, so at high speed it thins out (`reduced`) or stops (`off`)
+        rather than the world slowing to wait for a model. Pushed on every
+        frame because the user can change both the speed and the policy
+        while it runs.
+        """
+        limits = self._gateway.scheduler.limits
+        interval = limits.interval_for_speed(speed) if self._gateway.enabled else None
+        self._bundle.broker.set_interval(interval)
 
     async def _maybe_sample(self, tick: int) -> None:
         """Take a metrics sample if one is due, and broadcast it.
@@ -419,6 +443,23 @@ class SimulationService:
             self._recent_events.extend(items)
             if items:
                 await self.broadcast(envelopes.events(items[-1]["tick"], items))
+            await self._broadcast_speech(batch)
+
+    async def _broadcast_speech(self, batch: list[SimEvent]) -> None:
+        """Send what was said as its own envelope, as well as an event.
+
+        Speech is in the event feed because it is part of the story, and on
+        its own channel because the scene needs it separately: a bubble has
+        to appear over the right head and expire on its own timer, which the
+        feed knows nothing about.
+        """
+        for event in batch:
+            if event.type is not EventType.SPEECH:
+                continue
+            text = event.data.get("text")
+            if not isinstance(text, str) or not text or not event.actors:
+                continue
+            await self.broadcast(envelopes.speech(event.tick, event.actors[0], text))
 
     @staticmethod
     def _event_dict(event: SimEvent) -> dict[str, Any]:

@@ -21,6 +21,14 @@ class LLMStatusDTO(BaseModel):
         default=False,
         description="True when Ollama was requested but mock is serving instead.",
     )
+    high_speed_policy: str = Field(
+        default="reduced",
+        description="What happens to deliberation above the speed threshold.",
+    )
+    min_interval_sim_s: float = Field(
+        default=20.0,
+        description="Minimum sim-seconds between one agent's deliberations.",
+    )
 
 
 class LLMCallDTO(BaseModel):
@@ -49,6 +57,7 @@ class LLMStatsDTO(BaseModel):
     failures: int = 0
     cache_hits: int = 0
     timeouts: int = 0
+    refusals: int = 0
     avg_latency_s: float = 0.0
     failure_rate: float = 0.0
     prompt_tokens_estimate: int = 0

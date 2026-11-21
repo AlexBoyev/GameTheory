@@ -37,6 +37,9 @@ export function Inspector(): React.ReactElement | null {
   const trace = detail?.decision_trace ?? [];
   const memories = detail?.memories ?? [];
   const carriedFood = detail?.inventory?.food ?? 0;
+  // Present only for deliberative agents; absent means "does not think",
+  // which is different from "has not thought yet".
+  const mind = detail?.llm ?? null;
 
   return (
     <Panel
@@ -132,6 +135,57 @@ export function Inspector(): React.ReactElement | null {
               value={`${detail.summary.x.toFixed(0)}, ${detail.summary.z.toFixed(0)}`}
             />
           </Section>
+
+          {mind && (
+            <Section title="Deliberating">
+              {mind.goal ? (
+                <p className="text-[11px] text-slate-200">{mind.goal}</p>
+              ) : (
+                <p className="text-[11px] text-slate-500">no plan yet</p>
+              )}
+              {mind.thought && (
+                <p className="mt-1 text-[11px] italic text-slate-400">
+                  &ldquo;{mind.thought}&rdquo;
+                </p>
+              )}
+              {(mind.plan ?? []).length > 0 && (
+                <ol className="mt-1 space-y-0.5">
+                  {(mind.plan ?? []).map((step, index) => (
+                    <li key={`${step}-${index}`} className="text-[11px] text-slate-300">
+                      <span className="font-mono text-slate-500">{index + 1}.</span> {step}
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {(mind.beliefs ?? []).length > 0 && (
+                <>
+                  <p className="mt-2 text-[10px] uppercase tracking-wide text-slate-500">
+                    Has come to believe
+                  </p>
+                  <ul className="space-y-0.5">
+                    {(mind.beliefs ?? []).map((belief, index) => (
+                      <li key={`${belief}-${index}`} className="text-[11px] text-amber-200/80">
+                        {belief}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {mind.last_prompt && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-[10px] uppercase tracking-wide text-slate-500">
+                    Last prompt and reply
+                  </summary>
+                  <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded bg-black/30 p-2 text-[10px] text-slate-400">
+                    {mind.last_prompt}
+                  </pre>
+                  <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-words rounded bg-black/30 p-2 text-[10px] text-slate-400">
+                    {mind.last_response || '(no reply)'}
+                  </pre>
+                </details>
+              )}
+            </Section>
+          )}
 
           {memories.length > 0 && (
             <Section title="Remembers">

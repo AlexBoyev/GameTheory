@@ -81,7 +81,15 @@ class WorldConfig(BaseModel):
     mutation_rate: float = Field(default=0.05, ge=0.0, le=1.0)
     trembling_hand: float = Field(default=0.02, ge=0.0, le=0.5, description="Action-flip noise.")
 
-    llm_agents: int = Field(default=0, ge=0, le=64, description="Agents with brain_type=llm.")
+    llm_agents: int = Field(default=4, ge=0, le=64, description="Agents with brain_type=llm.")
+    """How many agents deliberate as well as react.
+
+    Four by default so the deliberative layer is visible (haloes, speech
+    bubbles, thoughts in the inspector) without being asked for: the default
+    provider is the in-process mock, so this costs nothing and needs nothing
+    installed. Set it to 0 for a bit-for-bit reproducible run - a model's
+    replies arrive on the event loop, whose timing no seed controls.
+    """
 
     tournament_mode: bool = Field(default=False, description="Survival off, round-robin IPD.")
 

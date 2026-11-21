@@ -1,10 +1,9 @@
 /**
  * Overlay toggles, as buttons rather than keys you have to know about.
  *
- * Three of these need data the simulation does not produce yet. Rather than
- * hide them (which makes the roadmap invisible) or let them silently do
- * nothing (which makes the UI feel broken), they are shown disabled with the
- * phase that turns them on.
+ * Toggles that need data the simulation does not produce yet are shown
+ * disabled with the phase that turns them on, rather than hidden (which makes
+ * the roadmap invisible) or live but inert (which makes the UI feel broken).
  */
 
 import { useUiStore, type ToggleKey } from '@/state/uiStore';
@@ -24,7 +23,8 @@ const TOGGLES: OverlayToggle[] = [
   { key: 'chartsOpen', label: 'Charts', icon: '📈', shortcut: 'c' },
   { key: 'showHeatmap', label: 'Heatmap', icon: '🔥', shortcut: 'h', needsPhase: 6 },
   { key: 'showNames', label: 'Names', icon: '🏷️', shortcut: 'n', needsPhase: 6 },
-  { key: 'showSpeechBubbles', label: 'Speech', icon: '💬', shortcut: 'b', needsPhase: 5 },
+  { key: 'showSpeechBubbles', label: 'Speech', icon: '💬', shortcut: 'b' },
+  { key: 'llmPanelOpen', label: 'LLM minds', icon: '🧠', shortcut: 'm' },
 ];
 
 export function OverlayBar(): React.ReactElement {

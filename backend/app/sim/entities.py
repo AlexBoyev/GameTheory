@@ -162,6 +162,12 @@ class Agent:
     current_skill: str | None = None
     intent: str | None = None
     thought: str = ""
+    goal: str = ""
+    """What a deliberative agent is currently trying to achieve.
+
+    Set by the LLM layer and shown in the inspector; empty for the utility-AI
+    majority, who have urges rather than goals.
+    """
 
     alive: bool = True
     death_cause: DeathCause | None = None

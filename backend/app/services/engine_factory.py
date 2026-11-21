@@ -13,11 +13,13 @@ from app.ai.gametheory.ledger import SocialLedger
 from app.ai.gametheory.payoffs import PayoffConfig, load_payoffs
 from app.ai.gametheory.resolver import EncounterResolver
 from app.ai.gametheory.strategies import build_strategy_registry
+from app.ai.llm.broker import IntentionBroker
 from app.ai.minds import MindRegistry
 from app.ai.skill_services import SkillServices
 from app.ai.skills.registry import SkillRegistry, build_registry
 from app.ai.systems import DecisionSystem, PerceptionSystem, SkillExecutionSystem
 from app.ai.systems.encounter_system import EncounterSystem
+from app.ai.systems.intention_system import IntentionSystem
 from app.ai.systems.tribe_system import TribeSystem
 from app.core.settings import Settings
 from app.core.world_config import WorldConfig
@@ -42,6 +44,7 @@ class EngineBundle:
     skills: SkillRegistry
     ledger: SocialLedger
     payoffs: PayoffConfig
+    broker: IntentionBroker
 
 
 def world_config_from_settings(settings: Settings) -> WorldConfig:
@@ -62,6 +65,7 @@ def build_pipeline(
     *,
     ledger: SocialLedger | None = None,
     payoffs: PayoffConfig | None = None,
+    broker: IntentionBroker | None = None,
 ) -> SystemPipeline:
     """Return the tick pipeline in its documented running order (SPEC 7.1).
 
@@ -69,6 +73,10 @@ def build_pipeline(
     the skill, the skill sets a velocity, and only then does movement apply
     it. Encounters run after skills, so a game is played between agents whose
     intentions for this tick are already settled.
+
+    Deliberation comes first of all: it installs the plans that came back from
+    the model since the last tick, so a decision taken this tick can act on
+    one. It never waits for the model (ADR 0004).
     """
     resolved_ledger = ledger or SocialLedger()
     resolved_payoffs = payoffs or load_payoffs()
@@ -83,6 +91,7 @@ def build_pipeline(
 
     return SystemPipeline(
         (
+            IntentionSystem(minds, skills, broker or IntentionBroker()),
             PerceptionSystem(minds),
             NeedsSystem(),
             DecisionSystem(minds, brain, skills),
@@ -110,6 +119,7 @@ def build_engine_bundle(
     minds = MindRegistry()
     ledger = SocialLedger()
     payoffs = load_payoffs(payoff_path(settings))
+    broker = IntentionBroker()
 
     skills = build_registry(SkillServices(minds=minds, ledger=ledger))
     pipeline = build_pipeline(
@@ -118,6 +128,7 @@ def build_engine_bundle(
         settings.sim_softmax_temperature,
         ledger=ledger,
         payoffs=payoffs,
+        broker=broker,
     )
 
     engine = SimulationEngine(
@@ -133,4 +144,5 @@ def build_engine_bundle(
         skills=skills,
         ledger=ledger,
         payoffs=payoffs,
+        broker=broker,
     )

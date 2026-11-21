@@ -95,6 +95,10 @@ export function useKeyboard(): void {
           event.preventDefault();
           useUiStore.getState().toggle('eventFeedOpen');
           break;
+        case 'toggleLlm':
+          event.preventDefault();
+          useUiStore.getState().toggle('llmPanelOpen');
+          break;
         case 'toggleHelp':
           event.preventDefault();
           useUiStore.getState().toggle('helpOpen');

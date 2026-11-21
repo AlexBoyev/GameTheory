@@ -108,9 +108,16 @@ export function Meter({ label, value, colour = 'bg-sky-400' }: MeterProps): Reac
   );
 }
 
-export function Row({ label, value }: { label: string; value: ReactNode }): React.ReactElement {
+export interface RowProps {
+  label: string;
+  value: ReactNode;
+  /** Hover text, for a figure whose name cannot carry the whole meaning. */
+  title?: string | undefined;
+}
+
+export function Row({ label, value, title }: RowProps): React.ReactElement {
   return (
-    <div className="flex items-baseline justify-between gap-3 py-0.5">
+    <div className="flex items-baseline justify-between gap-3 py-0.5" title={title}>
       <span className="text-[11px] text-slate-400">{label}</span>
       <span className="text-right font-mono text-[11px] text-slate-200">{value}</span>
     </div>

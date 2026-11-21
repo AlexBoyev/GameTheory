@@ -11,6 +11,15 @@ REVIEW_INTERVAL_SIM_S = 3.0
 """How often a busy agent reconsiders. Low enough to react to a new threat,
 high enough that agents finish what they start instead of dithering."""
 
+INTENTION_BONUS = 0.35
+"""Score added to the skills an LLM plan asked for.
+
+A bias, never an override (SPEC 7.2): it is large enough to break a tie
+between comparable options and to make a schemer follow through, and small
+enough that a starving agent still eats instead of executing its plan. The
+whole deliberative layer is therefore safe to switch off mid-run.
+"""
+
 COMMITMENT_BONUS = 0.25
 """Score added to whatever an agent is already doing, during a review.
 
@@ -72,6 +81,7 @@ class DecisionSystem:
     def _context(self, world: World, agent: Agent, mind: Mind, now: float) -> DecisionContext:
         """Build the context the brain is allowed to see."""
         unavailable = frozenset(name for name, ready_at in mind.cooldowns.items() if ready_at > now)
+        intention = mind.active_intention(now)
         return DecisionContext(
             agent=agent,
             world=world,
@@ -80,6 +90,8 @@ class DecisionSystem:
             unavailable=unavailable,
             current_skill=mind.run.skill if mind.run is not None else None,
             commitment_bonus=COMMITMENT_BONUS if mind.run is not None else 0.0,
+            intention_skills=intention.skills if intention is not None else (),
+            intention_bonus=INTENTION_BONUS if intention is not None else 0.0,
         )
 
     def _begin(

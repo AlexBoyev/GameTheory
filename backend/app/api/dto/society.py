@@ -93,6 +93,7 @@ class LLMMindDTO(BaseModel):
     goal: str = ""
     plan: list[str] = Field(default_factory=list)
     say: str | None = None
+    beliefs: list[str] = Field(default_factory=list)
     last_prompt: str | None = None
     last_response: str | None = None
 

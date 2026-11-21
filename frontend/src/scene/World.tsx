@@ -19,6 +19,7 @@ import { PerfProbe } from '@/scene/PerfProbe';
 import { Resources } from '@/scene/Resources';
 import { SelectionRing } from '@/scene/SelectionRing';
 import { Shelters } from '@/scene/Shelters';
+import { SpeechBubbles } from '@/scene/SpeechBubbles';
 import { StateIcons } from '@/scene/StateIcons';
 import { Terrain } from '@/scene/Terrain';
 import { Territories } from '@/scene/Territories';
@@ -101,6 +102,7 @@ export function World(): React.ReactElement {
       <Shelters sampler={sampler} />
       <Agents sampler={sampler} capacity={Math.max(256, maxAgents)} shadows={profile.shadows} />
       <StateIcons sampler={sampler} capacity={Math.max(256, maxAgents)} />
+      <SpeechBubbles sampler={sampler} />
       <SelectionRing sampler={sampler} />
 
       {showTrustLines && <TrustLines sampler={sampler} />}

@@ -9,6 +9,9 @@ from dataclasses import dataclass, field
 
 from app.sim.events import EventType
 
+IMPORTANT: int = 5
+"""Importance at or above which an event is worth reflecting on."""
+
 RECENCY_HALF_LIFE_SIM_S: float = 600.0
 """Sim-seconds after which a memory's recency weight halves."""
 
@@ -82,9 +85,19 @@ class AgentMemory:
     beliefs: list[str] = field(default_factory=list)
     last_observation_tick: int = -1
 
+    important_remembered: int = 0
+    """Lifetime count of notable things that have happened to this agent.
+
+    The episodic buffer is bounded, so its length says nothing about how
+    eventful a life has been. Reflection is triggered every N *important*
+    events, which needs a counter that does not forget.
+    """
+
     def remember(self, event: MemoryEvent) -> None:
         """Store `event`, evicting the oldest when the buffer is full."""
         self.episodic.append(event)
+        if event.importance >= IMPORTANT:
+            self.important_remembered += 1
 
     def relationship(self, other_id: int) -> Relationship:
         """Return (creating if needed) the relationship with `other_id`."""

@@ -8,6 +8,9 @@ import type {
   AgentSummary,
   EventsPayload,
   Health,
+  LlmSettings,
+  LlmStats,
+  LlmStatus,
   Metrics,
   Preset,
   Shelter,
@@ -83,4 +86,9 @@ export const api = {
   agent: (id: number): Promise<AgentDetail> => request<AgentDetail>(`/agents/${id}`),
   events: (limit = 200, type?: string): Promise<EventsPayload> =>
     request<EventsPayload>(`/events?limit=${limit}${type ? `&type=${type}` : ''}`),
+
+  llmStatus: (): Promise<LlmStatus> => request<LlmStatus>('/llm/status'),
+  llmStats: (): Promise<LlmStats> => request<LlmStats>('/llm/stats'),
+  putLlmSettings: (settings: LlmSettings): Promise<LlmStatus> =>
+    request<LlmStatus>('/llm/settings', { method: 'PUT', body: JSON.stringify(settings) }),
 };

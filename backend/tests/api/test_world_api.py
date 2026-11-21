@@ -60,9 +60,28 @@ def test_agent_detail_includes_needs_traits_and_a_trace(client: TestClient) -> N
     assert 0.0 <= detail["traits"]["honesty"] <= 1.0
     assert detail["inventory"]["food"] >= 0.0
     assert detail["life_stage"] in {"child", "adult", "elder"}
-    assert detail["llm"] is None
     assert isinstance(detail["decision_trace"], list)
     assert detail["current_skill"], "after 40 ticks an agent should be doing something"
+
+
+def test_only_deliberative_agents_have_an_llm_block(client: TestClient) -> None:
+    """Absent, not empty.
+
+    The inspector has to be able to tell "has no thoughts yet" from "does not
+    think at all".
+    """
+    client.post("/api/sim/step", json={"n": 20})
+    agents = client.get("/api/agents", params={"limit": 200}).json()
+
+    blocks = {}
+    for summary in agents:
+        detail = client.get(f"/api/agents/{summary['id']}").json()
+        blocks[summary["id"]] = detail["llm"]
+
+    deliberative = [block for block in blocks.values() if block is not None]
+    assert deliberative, "the default world ships a few deliberative agents"
+    assert any(block is None for block in blocks.values()), "most agents only react"
+    assert set(deliberative[0]) >= {"thought", "goal", "plan", "beliefs"}
 
 
 def test_an_unknown_agent_is_a_404(client: TestClient) -> None:

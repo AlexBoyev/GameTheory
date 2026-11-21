@@ -3,16 +3,23 @@
 This is the hottest data structure in the simulation: perception alone runs a
 few hundred radius queries per tick, so two things matter more than elegance.
 
-1. **Scan the fewest cells.** With `cell_size >= radius` a query can only
-   reach one cell in each direction, so nine cells is the correct answer -
-   scanning a wider ring is pure waste.
+1. **Scan the fewest cells, but all of them.** The cells to visit are the
+   ones the query circle's bounding box covers, derived from the coordinates
+   themselves. Taking a span around the centre cell instead (`ceil(radius /
+   cell_size)`) looks equivalent and is not: the query point can sit anywhere
+   inside its own cell, so a point at the far edge can be two cells away even
+   when the radius is one cell. That cost real neighbours at cell boundaries
+   until a property test found it.
 2. **Keep coordinates in the bucket.** Storing `(id, x, z)` inline means a
    candidate costs one tuple unpack instead of a dictionary lookup, which at
    a few million candidates per second is most of the cost.
 """
 
 from collections.abc import Iterator
-from math import ceil, floor
+from math import floor
+
+RADIUS_EPSILON = 1e-12
+"""Relative slack on the cell bounds, to match floating-point distance ties."""
 
 type Cell = tuple[int, int]
 type Entry = tuple[int, float, float]
@@ -103,18 +110,26 @@ class SpatialHash:
         if radius <= 0:
             return []
         cell_size = self.cell_size
-        cell_x = floor(x / cell_size)
-        cell_z = floor(z / cell_size)
-        # A circle of radius r reaches at most ceil(r / cell) cells away.
-        span = max(1, ceil(radius / cell_size))
+        # The bounding box of the circle, in cells, padded by one part in a
+        # trillion. The pad is not decoration: the distance test below is
+        # computed in floating point, so a point a hair outside the radius
+        # can round to exactly the radius and count as inside. Without the
+        # pad such a point may live in a cell the box excludes, and the hash
+        # would disagree with the obvious calculation (the property test
+        # found it at a coordinate of -3.75e-203). It only ever adds a cell
+        # when a box edge lands within the pad of a cell border.
+        pad = radius * RADIUS_EPSILON
+        first_x = floor((x - radius - pad) / cell_size)
+        last_x = floor((x + radius + pad) / cell_size)
+        first_z = floor((z - radius - pad) / cell_size)
+        last_z = floor((z + radius + pad) / cell_size)
         radius_squared = radius * radius
         cells = self._cells
         found: list[int] = []
 
-        for dz in range(-span, span + 1):
-            row = cell_z + dz
-            for dx in range(-span, span + 1):
-                bucket = cells.get((cell_x + dx, row))
+        for row in range(first_z, last_z + 1):
+            for column in range(first_x, last_x + 1):
+                bucket = cells.get((column, row))
                 if bucket is None:
                     continue
                 for item_id, item_x, item_z in bucket:

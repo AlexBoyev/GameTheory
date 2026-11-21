@@ -95,3 +95,27 @@ export function interpolatePose(
     heading: lerpAngle(before.heading, now.heading, alpha),
   };
 }
+
+/**
+ * Interpolated pose of the agent with `id`, or `null` if it is not in frame.
+ *
+ * Agents are addressed by slot everywhere else, because the renderer walks
+ * every slot anyway. Speech bubbles are the exception: they know an id and
+ * nothing else, and an agent's slot changes as others die, so the id has to
+ * be looked up each frame.
+ */
+export function findPoseById(
+  previous: AgentFrame | null,
+  current: AgentFrame | null,
+  id: number,
+  alpha: number,
+): AgentPose | null {
+  if (!current || current.stride <= 0) return null;
+  const total = Math.floor(current.agents.length / current.stride);
+  for (let index = 0; index < total; index += 1) {
+    if (current.agents[index * current.stride] === id) {
+      return interpolatePose(previous, current, index, alpha);
+    }
+  }
+  return null;
+}

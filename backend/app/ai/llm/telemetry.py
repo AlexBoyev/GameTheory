@@ -30,6 +30,14 @@ class LLMStats:
     failures: int = 0
     cache_hits: int = 0
     timeouts: int = 0
+    refusals: int = 0
+    """Requests the scheduler declined to make - rate limit or open circuit.
+
+    Counted separately from `failures` because nothing is wrong with the
+    provider: these are our own limits working. They were invisible at first,
+    which made the monitor under-report what the layer was doing (a run showed
+    50 calls where 100 had been asked for).
+    """
     total_latency_s: float = 0.0
     prompt_tokens_estimate: int = 0
 
@@ -41,8 +49,13 @@ class LLMStats:
 
     @property
     def failure_rate(self) -> float:
-        """Share of calls that failed, in `[0, 1]`."""
+        """Share of attempted calls that failed, in `[0, 1]`."""
         return self.failures / self.calls if self.calls else 0.0
+
+    @property
+    def requested(self) -> int:
+        """Everything asked for, including what was refused before going out."""
+        return self.calls + self.refusals
 
 
 class Telemetry:
@@ -58,6 +71,22 @@ class Telemetry:
     def recent(self) -> list[CallRecord]:
         """Most recent calls, newest first."""
         return list(reversed(self._records))
+
+    def refused(self, response: LLMResponse, reason: str) -> None:
+        """Record a request the scheduler declined to send."""
+        self.stats.refusals += 1
+        self._records.append(
+            CallRecord(
+                agent_id=response.agent_id,
+                kind=response.kind,
+                provider=response.provider,
+                model=response.model,
+                latency_s=0.0,
+                cached=False,
+                ok=False,
+                error=reason,
+            )
+        )
 
     def record(self, response: LLMResponse, prompt_preview: str = "") -> None:
         """Fold `response` into the stats and append a record."""

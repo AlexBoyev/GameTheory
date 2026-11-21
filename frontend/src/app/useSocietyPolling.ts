@@ -17,6 +17,7 @@ import { useUiStore } from '@/state/uiStore';
 const SLOW_MS = 2000;
 const TRUST_MS = 1500;
 const METRICS_MS = 3000;
+const LLM_MS = 4000;
 
 /** Run `task` every `interval` ms until unmounted, skipping failures. */
 function usePoll(task: () => Promise<void>, interval: number, enabled: boolean): void {
@@ -80,5 +81,15 @@ export function useSocietyPolling(): void {
     },
     METRICS_MS,
     chartsOpen,
+  );
+
+  // Always polled, panel open or not: an unreachable model is something the
+  // user needs told, and it is one small request every four seconds.
+  usePoll(
+    async () => {
+      useSocietyStore.getState().setLlm(await api.llmStatus());
+    },
+    LLM_MS,
+    true,
   );
 }

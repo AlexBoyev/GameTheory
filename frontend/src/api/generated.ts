@@ -4,2198 +4,2221 @@
  */
 
 export interface paths {
-  '/api/agents': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Liveness and LLM status
+         * @description Return process health plus the LLM gateway's view of the world.
+         */
+        get: operations["health_api_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * List agents
-     * @description Return a summary row per living agent, in id order.
-     */
-    get: operations['list_agents_api_agents_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/agents/{agent_id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/sim/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current simulation state
+         * @description Return status, tick, speed, seed, day, season and population.
+         */
+        get: operations["get_state_api_sim_state_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Full agent detail
-     * @description Return needs, traits, memory, relationships and the decision trace.
-     */
-    get: operations['get_agent_api_agents__agent_id__get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/events': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/sim/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume ticking
+         * @description Resume the simulation.
+         */
+        post: operations["start_api_sim_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Recent events
-     * @description Return the newest events, newest first, optionally filtered by type.
-     *
-     *     Backed by an in-memory ring buffer: the SQLite event log arrives with the
-     *     metrics in Phase 4.
-     */
-    get: operations['list_events_api_events_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/god/{action}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/sim/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause ticking
+         * @description Pause the simulation, keeping the world.
+         */
+        post: operations["pause_api_sim_pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Intervene
-     * @description Drop food, start a drought or a plague, spawn an agent, or smite one.
-     */
-    post: operations['act_api_god__action__post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/health': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/sim/step": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Advance n ticks
+         * @description Advance exactly `n` ticks and stay paused.
+         */
+        post: operations["step_api_sim_step_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Liveness and LLM status
-     * @description Return process health plus the LLM gateway's view of the world.
-     */
-    get: operations['health_api_health_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/llm/settings': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/sim/speed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set the speed multiplier
+         * @description Set speed to one of the presets; `0` pauses and `-1` means MAX.
+         */
+        post: operations["set_speed_api_sim_speed_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    /**
-     * Change LLM settings
-     * @description Update provider, model and rate limits at runtime.
-     */
-    put: operations['put_settings_api_llm_settings_put'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/llm/stats': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/sim/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Build a new world
+         * @description Rebuild the world; it stays paused at tick 0 so you can inspect it first.
+         *
+         *     `preset` is accepted but only applied from Phase 6, when the preset files
+         *     carry values.
+         */
+        post: operations["reset_api_sim_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Call counters and recent calls
-     * @description Return call counts, latency and the recent call log.
-     */
-    get: operations['stats_api_llm_stats_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/llm/status': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/sim/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current world config
+         * @description Return the config the current world was built from.
+         */
+        get: operations["get_config_api_sim_config_get"];
+        /**
+         * Replace the world config
+         * @description Apply a new config.
+         *
+         *     A running world cannot change its own population or terrain, so this
+         *     rebuilds it - equivalent to `POST /sim/reset` with a config.
+         */
+        put: operations["put_config_api_sim_config_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Provider and circuit status
-     * @description Return the gateway's current provider, model and health.
-     */
-    get: operations['status_api_llm_status_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/metrics': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/sim/presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Named world presets
+         * @description Return the preset catalogue.
+         */
+        get: operations["presets_api_sim_presets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Metrics time series
-     * @description Return samples at or after `from_tick`.
-     */
-    get: operations['get_metrics_api_metrics_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/sim/config': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/world/shelters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every hut on the island
+         * @description Return the shelters agents have built.
+         *
+         *     Polled rather than streamed: huts are built every few sim-minutes, so
+         *     putting them in a 20 Hz frame would be almost entirely repetition.
+         */
+        get: operations["shelters_api_world_shelters_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Current world config
-     * @description Return the config the current world was built from.
-     */
-    get: operations['get_config_api_sim_config_get'];
-    /**
-     * Replace the world config
-     * @description Apply a new config.
-     *
-     *     A running world cannot change its own population or terrain, so this
-     *     rebuilds it - equivalent to `POST /sim/reset` with a config.
-     */
-    put: operations['put_config_api_sim_config_put'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/sim/pause': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/world/terrain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Heightmap and biome map
+         * @description Return the island heightmap and biome map as base64 arrays.
+         *
+         *     Sent once per world: the terrain only changes on reset, so the frontend
+         *     caches the mesh and the socket carries nothing but the moving parts.
+         */
+        get: operations["terrain_api_world_terrain_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Pause ticking
-     * @description Pause the simulation, keeping the world.
-     */
-    post: operations['pause_api_sim_pause_post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/sim/presets': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List agents
+         * @description Return a summary row per living agent, in id order.
+         */
+        get: operations["list_agents_api_agents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Named world presets
-     * @description Return the preset catalogue.
-     */
-    get: operations['presets_api_sim_presets_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/sim/reset': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/agents/{agent_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Full agent detail
+         * @description Return needs, traits, memory, relationships and the decision trace.
+         */
+        get: operations["get_agent_api_agents__agent_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Build a new world
-     * @description Rebuild the world; it stays paused at tick 0 so you can inspect it first.
-     *
-     *     `preset` is accepted but only applied from Phase 6, when the preset files
-     *     carry values.
-     */
-    post: operations['reset_api_sim_reset_post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/sim/speed': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/tribes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List tribes
+         * @description Return every tribe with members, storage, camp and territory.
+         */
+        get: operations["list_tribes_api_tribes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Set the speed multiplier
-     * @description Set speed to one of the presets; `0` pauses and `-1` means MAX.
-     */
-    post: operations['set_speed_api_sim_speed_post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/sim/start': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/tribes/{tribe_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tribe detail
+         * @description Return one tribe.
+         */
+        get: operations["get_tribe_api_tribes__tribe_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Resume ticking
-     * @description Resume the simulation.
-     */
-    post: operations['start_api_sim_start_post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/sim/state': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/social/trust-graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Strongest bonds and feuds
+         * @description Return the strongest relationships, strongest first.
+         *
+         *     Thresholded on purpose: every agent knows dozens of others, so an
+         *     unfiltered graph is tens of thousands of edges and draws as grey fog.
+         */
+        get: operations["trust_graph_api_social_trust_graph_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Current simulation state
-     * @description Return status, tick, speed, seed, day, season and population.
-     */
-    get: operations['get_state_api_sim_state_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/sim/step': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Metrics time series
+         * @description Return samples at or after `from_tick`.
+         */
+        get: operations["get_metrics_api_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Advance n ticks
-     * @description Advance exactly `n` ticks and stay paused.
-     */
-    post: operations['step_api_sim_step_post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/snapshots': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recent events
+         * @description Return the newest events, newest first, optionally filtered by type.
+         *
+         *     Backed by an in-memory ring buffer: the SQLite event log arrives with the
+         *     metrics in Phase 4.
+         */
+        get: operations["list_events_api_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * List saved snapshots
-     * @description Return snapshot metadata, newest first.
-     */
-    get: operations['list_snapshots_api_snapshots_get'];
-    put?: never;
-    /**
-     * Save the current world
-     * @description Serialise and store the current world.
-     */
-    post: operations['create_snapshot_api_snapshots_post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/snapshots/{snapshot_id}/load': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/snapshots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List saved snapshots
+         * @description Return snapshot metadata, newest first.
+         */
+        get: operations["list_snapshots_api_snapshots_get"];
+        put?: never;
+        /**
+         * Save the current world
+         * @description Serialise and store the current world.
+         */
+        post: operations["create_snapshot_api_snapshots_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Load a snapshot
-     * @description Replace the running world with a saved one.
-     */
-    post: operations['load_snapshot_api_snapshots__snapshot_id__load_post'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/social/trust-graph': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/snapshots/{snapshot_id}/load": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Load a snapshot
+         * @description Replace the running world with a saved one.
+         */
+        post: operations["load_snapshot_api_snapshots__snapshot_id__load_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Strongest bonds and feuds
-     * @description Return the strongest relationships, strongest first.
-     *
-     *     Thresholded on purpose: every agent knows dozens of others, so an
-     *     unfiltered graph is tens of thousands of edges and draws as grey fog.
-     */
-    get: operations['trust_graph_api_social_trust_graph_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/tribes': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/llm/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Provider and circuit status
+         * @description Return the gateway's current provider, model and health.
+         */
+        get: operations["status_api_llm_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * List tribes
-     * @description Return every tribe with members, storage, camp and territory.
-     */
-    get: operations['list_tribes_api_tribes_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/tribes/{tribe_id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/llm/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Call counters and recent calls
+         * @description Return call counts, latency and the recent call log.
+         */
+        get: operations["stats_api_llm_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Tribe detail
-     * @description Return one tribe.
-     */
-    get: operations['get_tribe_api_tribes__tribe_id__get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/world/shelters': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/llm/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change LLM settings
+         * @description Update provider, model and rate limits at runtime.
+         *
+         *     Switching to Ollama when it is not running is allowed and reported, not
+         *     refused: `reachable: false` in the reply is the honest answer, and the
+         *     simulation carries on with utility AI either way.
+         */
+        put: operations["put_settings_api_llm_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Every hut on the island
-     * @description Return the shelters agents have built.
-     *
-     *     Polled rather than streamed: huts are built every few sim-minutes, so
-     *     putting them in a 20 Hz frame would be almost entirely repetition.
-     */
-    get: operations['shelters_api_world_shelters_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/world/terrain': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/god/{action}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Intervene
+         * @description Drop food, start a drought or a plague, spawn an agent, or smite one.
+         */
+        post: operations["act_api_god__action__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Heightmap and biome map
-     * @description Return the island heightmap and biome map as base64 arrays.
-     *
-     *     Sent once per world: the terrain only changes on reset, so the frontend
-     *     caches the mesh and the socket carries nothing but the moving parts.
-     */
-    get: operations['terrain_api_world_terrain_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    /**
-     * AckDTO
-     * @description Generic acknowledgement for commands with nothing to return.
-     */
-    AckDTO: {
-      /**
-       * Detail
-       * @default
-       */
-      detail: string;
-      /**
-       * Ok
-       * @default true
-       */
-      ok: boolean;
+    schemas: {
+        /**
+         * AckDTO
+         * @description Generic acknowledgement for commands with nothing to return.
+         */
+        AckDTO: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+        };
+        /**
+         * AgentDetailDTO
+         * @description `GET /api/agents/{id}` - everything the inspector shows.
+         */
+        AgentDetailDTO: {
+            summary: components["schemas"]["AgentSummaryDTO"];
+            /** Age */
+            age: number;
+            /** Life Stage */
+            life_stage: string;
+            needs: components["schemas"]["NeedsDTO"];
+            traits: components["schemas"]["TraitsDTO"];
+            /** Inventory */
+            inventory?: {
+                [key: string]: number;
+            };
+            /** Current Skill */
+            current_skill?: string | null;
+            /** Intent */
+            intent?: string | null;
+            /**
+             * Thought
+             * @default
+             */
+            thought: string;
+            /** Decision Trace */
+            decision_trace?: components["schemas"]["DecisionOptionDTO"][];
+            /** Relationships */
+            relationships?: components["schemas"]["RelationshipDTO"][];
+            /** Memories */
+            memories?: components["schemas"]["MemoryDTO"][];
+            llm?: components["schemas"]["LLMMindDTO"] | null;
+        };
+        /**
+         * AgentSummaryDTO
+         * @description One row of `GET /api/agents`.
+         */
+        AgentSummaryDTO: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** X */
+            x: number;
+            /** Z */
+            z: number;
+            /** State */
+            state: string;
+            /** Strategy */
+            strategy: string;
+            /** Brain Type */
+            brain_type: string;
+            /** Tribe Id */
+            tribe_id?: number | null;
+            /**
+             * Role
+             * @default none
+             */
+            role: string;
+            /**
+             * Health
+             * @default 100
+             */
+            health: number;
+            /**
+             * Alive
+             * @default true
+             */
+            alive: boolean;
+        };
+        /**
+         * DecisionOptionDTO
+         * @description One scored option from the decision trace (SPEC section 7.4).
+         */
+        DecisionOptionDTO: {
+            /** Skill */
+            skill: string;
+            /** Score */
+            score: number;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            /**
+             * Chosen
+             * @default false
+             */
+            chosen: boolean;
+        };
+        /**
+         * EventDTO
+         * @description One row of the event feed; `x`/`z` let the camera fly there.
+         */
+        EventDTO: {
+            /** Tick */
+            tick: number;
+            /** Type */
+            type: string;
+            /** Summary */
+            summary: string;
+            /**
+             * Importance
+             * @default 3
+             */
+            importance: number;
+            /** Actors */
+            actors?: number[];
+            /** X */
+            x?: number | null;
+            /** Z */
+            z?: number | null;
+        };
+        /**
+         * EventsDTO
+         * @description `GET /api/events?limit=&type=`.
+         */
+        EventsDTO: {
+            /** Items */
+            items?: components["schemas"]["EventDTO"][];
+        };
+        /**
+         * GodAction
+         * @description Supported interventions, used as the `POST /api/god/{action}` path.
+         * @enum {string}
+         */
+        GodAction: "drop_food" | "drought" | "plague" | "bounty" | "spawn_agent" | "smite";
+        /**
+         * GodActionRequest
+         * @description Parameters for an intervention; which fields matter depends on the action.
+         */
+        GodActionRequest: {
+            /**
+             * X
+             * @description World x, where the action is local.
+             */
+            x?: number | null;
+            /**
+             * Z
+             * @description World z, where the action is local.
+             */
+            z?: number | null;
+            /** Radius */
+            radius?: number | null;
+            /**
+             * Amount
+             * @description Food dropped, severity, etc.
+             */
+            amount?: number | null;
+            /**
+             * Agent Id
+             * @description Target for smite.
+             */
+            agent_id?: number | null;
+            /**
+             * Strategy
+             * @description Strategy for spawn_agent.
+             */
+            strategy?: string | null;
+            /**
+             * Brain Type
+             * @description utility | llm for spawn_agent.
+             */
+            brain_type?: string | null;
+        };
+        /**
+         * GodActionResultDTO
+         * @description What the intervention did.
+         */
+        GodActionResultDTO: {
+            action: components["schemas"]["GodAction"];
+            /**
+             * Affected
+             * @default 0
+             */
+            affected: number;
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HealthDTO
+         * @description `GET /api/health`: liveness plus LLM status.
+         */
+        HealthDTO: {
+            /**
+             * Status
+             * @default ok
+             */
+            status: string;
+            /** App */
+            app: string;
+            /** Version */
+            version: string;
+            /** Env */
+            env: string;
+            llm: components["schemas"]["LLMHealthDTO"];
+        };
+        /**
+         * LLMCallDTO
+         * @description One row of the LLM monitor's call log.
+         */
+        LLMCallDTO: {
+            /** Agent Id */
+            agent_id: number;
+            /** Kind */
+            kind: string;
+            /** Provider */
+            provider: string;
+            /** Model */
+            model: string;
+            /** Latency S */
+            latency_s: number;
+            /** Cached */
+            cached: boolean;
+            /** Ok */
+            ok: boolean;
+            /** Error */
+            error?: string | null;
+            /**
+             * Prompt Preview
+             * @default
+             */
+            prompt_preview: string;
+            /**
+             * Response Preview
+             * @default
+             */
+            response_preview: string;
+        };
+        /**
+         * LLMHealthDTO
+         * @description LLM summary embedded in the health response.
+         */
+        LLMHealthDTO: {
+            /** Enabled */
+            enabled: boolean;
+            /** Provider */
+            provider: string;
+            /** Model */
+            model: string;
+            /**
+             * Reachable
+             * @description None = not probed yet.
+             */
+            reachable?: boolean | null;
+            /**
+             * Circuit Open
+             * @default false
+             */
+            circuit_open: boolean;
+            /**
+             * Fallback Active
+             * @default false
+             */
+            fallback_active: boolean;
+        };
+        /**
+         * LLMMindDTO
+         * @description What an LLM agent is thinking (SPEC section 9.4).
+         */
+        LLMMindDTO: {
+            /**
+             * Thought
+             * @default
+             */
+            thought: string;
+            /**
+             * Goal
+             * @default
+             */
+            goal: string;
+            /** Plan */
+            plan?: string[];
+            /** Say */
+            say?: string | null;
+            /** Beliefs */
+            beliefs?: string[];
+            /** Last Prompt */
+            last_prompt?: string | null;
+            /** Last Response */
+            last_response?: string | null;
+        };
+        /**
+         * LLMSettingsRequest
+         * @description `PUT /api/llm/settings`. Omitted fields are left unchanged.
+         */
+        LLMSettingsRequest: {
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Provider */
+            provider?: ("mock" | "ollama") | null;
+            /** Model */
+            model?: string | null;
+            /** Max Agents */
+            max_agents?: number | null;
+            /** Max Concurrency */
+            max_concurrency?: number | null;
+            /** Max Calls Per Min */
+            max_calls_per_min?: number | null;
+            /** Min Interval Sim S */
+            min_interval_sim_s?: number | null;
+            /** Timeout S */
+            timeout_s?: number | null;
+            /** High Speed Policy */
+            high_speed_policy?: ("off" | "reduced" | "full") | null;
+        };
+        /**
+         * LLMStatsDTO
+         * @description `GET /api/llm/stats`.
+         */
+        LLMStatsDTO: {
+            /**
+             * Calls
+             * @default 0
+             */
+            calls: number;
+            /**
+             * Failures
+             * @default 0
+             */
+            failures: number;
+            /**
+             * Cache Hits
+             * @default 0
+             */
+            cache_hits: number;
+            /**
+             * Timeouts
+             * @default 0
+             */
+            timeouts: number;
+            /**
+             * Refusals
+             * @default 0
+             */
+            refusals: number;
+            /**
+             * Avg Latency S
+             * @default 0
+             */
+            avg_latency_s: number;
+            /**
+             * Failure Rate
+             * @default 0
+             */
+            failure_rate: number;
+            /**
+             * Prompt Tokens Estimate
+             * @default 0
+             */
+            prompt_tokens_estimate: number;
+            /** Recent */
+            recent?: components["schemas"]["LLMCallDTO"][];
+        };
+        /**
+         * LLMStatusDTO
+         * @description `GET /api/llm/status`.
+         */
+        LLMStatusDTO: {
+            /** Enabled */
+            enabled: boolean;
+            /** Provider */
+            provider: string;
+            /** Model */
+            model: string;
+            /** Reachable */
+            reachable?: boolean | null;
+            /**
+             * Circuit Open
+             * @default false
+             */
+            circuit_open: boolean;
+            /**
+             * Queue Depth
+             * @default 0
+             */
+            queue_depth: number;
+            /**
+             * Max Agents
+             * @default 0
+             */
+            max_agents: number;
+            /**
+             * Fallback Active
+             * @description True when Ollama was requested but mock is serving instead.
+             * @default false
+             */
+            fallback_active: boolean;
+            /**
+             * High Speed Policy
+             * @description What happens to deliberation above the speed threshold.
+             * @default reduced
+             */
+            high_speed_policy: string;
+            /**
+             * Min Interval Sim S
+             * @description Minimum sim-seconds between one agent's deliberations.
+             * @default 20
+             */
+            min_interval_sim_s: number;
+        };
+        /**
+         * MemoryDTO
+         * @description One remembered event.
+         */
+        MemoryDTO: {
+            /** Tick */
+            tick: number;
+            /** Type */
+            type: string;
+            /** Summary */
+            summary: string;
+            /**
+             * Importance
+             * @default 3
+             */
+            importance: number;
+        };
+        /**
+         * MetricPointDTO
+         * @description One sample in the metrics series.
+         */
+        MetricPointDTO: {
+            /** Tick */
+            tick: number;
+            /** Sim Seconds */
+            sim_seconds: number;
+            /** Population */
+            population: number;
+            /**
+             * Births
+             * @default 0
+             */
+            births: number;
+            /**
+             * Deaths
+             * @default 0
+             */
+            deaths: number;
+            /**
+             * Cooperation Rate
+             * @default 0
+             */
+            cooperation_rate: number;
+            /**
+             * Food Gini
+             * @default 0
+             */
+            food_gini: number;
+            /**
+             * Trust Density
+             * @default 0
+             */
+            trust_density: number;
+            /** By Tribe */
+            by_tribe?: {
+                [key: string]: number;
+            };
+            /** By Strategy */
+            by_strategy?: {
+                [key: string]: number;
+            };
+            /** Payoff By Strategy */
+            payoff_by_strategy?: {
+                [key: string]: number;
+            };
+            /** Cooperation By Game */
+            cooperation_by_game?: {
+                [key: string]: number;
+            };
+            /**
+             * Extra
+             * @description Counters: tribes, shelters, betrayals, lies, wars and so on.
+             */
+            extra?: {
+                [key: string]: number;
+            };
+        };
+        /**
+         * MetricsDTO
+         * @description `GET /api/metrics?from_tick=`.
+         */
+        MetricsDTO: {
+            /**
+             * From Tick
+             * @default 0
+             */
+            from_tick: number;
+            /**
+             * Sample Every Ticks
+             * @default 100
+             */
+            sample_every_ticks: number;
+            /** Points */
+            points?: components["schemas"]["MetricPointDTO"][];
+        };
+        /**
+         * NeedsDTO
+         * @description Drives, 0-100.
+         */
+        NeedsDTO: {
+            /** Hunger */
+            hunger: number;
+            /** Thirst */
+            thirst: number;
+            /** Energy */
+            energy: number;
+            /** Safety */
+            safety: number;
+            /** Social */
+            social: number;
+        };
+        /**
+         * PresetDTO
+         * @description One named world preset (`GET /api/sim/presets`).
+         */
+        PresetDTO: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+        };
+        /**
+         * RelationshipDTO
+         * @description One entry in the inspector's relationships list.
+         */
+        RelationshipDTO: {
+            /** Other Id */
+            other_id: number;
+            /**
+             * Other Name
+             * @default
+             */
+            other_name: string;
+            /** Trust */
+            trust: number;
+            /**
+             * Reputation
+             * @default 0
+             */
+            reputation: number;
+            /**
+             * Interactions
+             * @default 0
+             */
+            interactions: number;
+            /**
+             * Is Ally
+             * @default false
+             */
+            is_ally: boolean;
+            /**
+             * Caught Lying
+             * @default 0
+             */
+            caught_lying: number;
+        };
+        /**
+         * ResetRequest
+         * @description `POST /api/sim/reset`. Leaves the world paused at tick 0.
+         */
+        ResetRequest: {
+            /** Seed */
+            seed?: number | null;
+            /** Preset */
+            preset?: string | null;
+            config?: components["schemas"]["WorldConfig"] | null;
+        };
+        /**
+         * ShelterDTO
+         * @description One hut (`GET /api/world/shelters`).
+         */
+        ShelterDTO: {
+            /** Id */
+            id: number;
+            /** X */
+            x: number;
+            /** Z */
+            z: number;
+            /** Owner Id */
+            owner_id: number;
+            /** Tribe Id */
+            tribe_id?: number | null;
+            /**
+             * Quality
+             * @default 1
+             */
+            quality: number;
+        };
+        /**
+         * SimStateDTO
+         * @description `GET /api/sim/state`.
+         */
+        SimStateDTO: {
+            /**
+             * Status
+             * @description stopped | running | paused
+             */
+            status: string;
+            /** Tick */
+            tick: number;
+            /**
+             * Speed
+             * @description Multiplier; -1 means MAX.
+             */
+            speed: number;
+            /** Seed */
+            seed: number;
+            /** Day */
+            day: number;
+            /** Season */
+            season: string;
+            /** Time Of Day */
+            time_of_day: number;
+            /** Is Night */
+            is_night: boolean;
+            /** Population */
+            population: number;
+            /** Ticks Per Second */
+            ticks_per_second: number;
+            /**
+             * Placeholder
+             * @description True while the Phase 1 placeholder world is driving frames.
+             * @default false
+             */
+            placeholder: boolean;
+        };
+        /**
+         * SnapshotCreateRequest
+         * @description `POST /api/snapshots`.
+         */
+        SnapshotCreateRequest: {
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+        };
+        /**
+         * SnapshotDTO
+         * @description Snapshot listing row.
+         */
+        SnapshotDTO: {
+            /** Id */
+            id: number;
+            /** Label */
+            label: string;
+            /** Tick */
+            tick: number;
+            /** Seed */
+            seed: number;
+            /** Population */
+            population: number;
+            /** Created At */
+            created_at: string;
+            /** Size Bytes */
+            size_bytes: number;
+        };
+        /**
+         * SpeedRequest
+         * @description `POST /api/sim/speed`.
+         */
+        SpeedRequest: {
+            /**
+             * Multiplier
+             * @description One of 0, 1, 2, 5, 10, 25, 50, -1 (MAX).
+             */
+            multiplier: number;
+        };
+        /**
+         * StepRequest
+         * @description `POST /api/sim/step`.
+         */
+        StepRequest: {
+            /**
+             * N
+             * @default 1
+             */
+            n: number;
+        };
+        /**
+         * TerrainConfig
+         * @description Island generation parameters (SPEC section 3).
+         */
+        TerrainConfig: {
+            /**
+             * Size
+             * @description World extent in world units.
+             * @default 256
+             */
+            size: number;
+            /**
+             * Resolution
+             * @description Heightmap grid cells.
+             * @default 128
+             */
+            resolution: number;
+            /**
+             * Octaves
+             * @default 5
+             */
+            octaves: number;
+            /**
+             * Falloff
+             * @description Radial island falloff exponent.
+             * @default 2.2
+             */
+            falloff: number;
+            /**
+             * Water Level
+             * @default 0.32
+             */
+            water_level: number;
+            /**
+             * Max Height
+             * @default 18
+             */
+            max_height: number;
+        };
+        /**
+         * TerrainDTO
+         * @description `GET /api/world/terrain`.
+         *
+         *     The heightmap is a base64-encoded little-endian Float32 array of
+         *     `resolution * resolution` values in row-major `[z][x]` order; `biomes` is
+         *     the same shape as uint8 ordinals indexed into `biome_names`.
+         */
+        TerrainDTO: {
+            /**
+             * Size
+             * @description World extent in world units.
+             */
+            size: number;
+            /**
+             * Resolution
+             * @description Grid cells per axis.
+             */
+            resolution: number;
+            /** Water Level */
+            water_level: number;
+            /** Max Height */
+            max_height: number;
+            /**
+             * Heights B64
+             * @description base64 Float32, row-major.
+             */
+            heights_b64: string;
+            /**
+             * Biomes B64
+             * @description base64 uint8 biome ordinals.
+             */
+            biomes_b64: string;
+            /**
+             * Biome Names
+             * @description Index -> biome name.
+             */
+            biome_names: string[];
+        };
+        /**
+         * TraitsDTO
+         * @description Personality, 0-1.
+         */
+        TraitsDTO: {
+            /** Aggression */
+            aggression: number;
+            /** Honesty */
+            honesty: number;
+            /** Loyalty */
+            loyalty: number;
+            /** Greed */
+            greed: number;
+            /** Sociability */
+            sociability: number;
+            /** Cunning */
+            cunning: number;
+            /** Courage */
+            courage: number;
+            /** Charisma */
+            charisma: number;
+        };
+        /**
+         * TribeDTO
+         * @description `GET /api/tribes` and `/api/tribes/{id}`.
+         */
+        TribeDTO: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Colour */
+            colour: string;
+            /** Leader Id */
+            leader_id?: number | null;
+            /** Leader Name */
+            leader_name?: string | null;
+            /** Member Ids */
+            member_ids?: number[];
+            /**
+             * Storage Food
+             * @default 0
+             */
+            storage_food: number;
+            /**
+             * Camp X
+             * @default 0
+             */
+            camp_x: number;
+            /**
+             * Camp Z
+             * @default 0
+             */
+            camp_z: number;
+            /**
+             * Territory Radius
+             * @default 0
+             */
+            territory_radius: number;
+            /** At War With */
+            at_war_with?: number[];
+            /** Allied With */
+            allied_with?: number[];
+        };
+        /**
+         * TrustEdgeDTO
+         * @description One bond or feud, for the trust-lines overlay.
+         */
+        TrustEdgeDTO: {
+            /** A */
+            a: number;
+            /** B */
+            b: number;
+            /** Ax */
+            ax: number;
+            /** Az */
+            az: number;
+            /** Bx */
+            bx: number;
+            /** Bz */
+            bz: number;
+            /** Trust */
+            trust: number;
+            /**
+             * Ally
+             * @default false
+             */
+            ally: boolean;
+        };
+        /**
+         * TrustGraphDTO
+         * @description `GET /api/social/trust-graph`: the strongest relationships only.
+         */
+        TrustGraphDTO: {
+            /** Edges */
+            edges?: components["schemas"]["TrustEdgeDTO"][];
+            /**
+             * Total
+             * @description Edges above the threshold before truncation.
+             * @default 0
+             */
+            total: number;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
+        };
+        /**
+         * WorldConfig
+         * @description Everything the engine needs to build and run a world deterministically.
+         */
+        WorldConfig: {
+            /**
+             * Seed
+             * @default 1337
+             */
+            seed: number;
+            terrain?: components["schemas"]["TerrainConfig"];
+            /**
+             * Dt
+             * @description Sim-seconds advanced per tick.
+             * @default 0.1
+             */
+            dt: number;
+            /**
+             * Day Seconds
+             * @description Sim-seconds per day.
+             * @default 240
+             */
+            day_seconds: number;
+            /**
+             * Days Per Season
+             * @default 7
+             */
+            days_per_season: number;
+            /**
+             * Population
+             * @default 120
+             */
+            population: number;
+            /**
+             * Max Agents
+             * @default 1000
+             */
+            max_agents: number;
+            /**
+             * Initial Tribes
+             * @default 0
+             */
+            initial_tribes: number;
+            /**
+             * Scarcity
+             * @description Scales all resource yields.
+             * @default 1
+             */
+            scarcity: number;
+            /**
+             * Season Start
+             * @default spring
+             * @enum {string}
+             */
+            season_start: "spring" | "summer" | "autumn" | "winter";
+            /**
+             * Strategy Mix
+             * @description Relative weights, normalised at spawn time.
+             */
+            strategy_mix?: {
+                [key: string]: number;
+            };
+            /**
+             * Mutation Rate
+             * @default 0.05
+             */
+            mutation_rate: number;
+            /**
+             * Trembling Hand
+             * @description Action-flip noise.
+             * @default 0.02
+             */
+            trembling_hand: number;
+            /**
+             * Llm Agents
+             * @description Agents with brain_type=llm.
+             * @default 4
+             */
+            llm_agents: number;
+            /**
+             * Tournament Mode
+             * @description Survival off, round-robin IPD.
+             * @default false
+             */
+            tournament_mode: boolean;
+        };
     };
-    /**
-     * AgentDetailDTO
-     * @description `GET /api/agents/{id}` - everything the inspector shows.
-     */
-    AgentDetailDTO: {
-      /** Age */
-      age: number;
-      /** Current Skill */
-      current_skill?: string | null;
-      /** Decision Trace */
-      decision_trace?: components['schemas']['DecisionOptionDTO'][];
-      /** Intent */
-      intent?: string | null;
-      /** Inventory */
-      inventory?: {
-        [key: string]: number;
-      };
-      /** Life Stage */
-      life_stage: string;
-      llm?: components['schemas']['LLMMindDTO'] | null;
-      /** Memories */
-      memories?: components['schemas']['MemoryDTO'][];
-      needs: components['schemas']['NeedsDTO'];
-      /** Relationships */
-      relationships?: components['schemas']['RelationshipDTO'][];
-      summary: components['schemas']['AgentSummaryDTO'];
-      /**
-       * Thought
-       * @default
-       */
-      thought: string;
-      traits: components['schemas']['TraitsDTO'];
-    };
-    /**
-     * AgentSummaryDTO
-     * @description One row of `GET /api/agents`.
-     */
-    AgentSummaryDTO: {
-      /**
-       * Alive
-       * @default true
-       */
-      alive: boolean;
-      /** Brain Type */
-      brain_type: string;
-      /**
-       * Health
-       * @default 100
-       */
-      health: number;
-      /** Id */
-      id: number;
-      /** Name */
-      name: string;
-      /**
-       * Role
-       * @default none
-       */
-      role: string;
-      /** State */
-      state: string;
-      /** Strategy */
-      strategy: string;
-      /** Tribe Id */
-      tribe_id?: number | null;
-      /** X */
-      x: number;
-      /** Z */
-      z: number;
-    };
-    /**
-     * DecisionOptionDTO
-     * @description One scored option from the decision trace (SPEC section 7.4).
-     */
-    DecisionOptionDTO: {
-      /**
-       * Chosen
-       * @default false
-       */
-      chosen: boolean;
-      /**
-       * Reason
-       * @default
-       */
-      reason: string;
-      /** Score */
-      score: number;
-      /** Skill */
-      skill: string;
-    };
-    /**
-     * EventDTO
-     * @description One row of the event feed; `x`/`z` let the camera fly there.
-     */
-    EventDTO: {
-      /** Actors */
-      actors?: number[];
-      /**
-       * Importance
-       * @default 3
-       */
-      importance: number;
-      /** Summary */
-      summary: string;
-      /** Tick */
-      tick: number;
-      /** Type */
-      type: string;
-      /** X */
-      x?: number | null;
-      /** Z */
-      z?: number | null;
-    };
-    /**
-     * EventsDTO
-     * @description `GET /api/events?limit=&type=`.
-     */
-    EventsDTO: {
-      /** Items */
-      items?: components['schemas']['EventDTO'][];
-    };
-    /**
-     * GodAction
-     * @description Supported interventions, used as the `POST /api/god/{action}` path.
-     * @enum {string}
-     */
-    GodAction: 'drop_food' | 'drought' | 'plague' | 'bounty' | 'spawn_agent' | 'smite';
-    /**
-     * GodActionRequest
-     * @description Parameters for an intervention; which fields matter depends on the action.
-     */
-    GodActionRequest: {
-      /**
-       * Agent Id
-       * @description Target for smite.
-       */
-      agent_id?: number | null;
-      /**
-       * Amount
-       * @description Food dropped, severity, etc.
-       */
-      amount?: number | null;
-      /**
-       * Brain Type
-       * @description utility | llm for spawn_agent.
-       */
-      brain_type?: string | null;
-      /** Radius */
-      radius?: number | null;
-      /**
-       * Strategy
-       * @description Strategy for spawn_agent.
-       */
-      strategy?: string | null;
-      /**
-       * X
-       * @description World x, where the action is local.
-       */
-      x?: number | null;
-      /**
-       * Z
-       * @description World z, where the action is local.
-       */
-      z?: number | null;
-    };
-    /**
-     * GodActionResultDTO
-     * @description What the intervention did.
-     */
-    GodActionResultDTO: {
-      action: components['schemas']['GodAction'];
-      /**
-       * Affected
-       * @default 0
-       */
-      affected: number;
-      /**
-       * Detail
-       * @default
-       */
-      detail: string;
-    };
-    /** HTTPValidationError */
-    HTTPValidationError: {
-      /** Detail */
-      detail?: components['schemas']['ValidationError'][];
-    };
-    /**
-     * HealthDTO
-     * @description `GET /api/health`: liveness plus LLM status.
-     */
-    HealthDTO: {
-      /** App */
-      app: string;
-      /** Env */
-      env: string;
-      llm: components['schemas']['LLMHealthDTO'];
-      /**
-       * Status
-       * @default ok
-       */
-      status: string;
-      /** Version */
-      version: string;
-    };
-    /**
-     * LLMCallDTO
-     * @description One row of the LLM monitor's call log.
-     */
-    LLMCallDTO: {
-      /** Agent Id */
-      agent_id: number;
-      /** Cached */
-      cached: boolean;
-      /** Error */
-      error?: string | null;
-      /** Kind */
-      kind: string;
-      /** Latency S */
-      latency_s: number;
-      /** Model */
-      model: string;
-      /** Ok */
-      ok: boolean;
-      /**
-       * Prompt Preview
-       * @default
-       */
-      prompt_preview: string;
-      /** Provider */
-      provider: string;
-      /**
-       * Response Preview
-       * @default
-       */
-      response_preview: string;
-    };
-    /**
-     * LLMHealthDTO
-     * @description LLM summary embedded in the health response.
-     */
-    LLMHealthDTO: {
-      /**
-       * Circuit Open
-       * @default false
-       */
-      circuit_open: boolean;
-      /** Enabled */
-      enabled: boolean;
-      /**
-       * Fallback Active
-       * @default false
-       */
-      fallback_active: boolean;
-      /** Model */
-      model: string;
-      /** Provider */
-      provider: string;
-      /**
-       * Reachable
-       * @description None = not probed yet.
-       */
-      reachable?: boolean | null;
-    };
-    /**
-     * LLMMindDTO
-     * @description What an LLM agent is thinking (SPEC section 9.4).
-     */
-    LLMMindDTO: {
-      /**
-       * Goal
-       * @default
-       */
-      goal: string;
-      /** Last Prompt */
-      last_prompt?: string | null;
-      /** Last Response */
-      last_response?: string | null;
-      /** Plan */
-      plan?: string[];
-      /** Say */
-      say?: string | null;
-      /**
-       * Thought
-       * @default
-       */
-      thought: string;
-    };
-    /**
-     * LLMSettingsRequest
-     * @description `PUT /api/llm/settings`. Omitted fields are left unchanged.
-     */
-    LLMSettingsRequest: {
-      /** Enabled */
-      enabled?: boolean | null;
-      /** High Speed Policy */
-      high_speed_policy?: ('off' | 'reduced' | 'full') | null;
-      /** Max Agents */
-      max_agents?: number | null;
-      /** Max Calls Per Min */
-      max_calls_per_min?: number | null;
-      /** Max Concurrency */
-      max_concurrency?: number | null;
-      /** Min Interval Sim S */
-      min_interval_sim_s?: number | null;
-      /** Model */
-      model?: string | null;
-      /** Provider */
-      provider?: ('mock' | 'ollama') | null;
-      /** Timeout S */
-      timeout_s?: number | null;
-    };
-    /**
-     * LLMStatsDTO
-     * @description `GET /api/llm/stats`.
-     */
-    LLMStatsDTO: {
-      /**
-       * Avg Latency S
-       * @default 0
-       */
-      avg_latency_s: number;
-      /**
-       * Cache Hits
-       * @default 0
-       */
-      cache_hits: number;
-      /**
-       * Calls
-       * @default 0
-       */
-      calls: number;
-      /**
-       * Failure Rate
-       * @default 0
-       */
-      failure_rate: number;
-      /**
-       * Failures
-       * @default 0
-       */
-      failures: number;
-      /**
-       * Prompt Tokens Estimate
-       * @default 0
-       */
-      prompt_tokens_estimate: number;
-      /** Recent */
-      recent?: components['schemas']['LLMCallDTO'][];
-      /**
-       * Timeouts
-       * @default 0
-       */
-      timeouts: number;
-    };
-    /**
-     * LLMStatusDTO
-     * @description `GET /api/llm/status`.
-     */
-    LLMStatusDTO: {
-      /**
-       * Circuit Open
-       * @default false
-       */
-      circuit_open: boolean;
-      /** Enabled */
-      enabled: boolean;
-      /**
-       * Fallback Active
-       * @description True when Ollama was requested but mock is serving instead.
-       * @default false
-       */
-      fallback_active: boolean;
-      /**
-       * Max Agents
-       * @default 0
-       */
-      max_agents: number;
-      /** Model */
-      model: string;
-      /** Provider */
-      provider: string;
-      /**
-       * Queue Depth
-       * @default 0
-       */
-      queue_depth: number;
-      /** Reachable */
-      reachable?: boolean | null;
-    };
-    /**
-     * MemoryDTO
-     * @description One remembered event.
-     */
-    MemoryDTO: {
-      /**
-       * Importance
-       * @default 3
-       */
-      importance: number;
-      /** Summary */
-      summary: string;
-      /** Tick */
-      tick: number;
-      /** Type */
-      type: string;
-    };
-    /**
-     * MetricPointDTO
-     * @description One sample in the metrics series.
-     */
-    MetricPointDTO: {
-      /**
-       * Births
-       * @default 0
-       */
-      births: number;
-      /** By Strategy */
-      by_strategy?: {
-        [key: string]: number;
-      };
-      /** By Tribe */
-      by_tribe?: {
-        [key: string]: number;
-      };
-      /** Cooperation By Game */
-      cooperation_by_game?: {
-        [key: string]: number;
-      };
-      /**
-       * Cooperation Rate
-       * @default 0
-       */
-      cooperation_rate: number;
-      /**
-       * Deaths
-       * @default 0
-       */
-      deaths: number;
-      /**
-       * Extra
-       * @description Counters: tribes, shelters, betrayals, lies, wars and so on.
-       */
-      extra?: {
-        [key: string]: number;
-      };
-      /**
-       * Food Gini
-       * @default 0
-       */
-      food_gini: number;
-      /** Payoff By Strategy */
-      payoff_by_strategy?: {
-        [key: string]: number;
-      };
-      /** Population */
-      population: number;
-      /** Sim Seconds */
-      sim_seconds: number;
-      /** Tick */
-      tick: number;
-      /**
-       * Trust Density
-       * @default 0
-       */
-      trust_density: number;
-    };
-    /**
-     * MetricsDTO
-     * @description `GET /api/metrics?from_tick=`.
-     */
-    MetricsDTO: {
-      /**
-       * From Tick
-       * @default 0
-       */
-      from_tick: number;
-      /** Points */
-      points?: components['schemas']['MetricPointDTO'][];
-      /**
-       * Sample Every Ticks
-       * @default 100
-       */
-      sample_every_ticks: number;
-    };
-    /**
-     * NeedsDTO
-     * @description Drives, 0-100.
-     */
-    NeedsDTO: {
-      /** Energy */
-      energy: number;
-      /** Hunger */
-      hunger: number;
-      /** Safety */
-      safety: number;
-      /** Social */
-      social: number;
-      /** Thirst */
-      thirst: number;
-    };
-    /**
-     * PresetDTO
-     * @description One named world preset (`GET /api/sim/presets`).
-     */
-    PresetDTO: {
-      /**
-       * Description
-       * @default
-       */
-      description: string;
-      /** Id */
-      id: string;
-      /** Name */
-      name: string;
-    };
-    /**
-     * RelationshipDTO
-     * @description One entry in the inspector's relationships list.
-     */
-    RelationshipDTO: {
-      /**
-       * Caught Lying
-       * @default 0
-       */
-      caught_lying: number;
-      /**
-       * Interactions
-       * @default 0
-       */
-      interactions: number;
-      /**
-       * Is Ally
-       * @default false
-       */
-      is_ally: boolean;
-      /** Other Id */
-      other_id: number;
-      /**
-       * Other Name
-       * @default
-       */
-      other_name: string;
-      /**
-       * Reputation
-       * @default 0
-       */
-      reputation: number;
-      /** Trust */
-      trust: number;
-    };
-    /**
-     * ResetRequest
-     * @description `POST /api/sim/reset`. Leaves the world paused at tick 0.
-     */
-    ResetRequest: {
-      config?: components['schemas']['WorldConfig'] | null;
-      /** Preset */
-      preset?: string | null;
-      /** Seed */
-      seed?: number | null;
-    };
-    /**
-     * ShelterDTO
-     * @description One hut (`GET /api/world/shelters`).
-     */
-    ShelterDTO: {
-      /** Id */
-      id: number;
-      /** Owner Id */
-      owner_id: number;
-      /**
-       * Quality
-       * @default 1
-       */
-      quality: number;
-      /** Tribe Id */
-      tribe_id?: number | null;
-      /** X */
-      x: number;
-      /** Z */
-      z: number;
-    };
-    /**
-     * SimStateDTO
-     * @description `GET /api/sim/state`.
-     */
-    SimStateDTO: {
-      /** Day */
-      day: number;
-      /** Is Night */
-      is_night: boolean;
-      /**
-       * Placeholder
-       * @description True while the Phase 1 placeholder world is driving frames.
-       * @default false
-       */
-      placeholder: boolean;
-      /** Population */
-      population: number;
-      /** Season */
-      season: string;
-      /** Seed */
-      seed: number;
-      /**
-       * Speed
-       * @description Multiplier; -1 means MAX.
-       */
-      speed: number;
-      /**
-       * Status
-       * @description stopped | running | paused
-       */
-      status: string;
-      /** Tick */
-      tick: number;
-      /** Ticks Per Second */
-      ticks_per_second: number;
-      /** Time Of Day */
-      time_of_day: number;
-    };
-    /**
-     * SnapshotCreateRequest
-     * @description `POST /api/snapshots`.
-     */
-    SnapshotCreateRequest: {
-      /**
-       * Label
-       * @default
-       */
-      label: string;
-    };
-    /**
-     * SnapshotDTO
-     * @description Snapshot listing row.
-     */
-    SnapshotDTO: {
-      /** Created At */
-      created_at: string;
-      /** Id */
-      id: number;
-      /** Label */
-      label: string;
-      /** Population */
-      population: number;
-      /** Seed */
-      seed: number;
-      /** Size Bytes */
-      size_bytes: number;
-      /** Tick */
-      tick: number;
-    };
-    /**
-     * SpeedRequest
-     * @description `POST /api/sim/speed`.
-     */
-    SpeedRequest: {
-      /**
-       * Multiplier
-       * @description One of 0, 1, 2, 5, 10, 25, 50, -1 (MAX).
-       */
-      multiplier: number;
-    };
-    /**
-     * StepRequest
-     * @description `POST /api/sim/step`.
-     */
-    StepRequest: {
-      /**
-       * N
-       * @default 1
-       */
-      n: number;
-    };
-    /**
-     * TerrainConfig
-     * @description Island generation parameters (SPEC section 3).
-     */
-    TerrainConfig: {
-      /**
-       * Falloff
-       * @description Radial island falloff exponent.
-       * @default 2.2
-       */
-      falloff: number;
-      /**
-       * Max Height
-       * @default 18
-       */
-      max_height: number;
-      /**
-       * Octaves
-       * @default 5
-       */
-      octaves: number;
-      /**
-       * Resolution
-       * @description Heightmap grid cells.
-       * @default 128
-       */
-      resolution: number;
-      /**
-       * Size
-       * @description World extent in world units.
-       * @default 256
-       */
-      size: number;
-      /**
-       * Water Level
-       * @default 0.32
-       */
-      water_level: number;
-    };
-    /**
-     * TerrainDTO
-     * @description `GET /api/world/terrain`.
-     *
-     *     The heightmap is a base64-encoded little-endian Float32 array of
-     *     `resolution * resolution` values in row-major `[z][x]` order; `biomes` is
-     *     the same shape as uint8 ordinals indexed into `biome_names`.
-     */
-    TerrainDTO: {
-      /**
-       * Biome Names
-       * @description Index -> biome name.
-       */
-      biome_names: string[];
-      /**
-       * Biomes B64
-       * @description base64 uint8 biome ordinals.
-       */
-      biomes_b64: string;
-      /**
-       * Heights B64
-       * @description base64 Float32, row-major.
-       */
-      heights_b64: string;
-      /** Max Height */
-      max_height: number;
-      /**
-       * Resolution
-       * @description Grid cells per axis.
-       */
-      resolution: number;
-      /**
-       * Size
-       * @description World extent in world units.
-       */
-      size: number;
-      /** Water Level */
-      water_level: number;
-    };
-    /**
-     * TraitsDTO
-     * @description Personality, 0-1.
-     */
-    TraitsDTO: {
-      /** Aggression */
-      aggression: number;
-      /** Charisma */
-      charisma: number;
-      /** Courage */
-      courage: number;
-      /** Cunning */
-      cunning: number;
-      /** Greed */
-      greed: number;
-      /** Honesty */
-      honesty: number;
-      /** Loyalty */
-      loyalty: number;
-      /** Sociability */
-      sociability: number;
-    };
-    /**
-     * TribeDTO
-     * @description `GET /api/tribes` and `/api/tribes/{id}`.
-     */
-    TribeDTO: {
-      /** Allied With */
-      allied_with?: number[];
-      /** At War With */
-      at_war_with?: number[];
-      /**
-       * Camp X
-       * @default 0
-       */
-      camp_x: number;
-      /**
-       * Camp Z
-       * @default 0
-       */
-      camp_z: number;
-      /** Colour */
-      colour: string;
-      /** Id */
-      id: number;
-      /** Leader Id */
-      leader_id?: number | null;
-      /** Leader Name */
-      leader_name?: string | null;
-      /** Member Ids */
-      member_ids?: number[];
-      /** Name */
-      name: string;
-      /**
-       * Storage Food
-       * @default 0
-       */
-      storage_food: number;
-      /**
-       * Territory Radius
-       * @default 0
-       */
-      territory_radius: number;
-    };
-    /**
-     * TrustEdgeDTO
-     * @description One bond or feud, for the trust-lines overlay.
-     */
-    TrustEdgeDTO: {
-      /** A */
-      a: number;
-      /**
-       * Ally
-       * @default false
-       */
-      ally: boolean;
-      /** Ax */
-      ax: number;
-      /** Az */
-      az: number;
-      /** B */
-      b: number;
-      /** Bx */
-      bx: number;
-      /** Bz */
-      bz: number;
-      /** Trust */
-      trust: number;
-    };
-    /**
-     * TrustGraphDTO
-     * @description `GET /api/social/trust-graph`: the strongest relationships only.
-     */
-    TrustGraphDTO: {
-      /** Edges */
-      edges?: components['schemas']['TrustEdgeDTO'][];
-      /**
-       * Total
-       * @description Edges above the threshold before truncation.
-       * @default 0
-       */
-      total: number;
-    };
-    /** ValidationError */
-    ValidationError: {
-      /** Context */
-      ctx?: Record<string, never>;
-      /** Input */
-      input?: unknown;
-      /** Location */
-      loc: (string | number)[];
-      /** Message */
-      msg: string;
-      /** Error Type */
-      type: string;
-    };
-    /**
-     * WorldConfig
-     * @description Everything the engine needs to build and run a world deterministically.
-     */
-    WorldConfig: {
-      /**
-       * Day Seconds
-       * @description Sim-seconds per day.
-       * @default 240
-       */
-      day_seconds: number;
-      /**
-       * Days Per Season
-       * @default 7
-       */
-      days_per_season: number;
-      /**
-       * Dt
-       * @description Sim-seconds advanced per tick.
-       * @default 0.1
-       */
-      dt: number;
-      /**
-       * Initial Tribes
-       * @default 0
-       */
-      initial_tribes: number;
-      /**
-       * Llm Agents
-       * @description Agents with brain_type=llm.
-       * @default 0
-       */
-      llm_agents: number;
-      /**
-       * Max Agents
-       * @default 1000
-       */
-      max_agents: number;
-      /**
-       * Mutation Rate
-       * @default 0.05
-       */
-      mutation_rate: number;
-      /**
-       * Population
-       * @default 120
-       */
-      population: number;
-      /**
-       * Scarcity
-       * @description Scales all resource yields.
-       * @default 1
-       */
-      scarcity: number;
-      /**
-       * Season Start
-       * @default spring
-       * @enum {string}
-       */
-      season_start: 'spring' | 'summer' | 'autumn' | 'winter';
-      /**
-       * Seed
-       * @default 1337
-       */
-      seed: number;
-      /**
-       * Strategy Mix
-       * @description Relative weights, normalised at spawn time.
-       */
-      strategy_mix?: {
-        [key: string]: number;
-      };
-      terrain?: components['schemas']['TerrainConfig'];
-      /**
-       * Tournament Mode
-       * @description Survival off, round-robin IPD.
-       * @default false
-       */
-      tournament_mode: boolean;
-      /**
-       * Trembling Hand
-       * @description Action-flip noise.
-       * @default 0.02
-       */
-      trembling_hand: number;
-    };
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  list_agents_api_agents_get: {
-    parameters: {
-      query?: {
-        limit?: number;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
+    health_api_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthDTO"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    get_state_api_sim_state_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['AgentSummaryDTO'][];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimStateDTO"];
+                };
+            };
         };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
     };
-  };
-  get_agent_api_agents__agent_id__get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        agent_id: number;
-      };
-      cookie?: never;
+    start_api_sim_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimStateDTO"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    pause_api_sim_pause_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['AgentDetailDTO'];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimStateDTO"];
+                };
+            };
         };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
     };
-  };
-  list_events_api_events_get: {
-    parameters: {
-      query?: {
-        limit?: number;
-        /** @description Filter by event type. */
-        type?: string | null;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
+    step_api_sim_step_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StepRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimStateDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    set_speed_api_sim_speed_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['EventsDTO'];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SpeedRequest"];
+            };
         };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimStateDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
     };
-  };
-  act_api_god__action__post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        action: components['schemas']['GodAction'];
-      };
-      cookie?: never;
+    reset_api_sim_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimStateDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['GodActionRequest'];
-      };
+    get_config_api_sim_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldConfig"];
+                };
+            };
+        };
     };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    put_config_api_sim_config_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['GodActionResultDTO'];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorldConfig"];
+            };
         };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimStateDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
     };
-  };
-  health_api_health_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    presets_api_sim_presets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresetDTO"][];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    shelters_api_world_shelters_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['HealthDTO'];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShelterDTO"][];
+                };
+            };
         };
-      };
     };
-  };
-  put_settings_api_llm_settings_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    terrain_api_world_terrain_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TerrainDTO"];
+                };
+            };
+        };
     };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['LLMSettingsRequest'];
-      };
+    list_agents_api_agents_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentSummaryDTO"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    get_agent_api_agents__agent_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: number;
+            };
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['LLMStatusDTO'];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentDetailDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
     };
-  };
-  stats_api_llm_stats_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    list_tribes_api_tribes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TribeDTO"][];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    get_tribe_api_tribes__tribe_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tribe_id: number;
+            };
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['LLMStatsDTO'];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TribeDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-      };
     };
-  };
-  status_api_llm_status_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    trust_graph_api_social_trust_graph_get: {
+        parameters: {
+            query?: {
+                /** @description Minimum |trust| to include. */
+                minimum?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrustGraphDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    get_metrics_api_metrics_get: {
+        parameters: {
+            query?: {
+                from_tick?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['LLMStatusDTO'];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricsDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-      };
     };
-  };
-  get_metrics_api_metrics_get: {
-    parameters: {
-      query?: {
-        from_tick?: number;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
+    list_events_api_events_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Filter by event type. */
+                type?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventsDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    list_snapshots_api_snapshots_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['MetricsDTO'];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnapshotDTO"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
     };
-  };
-  get_config_api_sim_config_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    create_snapshot_api_snapshots_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SnapshotCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnapshotDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    load_snapshot_api_snapshots__snapshot_id__load_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshot_id: number;
+            };
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['WorldConfig'];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AckDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-      };
     };
-  };
-  put_config_api_sim_config_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    status_api_llm_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMStatusDTO"];
+                };
+            };
+        };
     };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['WorldConfig'];
-      };
+    stats_api_llm_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMStatsDTO"];
+                };
+            };
+        };
     };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    put_settings_api_llm_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['SimStateDTO'];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LLMSettingsRequest"];
+            };
         };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMStatusDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
     };
-  };
-  pause_api_sim_pause_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    act_api_god__action__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action: components["schemas"]["GodAction"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GodActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GodActionResultDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['SimStateDTO'];
-        };
-      };
-    };
-  };
-  presets_api_sim_presets_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PresetDTO'][];
-        };
-      };
-    };
-  };
-  reset_api_sim_reset_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ResetRequest'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['SimStateDTO'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  set_speed_api_sim_speed_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['SpeedRequest'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['SimStateDTO'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  start_api_sim_start_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['SimStateDTO'];
-        };
-      };
-    };
-  };
-  get_state_api_sim_state_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['SimStateDTO'];
-        };
-      };
-    };
-  };
-  step_api_sim_step_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['StepRequest'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['SimStateDTO'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  list_snapshots_api_snapshots_get: {
-    parameters: {
-      query?: {
-        limit?: number;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['SnapshotDTO'][];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  create_snapshot_api_snapshots_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['SnapshotCreateRequest'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['SnapshotDTO'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  load_snapshot_api_snapshots__snapshot_id__load_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        snapshot_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['AckDTO'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  trust_graph_api_social_trust_graph_get: {
-    parameters: {
-      query?: {
-        /** @description Minimum |trust| to include. */
-        minimum?: number;
-        limit?: number;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TrustGraphDTO'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  list_tribes_api_tribes_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TribeDTO'][];
-        };
-      };
-    };
-  };
-  get_tribe_api_tribes__tribe_id__get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        tribe_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TribeDTO'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  shelters_api_world_shelters_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ShelterDTO'][];
-        };
-      };
-    };
-  };
-  terrain_api_world_terrain_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TerrainDTO'];
-        };
-      };
-    };
-  };
 }

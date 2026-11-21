@@ -16,6 +16,7 @@ from app.core.settings import Settings
 from app.core.world_config import WorldConfig
 from app.persistence.database import build_engine
 from app.persistence.repository import Repository
+from app.services.llm_pump import LLMPump
 from app.services.metrics_service import MetricsService
 from app.services.simulation_service import SimulationService
 from app.services.snapshot_service import SnapshotService
@@ -50,6 +51,7 @@ class Container:
     simulation: SimulationService
     metrics: MetricsService
     snapshots: SnapshotService
+    llm_pump: LLMPump
 
     async def startup(self) -> None:
         """Create tables, probe the LLM provider and start broadcasting."""
@@ -63,10 +65,12 @@ class Container:
                 detail="falling back to deterministic mock plans",
             )
         await self.simulation.start()
+        self.llm_pump.start()
         LOG.info("container.started", skills=skill_count, llm_reachable=reachable)
 
     async def shutdown(self) -> None:
-        """Stop the broadcast loop and release the LLM transport."""
+        """Stop the pump and the broadcast loop, then release the transport."""
+        await self.llm_pump.stop()
         await self.simulation.shutdown()
         await self.gateway.aclose()
 
@@ -91,4 +95,5 @@ def build_container(settings: Settings, config: WorldConfig | None = None) -> Co
         simulation=simulation,
         metrics=metrics,
         snapshots=SnapshotService(repository),
+        llm_pump=LLMPump(simulation.broker, gateway),
     )

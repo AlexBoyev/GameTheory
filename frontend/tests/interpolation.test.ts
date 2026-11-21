@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   angleDelta,
+  findPoseById,
   frameAlpha,
   interpolatePose,
   lerpAngle,
@@ -67,5 +68,36 @@ describe('poses', () => {
     const recycled = frame(2, 100, [99, 10, 20, 1, 1, 2, 0]);
     const pose = interpolatePose(previous, recycled, 0, 0.5);
     expect(pose?.x).toBe(10);
+  });
+});
+
+describe('finding an agent by id', () => {
+  // [id, x, z, heading, state, tribe, flags]
+  const previous = frame(1, 1000, [7, 0, 0, 0, 0, -1, 0, 9, 10, 10, 0, 0, -1, 0]);
+  const current = frame(2, 1050, [7, 2, 0, 0, 0, -1, 0, 9, 12, 10, 0, 0, -1, 0]);
+
+  it('interpolates the agent with that id, whatever slot it is in', () => {
+    const pose = findPoseById(previous, current, 9, 0.5);
+
+    expect(pose?.id).toBe(9);
+    expect(pose?.x).toBeCloseTo(11, 5);
+  });
+
+  it('returns null for an agent that is not in the frame', () => {
+    expect(findPoseById(previous, current, 404, 1)).toBeNull();
+  });
+
+  it('survives an agent whose slot moved because someone died', () => {
+    // Agent 7 is gone, so 9 is now in slot 0.
+    const after = frame(3, 1100, [9, 14, 10, 0, 0, -1, 0]);
+
+    const pose = findPoseById(current, after, 9, 1);
+
+    expect(pose?.id).toBe(9);
+    expect(pose?.x).toBeCloseTo(14, 5);
+  });
+
+  it('has no opinion when there is no frame yet', () => {
+    expect(findPoseById(null, null, 9, 1)).toBeNull();
   });
 });
