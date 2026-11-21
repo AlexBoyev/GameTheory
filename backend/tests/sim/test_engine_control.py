@@ -183,3 +183,22 @@ def test_read_world_sees_a_consistent_world(engine: SimulationEngine) -> None:
     with engine.read_world() as world:
         assert world.population == len(world.living_agents())
         assert len(world.agent_index) == world.population
+
+
+def test_shutdown_stops_a_busy_engine_promptly(engine: SimulationEngine) -> None:
+    """A world running flat out must still stop when asked.
+
+    This is the dev-loop test: uvicorn --reload terminates the worker and
+    waits for it to exit, so an engine that keeps spinning after Shutdown
+    wedges the backend on every code edit until the machine is rebooted.
+    """
+    engine.submit(SetSpeed(MAX_SPEED))
+    sequence = engine.submit(Start())
+    assert wait_until(lambda: applied(engine, sequence)), "engine never started"
+    assert wait_until(lambda: engine.snapshot().tick > 50), "engine never got busy"
+
+    engine.submit(Shutdown())
+
+    assert wait_until(lambda: engine.snapshot().status is EngineStatus.STOPPED, timeout=3.0), (
+        "the engine ignored Shutdown while running at MAX speed"
+    )

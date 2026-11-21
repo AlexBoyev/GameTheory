@@ -50,6 +50,11 @@ class DecisionContext:
         unavailable: Skill names on cooldown, which the brain must not pick.
         intention_skills: Skills an LLM plan wants (Phase 5).
         intention_bonus: Score added to those skills.
+        current_skill: What the agent is already doing, if anything.
+        commitment_bonus: Score added to `current_skill`, so an agent does
+            not abandon a long errand for a marginally better idea. Without
+            it, anything that takes more than one review interval - walking
+            to a distant tree, say - never finishes.
     """
 
     agent: Agent
@@ -59,6 +64,8 @@ class DecisionContext:
     unavailable: frozenset[str] = frozenset()
     intention_skills: tuple[str, ...] = ()
     intention_bonus: float = 0.0
+    current_skill: str | None = None
+    commitment_bonus: float = 0.0
 
 
 class Brain(Protocol):

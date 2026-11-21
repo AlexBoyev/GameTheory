@@ -31,6 +31,8 @@ def get_metrics(metrics: MetricsDep, from_tick: int = Query(default=0, ge=0)) ->
                 by_tribe=point.by_tribe,
                 by_strategy=point.by_strategy,
                 payoff_by_strategy=point.payoff_by_strategy,
+                cooperation_by_game=point.cooperation_by_game,
+                extra={key: float(value) for key, value in point.extra.items()},
             )
             for point in metrics.series(from_tick)
         ],

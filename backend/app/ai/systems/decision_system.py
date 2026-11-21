@@ -11,6 +11,16 @@ REVIEW_INTERVAL_SIM_S = 3.0
 """How often a busy agent reconsiders. Low enough to react to a new threat,
 high enough that agents finish what they start instead of dithering."""
 
+COMMITMENT_BONUS = 0.25
+"""Score added to whatever an agent is already doing, during a review.
+
+Pure utility AI has no memory of having decided anything, so it re-litigates
+every three seconds and abandons any errand longer than that. Agents walked
+towards distant trees for days and never once arrived with enough wood to
+build. A little inertia is both more realistic and more competent - and a
+genuinely urgent need still outscores it easily.
+"""
+
 
 class DecisionSystem:
     """Asks the brain for a skill whenever an agent is idle or due a review."""
@@ -68,6 +78,8 @@ class DecisionSystem:
             memory=mind.memory,
             observation=mind.observation,
             unavailable=unavailable,
+            current_skill=mind.run.skill if mind.run is not None else None,
+            commitment_bonus=COMMITMENT_BONUS if mind.run is not None else 0.0,
         )
 
     def _begin(
@@ -97,7 +109,11 @@ class DecisionSystem:
         mind.run = skill.start(agent, world, params)
         mind.trace = decision.options
         mind.reason = decision.reason
-        mind.start_cooldown(definition.name, now, definition.cooldown)
+        # The cooldown starts when the skill *finishes* (SkillExecutionSystem),
+        # never here. Starting it now marked the running skill unavailable at
+        # the very next review, so the agent dropped it and started something
+        # else - which made any skill with a cooldown longer than the review
+        # interval impossible to complete. Nobody ever finished a shelter.
 
         agent.current_skill = definition.name
         agent.state = definition.visual_state

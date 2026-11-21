@@ -23,15 +23,44 @@ export interface LightingProps {
 const NIGHT_INTENSITY = 0.25;
 const DAY_INTENSITY = 1.5;
 
+/**
+ * How often the shadow map is re-rendered, in milliseconds.
+ *
+ * three.js re-renders shadows every frame by default, which means drawing the
+ * whole island into a 2048x2048 depth buffer sixty times a second. The sun
+ * crosses the sky over four sim-minutes, so four shadow updates a second is
+ * already smoother than anyone can see - and it takes the island's shadow
+ * pass from 60 renders a second to 4.
+ */
+const SHADOW_INTERVAL_MS = 250;
+
 export function Lighting({ size, shadows = true }: LightingProps): React.ReactElement {
   const sunRef = useRef<THREE.DirectionalLight>(null);
   const hemiRef = useRef<THREE.HemisphereLight>(null);
   const colour = useRef(new THREE.Color('#fff6e2'));
+  const lastShadow = useRef(0);
+  const shadowsConfigured = useRef(false);
 
-  useFrame(() => {
+  // The renderer comes from `useFrame`'s state rather than `useThree`, so
+  // that driving it imperatively is not a mutation of a hook's return value.
+  useFrame((state) => {
     const sun = sunRef.current;
     if (!sun) return;
     const { timeOfDay } = simState();
+
+    if (!shadowsConfigured.current) {
+      state.gl.shadowMap.autoUpdate = false;
+      state.gl.shadowMap.needsUpdate = true;
+      shadowsConfigured.current = true;
+    }
+
+    if (shadows) {
+      const now = performance.now();
+      if (now - lastShadow.current >= SHADOW_INTERVAL_MS) {
+        state.gl.shadowMap.needsUpdate = true;
+        lastShadow.current = now;
+      }
+    }
 
     // 0.0 = midnight, 0.5 = noon: the sun arcs from east to west.
     const angle = (timeOfDay - 0.25) * TAU;

@@ -74,18 +74,25 @@ function KindInstances({ nodes, style, sampler }: KindProps): React.ReactElement
   }, [nodes, sampler, style]);
 
   // Amounts change constantly; shrink harvested nodes with no React re-render.
+  // Only touched nodes are rewritten: a forest of full bushes costs nothing.
+  const drawn = useRef(new Map<number, number>());
   useFrame(() => {
     const mesh = meshRef.current;
     if (!mesh || style.shrink <= 0) return;
     const amounts = simState().resourceAmounts;
+    const seen = drawn.current;
+    let dirty = false;
 
     nodes.forEach((node, index) => {
       // The wire carries fullness in 0..1, already quantised to 2% steps.
       const fullness = amounts.get(node.id);
-      if (fullness === undefined) return;
+      if (fullness === undefined || seen.get(node.id) === fullness) return;
+      seen.set(node.id, fullness);
       write(mesh, index, node, 1 - style.shrink * (1 - Math.max(0, Math.min(1, fullness))));
+      dirty = true;
     });
-    mesh.instanceMatrix.needsUpdate = true;
+
+    if (dirty) mesh.instanceMatrix.needsUpdate = true;
   });
 
   return (

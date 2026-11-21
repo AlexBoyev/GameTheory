@@ -2,12 +2,14 @@
 
 from pydantic import BaseModel, ConfigDict
 
+from app.ai import social
 from app.ai.brains.base import DecisionContext
 from app.ai.skills.base import NoParams, Skill, SkillCategory, SkillRun, SkillStatus
 from app.ai.skills.helpers import nearest_resource, need_urgency, steer_towards, stop
 from app.core.result import OK_NONE, Err, Result
 from app.sim import balance
-from app.sim.entities import Agent, AgentState, ResourceKind
+from app.sim.entities import Agent, AgentState, ResourceKind, Shelter
+from app.sim.events import EventType, SimEvent
 from app.sim.world import World
 
 EDIBLE: frozenset[ResourceKind] = frozenset({ResourceKind.BERRY_BUSH, ResourceKind.CORPSE})
@@ -20,6 +22,24 @@ HYDRATED_ENOUGH = 99.0
 RESTED_ENOUGH = 99.0
 SLEEPY_BELOW = 85.0
 NIGHT_SLEEP_BONUS = 0.45
+
+SHELTER_COMFORT_RADIUS = 4.0
+SHELTER_REST_BONUS = 0.8
+"""A good hut makes sleep most of twice as fast - the point of building one."""
+
+
+def shelter_near(world: World, position: tuple[float, float], radius: float) -> Shelter | None:
+    """Return a shelter within `radius` of `position`, if there is one."""
+    best: Shelter | None = None
+    best_distance = radius * radius
+    for shelter_id in sorted(world.shelters):
+        shelter = world.shelters[shelter_id]
+        distance = (shelter.position[0] - position[0]) ** 2 + (
+            shelter.position[1] - position[1]
+        ) ** 2
+        if distance <= best_distance:
+            best_distance, best = distance, shelter
+    return best
 
 
 class GatherParams(BaseModel):
@@ -63,7 +83,18 @@ class Gather(Skill):
         return 0.6 * hunger + 0.3 * (1.0 - stock) * (0.4 + agent.traits.greed)
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
-        """Lock on to a node and start walking."""
+        """Lock on to a node - unless someone has lied about where food is."""
+        mind = self.services.minds.require(agent.id)
+        lead = mind.take_false_lead(world.clock.sim_seconds)
+        if lead is not None:
+            return SkillRun(
+                skill=self.name,
+                agent_id=agent.id,
+                params=params,
+                started_tick=world.clock.tick,
+                state={"node": -1, "arrived": False, "taken": 0.0, "lx": lead[0], "lz": lead[1]},
+            )
+
         node_id = _resolve_node_id(agent, world, params)
         return SkillRun(
             skill=self.name,
@@ -77,6 +108,10 @@ class Gather(Skill):
         """Walk there, then harvest until full or the node is empty."""
         agent = world.agents[run.agent_id]
         run.elapsed += dt
+
+        if "lx" in run.state:
+            return self._chase_false_lead(run, world, agent)
+
         node = world.resources.get(int(run.state["node"]))
 
         if node is None or node.depleted:
@@ -98,6 +133,45 @@ class Gather(Skill):
             stop(agent)
             return SkillStatus.DONE
         return SkillStatus.RUNNING
+
+    def _chase_false_lead(self, run: SkillRun, world: World, agent: Agent) -> SkillStatus:
+        """Walk to where you were told food was, and find bare ground.
+
+        The wasted journey *is* the damage. Working out who sent you is a
+        second, separate thing - and not everyone does.
+        """
+        target = (float(run.state["lx"]), float(run.state["lz"]))
+        if not steer_towards(agent, target):
+            return SkillStatus.RUNNING
+
+        stop(agent)
+        mind = self.services.minds.require(agent.id)
+        liar_id = mind.clear_false_lead()
+        if liar_id is None:
+            return SkillStatus.FAILED
+
+        liar = world.agents.get(liar_id)
+        if liar is None:
+            return SkillStatus.FAILED
+
+        # Standing on empty ground, do they realise they were played?
+        chance = social.lie_detection_chance(liar.traits, agent.traits, listener_knows_better=True)
+        if float(world.rngs["gossip"].random()) >= chance:
+            return SkillStatus.FAILED
+
+        social.punish_caught_liar(mind.memory, liar_id)
+        self.services.ledger.lies_caught += 1
+        world.events.emit(
+            SimEvent(
+                tick=world.clock.tick,
+                type=EventType.LIE_CAUGHT,
+                summary=f"{agent.name} realised {liar.name} had lied about the food",
+                actors=(agent.id, liar_id),
+                importance=7,
+                position=agent.position,
+            )
+        )
+        return SkillStatus.FAILED
 
 
 class Eat(Skill):
@@ -228,10 +302,19 @@ class Sleep(Skill):
         )
 
     def step(self, run: SkillRun, world: World, dt: float) -> SkillStatus:
-        """Recover energy until rested."""
+        """Recover energy until rested - faster and safer under a roof."""
         agent = world.agents[run.agent_id]
         run.elapsed += dt
-        agent.needs.energy = min(balance.NEED_MAX, agent.needs.energy + balance.SLEEP_RATE * dt)
+
+        # A shelter is the payoff for all that wood: you rest faster in one,
+        # and you stop being afraid while you are inside it.
+        rate = balance.SLEEP_RATE
+        shelter = shelter_near(world, agent.position, SHELTER_COMFORT_RADIUS)
+        if shelter is not None:
+            rate *= 1.0 + SHELTER_REST_BONUS * shelter.quality
+            agent.needs.safety = min(balance.NEED_MAX, agent.needs.safety + 8.0 * dt)
+
+        agent.needs.energy = min(balance.NEED_MAX, agent.needs.energy + rate * dt)
         return SkillStatus.DONE if agent.needs.energy >= RESTED_ENOUGH else SkillStatus.RUNNING
 
 

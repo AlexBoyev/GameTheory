@@ -19,6 +19,11 @@ class MetricPointDTO(BaseModel):
     by_tribe: dict[str, int] = Field(default_factory=dict)
     by_strategy: dict[str, int] = Field(default_factory=dict)
     payoff_by_strategy: dict[str, float] = Field(default_factory=dict)
+    cooperation_by_game: dict[str, float] = Field(default_factory=dict)
+    extra: dict[str, float] = Field(
+        default_factory=dict,
+        description="Counters: tribes, shelters, betrayals, lies, wars and so on.",
+    )
 
 
 class MetricsDTO(BaseModel):

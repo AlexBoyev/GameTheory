@@ -11,6 +11,7 @@ it needs - the tick loop is waiting on it.
 import base64
 from typing import Any
 
+from app.ai.gametheory.ledger import SocialLedger
 from app.ai.minds import MindRegistry
 from app.sim.engine import SimulationEngine
 from app.sim.entities import Agent
@@ -22,11 +23,98 @@ DEFAULT_AGENT_LIMIT = 500
 class WorldQueries:
     """Answers "what does the world look like right now?" for `api/`."""
 
-    __slots__ = ("_engine", "_minds")
+    __slots__ = ("_engine", "_ledger", "_minds")
 
-    def __init__(self, engine: SimulationEngine, minds: MindRegistry) -> None:
+    def __init__(
+        self,
+        engine: SimulationEngine,
+        minds: MindRegistry,
+        ledger: SocialLedger | None = None,
+    ) -> None:
         self._engine = engine
         self._minds = minds
+        self._ledger = ledger or SocialLedger()
+
+    # ------------------------------------------------------------- society
+
+    def tribes(self) -> list[dict[str, Any]]:
+        """Every tribe, with membership, camp and territory."""
+        with self._engine.read_world() as world:
+            return [
+                {
+                    "id": tribe.id,
+                    "name": tribe.name,
+                    "colour": tribe.colour,
+                    "leader_id": tribe.leader_id,
+                    "leader_name": (
+                        world.agents[tribe.leader_id].name
+                        if tribe.leader_id in world.agents
+                        else None
+                    ),
+                    "member_ids": sorted(tribe.member_ids),
+                    "storage_food": round(tribe.storage_food, 2),
+                    "camp_x": round(tribe.camp_position[0], 2),
+                    "camp_z": round(tribe.camp_position[1], 2),
+                    "territory_radius": round(tribe.territory_radius, 2),
+                    "at_war_with": sorted(tribe.at_war_with),
+                    "allied_with": sorted(tribe.allied_with),
+                }
+                for _, tribe in sorted(world.tribes.items())
+            ]
+
+    def shelters(self) -> list[dict[str, Any]]:
+        """Every hut on the island."""
+        with self._engine.read_world() as world:
+            return [
+                {
+                    "id": shelter.id,
+                    "x": round(shelter.position[0], 2),
+                    "z": round(shelter.position[1], 2),
+                    "owner_id": shelter.owner_id,
+                    "tribe_id": shelter.tribe_id,
+                    "quality": round(shelter.quality, 2),
+                }
+                for _, shelter in sorted(world.shelters.items())
+            ]
+
+    def trust_graph(self, minimum: float = 0.25, limit: int = 400) -> dict[str, Any]:
+        """The strongest bonds and feuds, for the trust-lines overlay.
+
+        Only edges worth drawing: a world of 300 agents has tens of
+        thousands of acquaintances, and a line for each would be a grey fog.
+        """
+        with self._engine.read_world() as world:
+            positions = {
+                agent.id: (round(agent.position[0], 2), round(agent.position[1], 2))
+                for agent in world.living_agents()
+            }
+
+        edges: list[dict[str, Any]] = []
+        for agent_id, position in positions.items():
+            mind = self._minds.get(agent_id)
+            if mind is None:
+                continue
+            for other_id, relationship in mind.memory.social.items():
+                # One line per pair, drawn by the lower id.
+                if other_id <= agent_id or other_id not in positions:
+                    continue
+                if abs(relationship.trust) < minimum:
+                    continue
+                edges.append(
+                    {
+                        "a": agent_id,
+                        "b": other_id,
+                        "ax": position[0],
+                        "az": position[1],
+                        "bx": positions[other_id][0],
+                        "bz": positions[other_id][1],
+                        "trust": round(relationship.trust, 3),
+                        "ally": relationship.is_ally,
+                    }
+                )
+
+        edges.sort(key=lambda edge: -abs(float(edge["trust"])))
+        return {"edges": edges[:limit], "total": len(edges)}
 
     # ---------------------------------------------------------------- terrain
 

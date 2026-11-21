@@ -8,7 +8,7 @@ import numpy as np
 from app.core.world_config import WorldConfig
 from app.sim import balance
 from app.sim.clock import SimClock, season_offset_for
-from app.sim.entities import Agent, Biome, ResourceNode, Tribe
+from app.sim.entities import Agent, Biome, ResourceNode, Shelter, Tribe
 from app.sim.events import EventBus
 from app.sim.rng import spawn_generators
 from app.sim.spatial_hash import SpatialHash
@@ -118,6 +118,7 @@ class World:
     agents: dict[int, Agent] = field(default_factory=dict)
     resources: dict[int, ResourceNode] = field(default_factory=dict)
     tribes: dict[int, Tribe] = field(default_factory=dict)
+    shelters: dict[int, Shelter] = field(default_factory=dict)
     # Both indices are sized to the vision radius, because the hottest query
     # in the simulation is "what can this agent see" - that then touches nine
     # cells instead of the hundred-odd a smaller cell would need. Encounter
@@ -132,6 +133,7 @@ class World:
     next_agent_id: int = 0
     next_resource_id: int = 0
     next_tribe_id: int = 0
+    next_shelter_id: int = 0
     uid: int = 0
     """Incremented per built world, so per-agent caches know to start over."""
     births: int = 0

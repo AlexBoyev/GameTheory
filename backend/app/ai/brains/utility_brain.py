@@ -119,6 +119,8 @@ class UtilityBrain:
             score = skill.utility(ctx.agent, ctx)
             if definition.name in ctx.intention_skills:
                 score += ctx.intention_bonus
+            if definition.name == ctx.current_skill:
+                score += ctx.commitment_bonus
             if score > MIN_SCORE:
                 scored.append((skill, score))
 

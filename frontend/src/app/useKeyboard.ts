@@ -87,6 +87,14 @@ export function useKeyboard(): void {
             useSelectionStore.getState().setFollowing(false);
           else useSelectionStore.getState().clear();
           break;
+        case 'toggleCharts':
+          event.preventDefault();
+          useUiStore.getState().toggle('chartsOpen');
+          break;
+        case 'toggleLog':
+          event.preventDefault();
+          useUiStore.getState().toggle('eventFeedOpen');
+          break;
         case 'toggleHelp':
           event.preventDefault();
           useUiStore.getState().toggle('helpOpen');

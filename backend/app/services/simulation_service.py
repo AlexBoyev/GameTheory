@@ -23,12 +23,14 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.ai.llm.gateway import LLMGateway, LLMStatus
+from app.ai.skills.registry import SkillRegistry
 from app.core.logging import get_logger
 from app.core.settings import Settings
 from app.core.world_config import WorldConfig
 from app.services import envelopes
 from app.services.engine_factory import EngineBundle, build_engine_bundle
 from app.services.envelopes import Envelope
+from app.services.metrics_service import MetricsService
 from app.services.world_queries import WorldQueries
 from app.sim.clock import SPEED_PRESETS
 from app.sim.engine import (
@@ -84,12 +86,15 @@ class SimulationService:
         gateway: LLMGateway,
         bundle: EngineBundle | None = None,
         config: WorldConfig | None = None,
+        metrics: MetricsService | None = None,
     ) -> None:
         self._settings = settings
         self._gateway = gateway
         self._bundle = bundle or build_engine_bundle(settings, config)
         self._engine = self._bundle.engine
-        self._queries = WorldQueries(self._engine, self._bundle.minds)
+        self._metrics = metrics
+        self._last_sampled_tick = -1
+        self._queries = WorldQueries(self._engine, self._bundle.minds, self._bundle.ledger)
 
         self._frames: queue.Queue[WorldFrame] = queue.Queue(maxsize=FRAME_QUEUE_SIZE)
         self._event_batches: queue.Queue[list[SimEvent]] = queue.Queue(maxsize=EVENT_QUEUE_SIZE)
@@ -108,6 +113,11 @@ class SimulationService:
     def queries(self) -> WorldQueries:
         """Read-only views of the world for the REST API."""
         return self._queries
+
+    @property
+    def skills(self) -> SkillRegistry:
+        """The skill registry the running pipeline uses."""
+        return self._bundle.skills
 
     @property
     def config(self) -> WorldConfig:
@@ -273,6 +283,9 @@ class SimulationService:
         """Rebuild the world and stay paused at tick 0."""
         self._last_amounts.clear()
         self._recent_events.clear()
+        self._last_sampled_tick = -1
+        if self._metrics is not None:
+            self._metrics.clear()
         state = await self._submit(Reset(seed=seed, config=config))
         LOG.info("simulation.reset", seed=state.seed, population=state.population)
         return state
@@ -321,7 +334,47 @@ class SimulationService:
             frame = self._latest_frame()
             if frame is not None:
                 await self.broadcast(self._frame_envelope(frame))
+                await self._maybe_sample(frame.tick)
             await self._drain_events()
+
+    async def _maybe_sample(self, tick: int) -> None:
+        """Take a metrics sample if one is due, and broadcast it.
+
+        Sampling happens here rather than inside the tick loop so the cost
+        lands on the broadcast thread, never on the engine. That means the
+        sampler only ever sees the ticks that happen to land on a frame, so
+        "is one due" has to be a question about elapsed ticks (`is_due`) and
+        not about divisibility: at 25x the frames are ~12 ticks apart and a
+        test for `tick % 100 == 0` missed nearly every window, which left the
+        charts panel with a single data point after six thousand ticks.
+        """
+        if self._metrics is None or not self._metrics.is_due(tick, self._last_sampled_tick):
+            return
+
+        with self._engine.read_world() as world:
+            point = self._metrics.sample(world, self._bundle.ledger, self._bundle.minds)
+
+        # Book the tick that was *recorded*, not the frame tick that triggered
+        # this. The engine keeps running while the frame is in flight, so the
+        # world is tens of ticks further on by the time we read it; charging
+        # the interval to the frame tick made the recorded spacing drift below
+        # the interval (a run showed 82 ticks between two "every 100" points).
+        self._last_sampled_tick = point.tick
+
+        await self.broadcast(
+            envelopes.metrics(
+                point.tick,
+                {
+                    "population": point.population,
+                    "cooperation_rate": point.cooperation_rate,
+                    "food_gini": point.food_gini,
+                    "trust_density": point.trust_density,
+                    "by_strategy": point.by_strategy,
+                    "by_tribe": point.by_tribe,
+                    "extra": point.extra,
+                },
+            )
+        )
 
     def _latest_frame(self) -> WorldFrame | None:
         """Return the newest queued frame, discarding anything older."""

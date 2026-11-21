@@ -36,6 +36,36 @@ class Mind:
     cooldowns: dict[str, float] = field(default_factory=dict)
     last_decision_s: float = -1.0
 
+    false_lead: tuple[float, float] | None = None
+    """Somewhere an agent has been told there is food, where there is none.
+
+    This is what makes lying cost the victim something real: they walk there,
+    find nothing, and have wasted the time. If they work out who sent them,
+    the liar pays for it.
+    """
+    false_lead_from: int | None = None
+    false_lead_until: float = 0.0
+
+    def plant_false_lead(self, liar_id: int, where: tuple[float, float], until: float) -> None:
+        """Record a lie about where food is."""
+        self.false_lead = where
+        self.false_lead_from = liar_id
+        self.false_lead_until = until
+
+    def take_false_lead(self, now_s: float) -> tuple[float, float] | None:
+        """Return an unexpired false lead, if this agent is still fooled."""
+        if self.false_lead is None or now_s > self.false_lead_until:
+            return None
+        return self.false_lead
+
+    def clear_false_lead(self) -> int | None:
+        """Forget the lead and return who planted it."""
+        liar = self.false_lead_from
+        self.false_lead = None
+        self.false_lead_from = None
+        self.false_lead_until = 0.0
+        return liar
+
     def is_ready(self, skill: str, now_s: float) -> bool:
         """Whether `skill` is off cooldown at `now_s`."""
         return self.cooldowns.get(skill, 0.0) <= now_s

@@ -3,9 +3,12 @@
 import importlib
 import pkgutil
 from types import ModuleType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.ai.skills.base import Skill, SkillCategory
+
+if TYPE_CHECKING:  # pragma: no cover - import cycle avoidance
+    from app.ai.skill_services import SkillServices
 
 
 class SkillRegistry:
@@ -42,6 +45,14 @@ class SkillRegistry:
     def get(self, name: str) -> Skill | None:
         """Return the skill called `name`, or `None`."""
         return self._skills.get(name)
+
+    def require(self, name: str) -> Skill:
+        """Return the skill called `name`, or raise if it is not registered."""
+        skill = self._skills.get(name)
+        if skill is None:
+            msg = f"no skill named {name!r}; registered: {', '.join(self.names)}"
+            raise KeyError(msg)
+        return skill
 
     def by_category(self, category: SkillCategory) -> list[Skill]:
         """Return registered skills in `category`, name-sorted."""
@@ -83,9 +94,21 @@ class SkillRegistry:
             if getattr(attribute, "name", None) and attribute.name not in self._skills:
                 self.register(attribute())
 
+    def bind(self, services: "SkillServices") -> None:
+        """Hand every registered skill the collaborators it may need."""
+        for skill in self._skills.values():
+            skill.bind(services)
 
-def build_registry() -> SkillRegistry:
-    """Return a registry with every shipped skill discovered."""
+
+def build_registry(services: "SkillServices | None" = None) -> SkillRegistry:
+    """Return a registry with every shipped skill discovered and bound.
+
+    `services` is optional only so that tests which never touch a social
+    skill can build a registry in one line; anything that runs the pipeline
+    passes it.
+    """
     registry = SkillRegistry()
     registry.discover()
+    if services is not None:
+        registry.bind(services)
     return registry

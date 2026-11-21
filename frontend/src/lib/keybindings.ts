@@ -23,6 +23,8 @@ export type ActionId =
   | 'toggleHeatmap'
   | 'toggleNames'
   | 'toggleSpeech'
+  | 'toggleCharts'
+  | 'toggleLog'
   | 'toggleHelp';
 
 export interface Keybinding {
@@ -51,6 +53,8 @@ export const KEYBINDINGS: readonly Keybinding[] = [
   { key: 'h', action: 'toggleHeatmap', label: 'Activity heatmap', group: 'overlays' },
   { key: 'n', action: 'toggleNames', label: 'Agent names', group: 'overlays' },
   { key: 'b', action: 'toggleSpeech', label: 'Speech bubbles', group: 'overlays' },
+  { key: 'c', action: 'toggleCharts', label: 'Charts panel', group: 'overlays' },
+  { key: 'l', action: 'toggleLog', label: 'Event log', group: 'overlays' },
   { key: '?', action: 'toggleHelp', label: 'This help', group: 'overlays' },
 ];
 

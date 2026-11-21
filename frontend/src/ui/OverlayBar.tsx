@@ -19,10 +19,11 @@ interface OverlayToggle {
 }
 
 const TOGGLES: OverlayToggle[] = [
-  { key: 'showTrustLines', label: 'Trust lines', icon: '🔗', shortcut: 't', needsPhase: 4 },
-  { key: 'showTerritories', label: 'Territories', icon: '🏕️', shortcut: 'g', needsPhase: 4 },
-  { key: 'showHeatmap', label: 'Heatmap', icon: '🔥', shortcut: 'h', needsPhase: 4 },
-  { key: 'showNames', label: 'Names', icon: '🏷️', shortcut: 'n', needsPhase: 3 },
+  { key: 'showTrustLines', label: 'Trust lines', icon: '🔗', shortcut: 't' },
+  { key: 'showTerritories', label: 'Territories', icon: '🏕️', shortcut: 'g' },
+  { key: 'chartsOpen', label: 'Charts', icon: '📈', shortcut: 'c' },
+  { key: 'showHeatmap', label: 'Heatmap', icon: '🔥', shortcut: 'h', needsPhase: 6 },
+  { key: 'showNames', label: 'Names', icon: '🏷️', shortcut: 'n', needsPhase: 6 },
   { key: 'showSpeechBubbles', label: 'Speech', icon: '💬', shortcut: 'b', needsPhase: 5 },
 ];
 

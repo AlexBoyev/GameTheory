@@ -8,8 +8,12 @@ import type {
   AgentSummary,
   EventsPayload,
   Health,
+  Metrics,
   Preset,
+  Shelter,
   SimState,
+  Tribe,
+  TrustGraph,
   WorldConfig,
 } from '@/api/types';
 
@@ -71,6 +75,11 @@ export const api = {
 
   agents: (limit = 500): Promise<AgentSummary[]> =>
     request<AgentSummary[]>(`/agents?limit=${limit}`),
+  tribes: (): Promise<Tribe[]> => request<Tribe[]>('/tribes'),
+  shelters: (): Promise<Shelter[]> => request<Shelter[]>('/world/shelters'),
+  trustGraph: (minimum = 0.3, limit = 300): Promise<TrustGraph> =>
+    request<TrustGraph>(`/social/trust-graph?minimum=${minimum}&limit=${limit}`),
+  metrics: (fromTick = 0): Promise<Metrics> => request<Metrics>(`/metrics?from_tick=${fromTick}`),
   agent: (id: number): Promise<AgentDetail> => request<AgentDetail>(`/agents/${id}`),
   events: (limit = 200, type?: string): Promise<EventsPayload> =>
     request<EventsPayload>(`/events?limit=${limit}${type ? `&type=${type}` : ''}`),

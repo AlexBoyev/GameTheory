@@ -10,7 +10,7 @@ from app.ai.llm.gateway import LLMGateway
 from app.ai.llm.mock_provider import MockProvider
 from app.ai.llm.ollama_provider import OllamaProvider
 from app.ai.llm.provider import LLMProvider
-from app.ai.skills.registry import SkillRegistry, build_registry
+from app.ai.skills.registry import SkillRegistry
 from app.core.logging import get_logger
 from app.core.settings import Settings
 from app.core.world_config import WorldConfig
@@ -79,13 +79,16 @@ def build_container(settings: Settings, config: WorldConfig | None = None) -> Co
     """
     repository = Repository(build_engine(settings))
     gateway = LLMGateway(settings, build_provider(settings))
-    simulation = SimulationService(settings, gateway, config=config)
+    metrics = MetricsService(settings, repository)
+    simulation = SimulationService(settings, gateway, config=config, metrics=metrics)
     return Container(
         settings=settings,
         repository=repository,
         gateway=gateway,
-        skills=build_registry(),
+        # The simulation owns the registry its skills are bound to; exposing
+        # that one rather than a second, unbound registry.
+        skills=simulation.skills,
         simulation=simulation,
-        metrics=MetricsService(settings, repository),
+        metrics=metrics,
         snapshots=SnapshotService(repository),
     )

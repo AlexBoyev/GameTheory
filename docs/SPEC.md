@@ -358,6 +358,8 @@ InstancedMesh for agents & vegetation; interpolate positions between frames; tar
 ## 10. Metrics
 Every N ticks: population (total / by tribe / by strategy), births, deaths by cause, cooperation rate per game type, average payoff per strategy, food Gini, trust-graph density, alliances, wars, betrayals, lies told / caught, LLM calls. Stored in SQLite, streamed via WS.
 
+"Every N ticks" means *at least* N ticks have elapsed since the last sample — not `tick % N == 0`. Sampling runs on the broadcast thread (so the engine never pays for it), and the broadcast only sees the ticks that land on a 20 Hz frame; at 25× those are ~12 ticks apart, so a divisibility test misses nearly every window. Coups are reported as attempts and successes separately — most challenges fail. See ADR 0003.
+
 ## 11. Persistence
 SQLite (SQLModel) in `./data/gametheory.db` (Docker volume): runs, metrics, snapshots (full world state JSON, gzipped), capped events table.
 

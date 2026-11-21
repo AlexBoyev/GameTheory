@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 import { createWorldSocket } from '@/api/ws';
 import { useKeyboard } from '@/app/useKeyboard';
 import { useSimPolling } from '@/app/useSimPolling';
+import { useSocietyPolling } from '@/app/useSocietyPolling';
 import { useUrlState } from '@/app/useUrlState';
 import { World } from '@/scene/World';
 import { Hud } from '@/ui/Hud';
@@ -27,6 +28,7 @@ export function App(): React.ReactElement {
   }, []);
 
   useSimPolling();
+  useSocietyPolling();
   useKeyboard();
   useUrlState();
 

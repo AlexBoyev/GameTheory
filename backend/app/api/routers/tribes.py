@@ -1,20 +1,24 @@
-"""Tribe listing and detail. Tribes emerge in Phase 4."""
+"""Tribe listing and detail (SPEC section 6)."""
 
 from fastapi import APIRouter
 
+from app.api.deps import SimulationDep
 from app.api.dto.society import TribeDTO
-from app.api.errors import not_implemented_yet
+from app.api.errors import not_found
 
 router = APIRouter(prefix="/tribes", tags=["tribes"])
 
 
 @router.get("", response_model=list[TribeDTO], summary="List tribes")
-def list_tribes() -> list[TribeDTO]:
+def list_tribes(simulation: SimulationDep) -> list[TribeDTO]:
     """Return every tribe with members, storage, camp and territory."""
-    raise not_implemented_yet("Tribes", phase=4)
+    return [TribeDTO(**row) for row in simulation.queries.tribes()]
 
 
 @router.get("/{tribe_id}", response_model=TribeDTO, summary="Tribe detail")
-def get_tribe(tribe_id: int) -> TribeDTO:
+def get_tribe(tribe_id: int, simulation: SimulationDep) -> TribeDTO:
     """Return one tribe."""
-    raise not_implemented_yet("Tribes", phase=4)
+    for row in simulation.queries.tribes():
+        if row["id"] == tribe_id:
+            return TribeDTO(**row)
+    raise not_found(f"tribe {tribe_id}")

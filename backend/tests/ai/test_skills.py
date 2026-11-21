@@ -9,7 +9,7 @@ import pytest
 from app.ai.skills.base import SkillCategory, SkillStatus
 from app.ai.skills.hunting import HuntParams, HuntRabbit
 from app.ai.skills.movement import Flee, FleeParams, MoveTo, MoveToParams, Wander
-from app.ai.skills.registry import build_registry
+from app.ai.skills.registry import SkillRegistry
 from app.ai.skills.sustenance import Drink, Eat, Gather, Sleep
 from app.core.result import is_ok
 from app.sim import balance
@@ -17,30 +17,55 @@ from app.sim.entities import ResourceKind, Traits
 from app.sim.world import World
 from tests.factories import centre_agent, clear_resources, place, run_until_done
 
-EXPECTED_SKILLS = {
+SURVIVAL_SKILLS = {
     "Wander",
     "MoveTo",
     "Gather",
+    "GatherWood",
     "Eat",
     "Drink",
     "Sleep",
     "HuntRabbit",
     "Flee",
+    "BuildShelter",
+}
+
+SOCIAL_SKILLS = {"Talk", "Share", "Trade", "ProposeAlliance", "Reproduce"}
+MANIPULATION_SKILLS = {"Gossip", "Lie", "Persuade", "Bribe", "Betray"}
+COMBAT_SKILLS = {"Attack", "Defend", "Raid"}
+TRIBE_SKILLS = {
+    "FoundTribe",
+    "JoinTribe",
+    "LeaveTribe",
+    "StoreFood",
+    "TakeFromStorage",
+    "ChallengeLeader",
+    "DeclareWar",
+    "OfferPeace",
 }
 
 
 # ------------------------------------------------------------------- registry
 
 
-def test_the_registry_discovers_exactly_the_phase_2_skills() -> None:
-    registry = build_registry()
+def test_the_registry_discovers_every_skill(skills: SkillRegistry) -> None:
+    """Auto-discovery must find the whole action library, not a subset."""
+    found = set(skills.names)
 
-    assert set(registry.names) == EXPECTED_SKILLS
-    assert all(type(skill).category is SkillCategory.SURVIVAL for skill in registry.all())
+    assert found >= SURVIVAL_SKILLS, SURVIVAL_SKILLS - found
+    assert found >= SOCIAL_SKILLS, SOCIAL_SKILLS - found
+    assert found >= MANIPULATION_SKILLS, MANIPULATION_SKILLS - found
+    assert found >= COMBAT_SKILLS, COMBAT_SKILLS - found
+    assert found >= TRIBE_SKILLS, TRIBE_SKILLS - found
 
 
-def test_every_skill_exposes_a_json_schema_for_the_llm() -> None:
-    for skill in build_registry().all():
+def test_every_category_is_represented(skills: SkillRegistry) -> None:
+    for category in SkillCategory:
+        assert skills.by_category(category), f"no skills in {category.value}"
+
+
+def test_every_skill_exposes_a_json_schema_for_the_llm(skills: SkillRegistry) -> None:
+    for skill in skills.all():
         described = type(skill).describe()
         assert described["name"]
         assert described["description"]
@@ -157,23 +182,25 @@ def test_gather_needs_food_in_sight_and_room_to_carry(world: World) -> None:
     assert not is_ok(skill.check(agent, world, Gather.Params()))
 
 
-def test_gathering_moves_food_from_the_bush_to_the_inventory(world: World) -> None:
+def test_gathering_moves_food_from_the_bush_to_the_inventory(
+    world: World, skills: SkillRegistry
+) -> None:
     agent = centre_agent(world)
     clear_resources(world)
     bush = place(world, ResourceKind.BERRY_BUSH, (0.5, 0.0))
 
-    status = run_until_done(Gather(), world, agent, Gather.Params())
+    status = run_until_done(skills.require("Gather"), world, agent, Gather.Params())
 
     assert status is SkillStatus.DONE
     assert agent.inventory.food > 0.0
     assert bush.amount < bush.capacity
 
 
-def test_gather_fails_when_its_target_vanishes(world: World) -> None:
+def test_gather_fails_when_its_target_vanishes(world: World, skills: SkillRegistry) -> None:
     agent = centre_agent(world)
     clear_resources(world)
     bush = place(world, ResourceKind.BERRY_BUSH, (0.5, 0.0))
-    skill = Gather()
+    skill = skills.require("Gather")
     run = skill.start(agent, world, Gather.Params())
 
     del world.resources[bush.id]

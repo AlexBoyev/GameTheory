@@ -18,11 +18,15 @@ import { Lighting } from '@/scene/Lighting';
 import { PerfProbe } from '@/scene/PerfProbe';
 import { Resources } from '@/scene/Resources';
 import { SelectionRing } from '@/scene/SelectionRing';
+import { Shelters } from '@/scene/Shelters';
 import { StateIcons } from '@/scene/StateIcons';
 import { Terrain } from '@/scene/Terrain';
+import { Territories } from '@/scene/Territories';
+import { TrustLines } from '@/scene/TrustLines';
 import { Water } from '@/scene/Water';
 import { useSettingsStore } from '@/state/settingsStore';
 import { useSimStore } from '@/state/simStore';
+import { useUiStore } from '@/state/uiStore';
 
 const FALLBACK_TERRAIN = { size: 256, resolution: 128, water_level: 0.32, max_height: 18 };
 const MAX_MESH_SEGMENTS = 160;
@@ -34,6 +38,8 @@ export function World(): React.ReactElement {
   const maxAgents = useSimStore((state) => state.config?.max_agents ?? 1024);
   const quality = useSettingsStore((state) => state.quality);
   const profile = useSettingsStore((state) => state.profile());
+  const showTrustLines = useUiStore((state) => state.showTrustLines);
+  const showTerritories = useUiStore((state) => state.showTerritories);
 
   const [loaded, setLoaded] = useState<{ epoch: number; grid: TerrainGrid } | null>(null);
   const available = terrain?.available ?? false;
@@ -92,9 +98,14 @@ export function World(): React.ReactElement {
       <Terrain sampler={sampler} segments={segments} />
       <Water sampler={sampler} />
       <Resources sampler={sampler} />
+      <Shelters sampler={sampler} />
       <Agents sampler={sampler} capacity={Math.max(256, maxAgents)} shadows={profile.shadows} />
       <StateIcons sampler={sampler} capacity={Math.max(256, maxAgents)} />
       <SelectionRing sampler={sampler} />
+
+      {showTrustLines && <TrustLines sampler={sampler} />}
+      {showTerritories && <Territories sampler={sampler} />}
+
       <CameraRig size={meta.size} sampler={sampler} />
     </>
   );

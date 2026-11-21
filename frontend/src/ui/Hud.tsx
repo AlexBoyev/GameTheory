@@ -5,6 +5,7 @@
  * themselves, so the island stays draggable everywhere they are not.
  */
 
+import { ChartsPanel } from '@/ui/ChartsPanel';
 import { ControlBar } from '@/ui/ControlBar';
 import { EventFeed } from '@/ui/EventFeed';
 import { HelpOverlay } from '@/ui/HelpOverlay';
@@ -52,6 +53,7 @@ function ConnectionNotice(): React.ReactElement | null {
 export function Hud(): React.ReactElement {
   const helpOpen = useUiStore((state) => state.helpOpen);
   const feedOpen = useUiStore((state) => state.eventFeedOpen);
+  const chartsOpen = useUiStore((state) => state.chartsOpen);
   const setHelp = useUiStore((state) => state.set);
 
   return (
@@ -61,7 +63,10 @@ export function Hud(): React.ReactElement {
 
       {/* Side panels: log on the left, inspector on the right. */}
       <div className="absolute inset-x-0 top-20 bottom-20 flex items-start justify-between px-3">
-        <div className="pointer-events-none flex flex-col gap-3">{feedOpen && <EventFeed />}</div>
+        <div className="pointer-events-none flex flex-col gap-3">
+          {feedOpen && <EventFeed />}
+          {chartsOpen && <ChartsPanel />}
+        </div>
         <div className="pointer-events-none flex items-start gap-3">
           <Inspector />
           <OverlayBar />

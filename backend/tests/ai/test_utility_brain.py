@@ -4,7 +4,10 @@ import numpy as np
 
 from app.ai.brains.base import DecisionContext
 from app.ai.brains.utility_brain import Curve, UtilityBrain, apply_curve
+from app.ai.gametheory.ledger import SocialLedger
 from app.ai.memory import AgentMemory
+from app.ai.minds import MindRegistry
+from app.ai.skill_services import SkillServices
 from app.ai.skills.registry import SkillRegistry, build_registry
 from app.sim.entities import Agent, ResourceKind
 from app.sim.world import World
@@ -166,13 +169,18 @@ def test_the_reason_never_claims_a_lower_score_beat_a_higher_one(
             assert " over " in decision.reason or "only option" in decision.reason
 
 
-def test_decisions_are_deterministic_for_a_given_rng(world: World) -> None:
+def test_decisions_are_deterministic_for_a_given_rng(
+    world: World,
+    minds: MindRegistry,
+    ledger: SocialLedger,
+) -> None:
     agent = centre_agent(world)
     place(world, ResourceKind.BERRY_BUSH, (1.0, 0.0))
     agent.needs.hunger = 50.0
 
-    first_registry = build_registry()
-    second_registry = build_registry()
+    services = SkillServices(minds=minds, ledger=ledger)
+    first_registry = build_registry(services)
+    second_registry = build_registry(services)
 
     world.rngs["decide"] = np.random.default_rng(99)
     first = [UtilityBrain(first_registry).decide(context(world, agent)).skill for _ in range(10)]

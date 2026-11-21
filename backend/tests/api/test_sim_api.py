@@ -84,7 +84,21 @@ def test_presets_are_listed(client: TestClient) -> None:
 
 
 def test_later_phases_still_announce_themselves(client: TestClient) -> None:
-    response = client.get("/api/tribes")
+    """Endpoints that are not built yet say so, and say when."""
+    response = client.post("/api/snapshots", json={"label": "test"})
 
     assert response.status_code == 501
-    assert "Phase 4" in response.json()["detail"]
+    assert "Phase 6" in response.json()["detail"]
+
+
+def test_tribes_and_the_social_graph_are_live(client: TestClient) -> None:
+    """Phase 4 turned these on; they answer even before anyone has met."""
+    tribes = client.get("/api/tribes")
+    graph = client.get("/api/social/trust-graph")
+    shelters = client.get("/api/world/shelters")
+
+    assert tribes.status_code == 200
+    assert isinstance(tribes.json(), list)
+    assert graph.status_code == 200
+    assert "edges" in graph.json()
+    assert shelters.status_code == 200

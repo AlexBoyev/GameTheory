@@ -6,6 +6,7 @@
     python driver.py --bench         throughput benchmark
     python driver.py --port 8001     pin the backend port (default: first free from 8000)
     python driver.py --no-frontend   backend only
+    python driver.py --no-reload     do not restart the backend on source changes
     python driver.py --install       install dependencies and exit
 
 Stdlib only, so it runs with the system Python before anything is installed.
@@ -25,6 +26,7 @@ import time
 import urllib.error
 import urllib.request
 import webbrowser
+from contextlib import suppress
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -55,16 +57,38 @@ def _enable_ansi() -> bool:
         return False
 
 
+def _use_utf8() -> None:
+    """Make stdout able to carry whatever the child processes print.
+
+    Vite announces itself with an arrow, and a Windows console on a non-Latin
+    code page (cp1255 here) cannot encode it. That raised UnicodeEncodeError
+    inside the output pump thread, which killed the thread - so the servers
+    kept running but their logs went silent halfway through startup.
+    Reconfiguring to UTF-8 with replacement means a character we cannot show
+    costs us one "?", never a log stream.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        with suppress(AttributeError, OSError, ValueError):
+            stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+
+
+_use_utf8()
 COLOUR = _enable_ansi()
 
 
 def say(channel: str, message: str) -> None:
-    """Print one prefixed, optionally coloured line."""
-    if COLOUR:
-        colour = COLORS.get(channel, "")
-        print(f"{colour}[{channel:>8}]{RESET} {message}", flush=True)
-    else:
-        print(f"[{channel:>8}] {message}", flush=True)
+    """Print one prefixed, optionally coloured line.
+
+    Never raises: a line we cannot print is not worth losing the stream over
+    (see `_use_utf8`), and this runs on a daemon thread per child process.
+    """
+    prefix = f"{COLORS.get(channel, '')}[{channel:>8}]{RESET}" if COLOUR else f"[{channel:>8}]"
+    try:
+        print(f"{prefix} {message}", flush=True)
+    except (UnicodeEncodeError, ValueError, OSError):
+        safe = message.encode("ascii", "replace").decode("ascii")
+        with suppress(Exception):
+            print(f"{prefix} {safe}", flush=True)
 
 
 # --------------------------------------------------------------------- tooling
@@ -217,7 +241,53 @@ def wait_for_url(url: str, timeout: float, child: Managed | None = None) -> bool
     return False
 
 
-def serve(backend_port: int, frontend_port: int, *, frontend: bool, browser: bool) -> int:
+WATCH_SUFFIXES = (".py", ".yaml", ".yml")
+WATCH_DEBOUNCE_S = 0.6
+
+
+def source_stamp(roots: tuple[Path, ...]) -> dict[str, float]:
+    """Modification times of every watched source file under `roots`."""
+    stamp: dict[str, float] = {}
+    for root in roots:
+        if not root.exists():
+            continue
+        for path in root.rglob("*"):
+            if path.suffix not in WATCH_SUFFIXES or "__pycache__" in path.parts:
+                continue
+            try:
+                stamp[str(path)] = path.stat().st_mtime
+            except OSError:
+                continue
+    return stamp
+
+
+def start_backend(uv: str, port: int, env: dict[str, str]) -> Managed:
+    """Launch the backend without uvicorn's own reloader.
+
+    `uvicorn --reload` does not work for this app on Windows: the reloader
+    announces "Reloading..." and then never finishes, because the worker
+    process never exits. The old worker keeps serving, so an edit silently
+    has no effect - which is worse than a crash, since the server looks
+    healthy while running code you have already changed. The driver watches
+    the files and restarts the whole process instead; a tree kill is a thing
+    we already do reliably (see `Managed.stop`).
+    """
+    return Managed(
+        "backend",
+        [uv, "run", "uvicorn", "app.main:app", "--port", str(port)],
+        BACKEND,
+        env,
+    )
+
+
+def serve(
+    backend_port: int,
+    frontend_port: int,
+    *,
+    frontend: bool,
+    browser: bool,
+    reload: bool = True,
+) -> int:
     """Start the servers and block until they exit or Ctrl+C."""
     uv = require("uv", "Install uv: https://docs.astral.sh/uv/getting-started/installation/")
     install_backend(uv)
@@ -227,12 +297,7 @@ def serve(backend_port: int, frontend_port: int, *, frontend: bool, browser: boo
 
     children: list[Managed] = []
     try:
-        backend_process = Managed(
-            "backend",
-            [uv, "run", "uvicorn", "app.main:app", "--reload", "--port", str(backend_port)],
-            BACKEND,
-            env,
-        )
+        backend_process = start_backend(uv, backend_port, env)
         children.append(backend_process)
 
         if not wait_for_url(
@@ -266,9 +331,43 @@ def serve(backend_port: int, frontend_port: int, *, frontend: bool, browser: boo
             if browser:
                 webbrowser.open(url)
 
-        say("driver", "Ctrl+C to stop")
+        watched = (BACKEND / "app", BACKEND / "config")
+        stamp = source_stamp(watched) if reload else {}
+        say("driver", "Ctrl+C to stop" + ("  (watching backend sources)" if reload else ""))
+
         while all(child.alive for child in children):
             time.sleep(0.4)
+            if not reload:
+                continue
+            current = source_stamp(watched)
+            if current == stamp:
+                continue
+            # Let a burst of saves settle before paying for a restart.
+            time.sleep(WATCH_DEBOUNCE_S)
+            current = source_stamp(watched)
+            changed = sorted(
+                name
+                for name in set(current) | set(stamp)
+                if current.get(name) != stamp.get(name)
+            )
+            stamp = current
+            say("driver", f"reloading backend ({len(changed)} file(s) changed)")
+            for name in changed[:3]:
+                say("driver", f"  {Path(name).relative_to(ROOT)}")
+
+            backend_process.stop()
+            children.remove(backend_process)
+            backend_process = start_backend(uv, backend_port, env)
+            children.insert(0, backend_process)
+            if wait_for_url(
+                f"http://127.0.0.1:{backend_port}/api/health",
+                timeout=60.0,
+                child=backend_process,
+            ):
+                say("driver", "backend reloaded")
+            else:
+                say("warn", "backend did not come back after the reload - see the log above")
+                return 1
 
         for child in children:
             if not child.alive:
@@ -331,6 +430,11 @@ def main() -> int:
     parser.add_argument("--frontend-port", type=int, default=DEFAULT_FRONTEND_PORT)
     parser.add_argument("--no-frontend", action="store_true", help="Run the backend only.")
     parser.add_argument("--no-browser", action="store_true", help="Do not open a browser.")
+    parser.add_argument(
+        "--no-reload",
+        action="store_true",
+        help="Do not restart the backend when its sources change.",
+    )
     parser.add_argument("--install", action="store_true", help="Install dependencies and exit.")
     parser.add_argument("--check", action="store_true", help="Run all linters, types and tests.")
     parser.add_argument("--bench", action="store_true", help="Run the throughput benchmark.")
@@ -360,7 +464,7 @@ def main() -> int:
     # with rather than silently worked around on another port.
     if not port_is_free(args.frontend_port):
         say("warn", f"port {args.frontend_port} is in use - a dev server is probably still running")
-        say("warn", f"stop it, or pass --frontend-port <other>")
+        say("warn", "stop it, or pass --frontend-port <other>")
         return 1
     frontend_port = args.frontend_port
     return serve(
@@ -368,6 +472,7 @@ def main() -> int:
         frontend_port,
         frontend=not args.no_frontend,
         browser=not args.no_browser,
+        reload=not args.no_reload,
     )
 
 

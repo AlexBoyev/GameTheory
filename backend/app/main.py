@@ -19,6 +19,7 @@ from app.api.routers import (
     metrics,
     sim,
     snapshots,
+    social,
     tribes,
     world,
 )
@@ -41,6 +42,7 @@ ROUTERS = (
     world.router,
     agents.router,
     tribes.router,
+    social.router,
     metrics.router,
     events.router,
     snapshots.router,

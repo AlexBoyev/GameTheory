@@ -34,27 +34,43 @@ class MemoryEvent:
     importance: int = 3
 
 
+HISTORY_LENGTH = 16
+"""How many rounds of a pairing are remembered. Enough for every strategy in
+SPEC 5.2 to see what it needs, bounded so a long-lived pair cannot grow
+without limit."""
+
+
 @dataclass(slots=True)
 class Relationship:
     """What one agent believes about another (SPEC section 6).
+
+    Trust is first-hand and only moves when these two actually did something
+    to each other; reputation is hearsay. Keeping them apart is what lets a
+    liar be believed by strangers and ignored by friends.
 
     Attributes:
         trust: `[-1, 1]`; updated by outcomes, gifts, betrayals and gossip.
         reputation: Second-hand belief about the partner's character.
         moves: Last K moves the partner played against us ("C"/"D").
+        own_moves: Last K moves we played against them.
+        payoffs: What each of those rounds paid us - Pavlov needs it.
         interactions: Total encounters.
         last_tick: Tick of the most recent interaction.
         is_ally: Explicit pact in force.
         caught_lying: Times we caught them lying.
+        betrayals: Times they defected on us while we trusted them.
     """
 
     trust: float = 0.0
     reputation: float = 0.0
-    moves: deque[str] = field(default_factory=lambda: deque(maxlen=16))
+    moves: deque[str] = field(default_factory=lambda: deque(maxlen=HISTORY_LENGTH))
+    own_moves: deque[str] = field(default_factory=lambda: deque(maxlen=HISTORY_LENGTH))
+    payoffs: deque[float] = field(default_factory=lambda: deque(maxlen=HISTORY_LENGTH))
     interactions: int = 0
     last_tick: int = 0
     is_ally: bool = False
     caught_lying: int = 0
+    betrayals: int = 0
 
 
 @dataclass(slots=True)

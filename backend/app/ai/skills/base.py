@@ -8,9 +8,12 @@ it, `utility()` scores it, `start()`/`step()` run it over several ticks. The
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from pydantic import BaseModel
+
+if TYPE_CHECKING:  # pragma: no cover - import cycle avoidance
+    from app.ai.skill_services import SkillServices
 
 from app.ai.brains.base import DecisionContext
 from app.core.result import Result
@@ -101,6 +104,25 @@ class Skill(ABC):
     @abstractmethod
     def step(self, run: SkillRun, world: World, dt: float) -> SkillStatus:
         """Advance the run by `dt` sim-seconds."""
+
+    _services: "SkillServices | None" = None
+
+    def bind(self, services: "SkillServices") -> None:
+        """Receive the collaborators a social skill needs.
+
+        Called once by the registry. Held per instance rather than in a
+        module global, so two registries (a test and the engine, say) never
+        share state.
+        """
+        self._services = services
+
+    @property
+    def services(self) -> "SkillServices":
+        """The bound services, or a clear error if the skill was never bound."""
+        if self._services is None:
+            msg = f"{type(self).name} was used before SkillRegistry bound its services"
+            raise RuntimeError(msg)
+        return self._services
 
     @classmethod
     def params_schema(cls) -> dict[str, Any]:

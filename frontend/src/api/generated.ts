@@ -401,6 +401,29 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/social/trust-graph': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Strongest bonds and feuds
+     * @description Return the strongest relationships, strongest first.
+     *
+     *     Thresholded on purpose: every agent knows dozens of others, so an
+     *     unfiltered graph is tens of thousands of edges and draws as grey fog.
+     */
+    get: operations['trust_graph_api_social_trust_graph_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/tribes': {
     parameters: {
       query?: never;
@@ -433,6 +456,29 @@ export interface paths {
      * @description Return one tribe.
      */
     get: operations['get_tribe_api_tribes__tribe_id__get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/world/shelters': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Every hut on the island
+     * @description Return the shelters agents have built.
+     *
+     *     Polled rather than streamed: huts are built every few sim-minutes, so
+     *     putting them in a 20 Hz frame would be almost entirely repetition.
+     */
+    get: operations['shelters_api_world_shelters_get'];
     put?: never;
     post?: never;
     delete?: never;
@@ -909,6 +955,10 @@ export interface components {
       by_tribe?: {
         [key: string]: number;
       };
+      /** Cooperation By Game */
+      cooperation_by_game?: {
+        [key: string]: number;
+      };
       /**
        * Cooperation Rate
        * @default 0
@@ -919,6 +969,13 @@ export interface components {
        * @default 0
        */
       deaths: number;
+      /**
+       * Extra
+       * @description Counters: tribes, shelters, betrayals, lies, wars and so on.
+       */
+      extra?: {
+        [key: string]: number;
+      };
       /**
        * Food Gini
        * @default 0
@@ -1034,6 +1091,27 @@ export interface components {
       preset?: string | null;
       /** Seed */
       seed?: number | null;
+    };
+    /**
+     * ShelterDTO
+     * @description One hut (`GET /api/world/shelters`).
+     */
+    ShelterDTO: {
+      /** Id */
+      id: number;
+      /** Owner Id */
+      owner_id: number;
+      /**
+       * Quality
+       * @default 1
+       */
+      quality: number;
+      /** Tribe Id */
+      tribe_id?: number | null;
+      /** X */
+      x: number;
+      /** Z */
+      z: number;
     };
     /**
      * SimStateDTO
@@ -1251,6 +1329,8 @@ export interface components {
       id: number;
       /** Leader Id */
       leader_id?: number | null;
+      /** Leader Name */
+      leader_name?: string | null;
       /** Member Ids */
       member_ids?: number[];
       /** Name */
@@ -1265,6 +1345,45 @@ export interface components {
        * @default 0
        */
       territory_radius: number;
+    };
+    /**
+     * TrustEdgeDTO
+     * @description One bond or feud, for the trust-lines overlay.
+     */
+    TrustEdgeDTO: {
+      /** A */
+      a: number;
+      /**
+       * Ally
+       * @default false
+       */
+      ally: boolean;
+      /** Ax */
+      ax: number;
+      /** Az */
+      az: number;
+      /** B */
+      b: number;
+      /** Bx */
+      bx: number;
+      /** Bz */
+      bz: number;
+      /** Trust */
+      trust: number;
+    };
+    /**
+     * TrustGraphDTO
+     * @description `GET /api/social/trust-graph`: the strongest relationships only.
+     */
+    TrustGraphDTO: {
+      /** Edges */
+      edges?: components['schemas']['TrustEdgeDTO'][];
+      /**
+       * Total
+       * @description Edges above the threshold before truncation.
+       * @default 0
+       */
+      total: number;
     };
     /** ValidationError */
     ValidationError: {
@@ -1955,6 +2074,39 @@ export interface operations {
       };
     };
   };
+  trust_graph_api_social_trust_graph_get: {
+    parameters: {
+      query?: {
+        /** @description Minimum |trust| to include. */
+        minimum?: number;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TrustGraphDTO'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   list_tribes_api_tribes_get: {
     parameters: {
       query?: never;
@@ -2002,6 +2154,26 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  shelters_api_world_shelters_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ShelterDTO'][];
         };
       };
     };

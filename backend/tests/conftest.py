@@ -7,7 +7,9 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from app.ai.gametheory.ledger import SocialLedger
 from app.ai.minds import MindRegistry
+from app.ai.skill_services import SkillServices
 from app.ai.skills.registry import SkillRegistry, build_registry
 from app.container import build_container
 from app.core.settings import Settings
@@ -62,15 +64,32 @@ def world(small_config: WorldConfig) -> World:
 
 
 @pytest.fixture
-def skills() -> SkillRegistry:
-    """Every shipped skill, discovered."""
-    return build_registry()
+def minds() -> MindRegistry:
+    """A fresh mind registry, shared by the skills and the pipeline."""
+    return MindRegistry()
 
 
 @pytest.fixture
-def pipeline(skills: SkillRegistry) -> SystemPipeline:
-    """The real tick pipeline with its own mind registry."""
-    return build_pipeline(MindRegistry(), skills, temperature=0.35)
+def ledger() -> SocialLedger:
+    """A fresh tally of social events."""
+    return SocialLedger()
+
+
+@pytest.fixture
+def skills(minds: MindRegistry, ledger: SocialLedger) -> SkillRegistry:
+    """Every shipped skill, discovered and bound to `minds`.
+
+    Binding matters: a social skill reaches into *other* agents' minds, so a
+    registry that is not bound to the same registry the test uses would
+    quietly operate on a different set of memories.
+    """
+    return build_registry(SkillServices(minds=minds, ledger=ledger))
+
+
+@pytest.fixture
+def pipeline(minds: MindRegistry, skills: SkillRegistry, ledger: SocialLedger) -> SystemPipeline:
+    """The real tick pipeline, sharing the test's minds and ledger."""
+    return build_pipeline(minds, skills, temperature=0.35, ledger=ledger)
 
 
 def run_ticks(pipeline: SystemPipeline, world: World, ticks: int) -> None:

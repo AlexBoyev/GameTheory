@@ -23,6 +23,7 @@ class EventType(StrEnum):
     ALLIANCE = "alliance"
     COMBAT = "combat"
     HUNT = "hunt"
+    SHELTER_BUILT = "shelter_built"
     TRIBE_FOUNDED = "tribe_founded"
     TRIBE_JOINED = "tribe_joined"
     TRIBE_LEFT = "tribe_left"

@@ -192,6 +192,27 @@ class ResourceNode:
 
 
 @dataclass(slots=True)
+class Shelter:
+    """A hut. Sleeping in one is safer and more restful than sleeping in a field.
+
+    Attributes:
+        id: Stable identifier.
+        position: Where it stands.
+        owner_id: Who built it.
+        tribe_id: Which tribe's camp it belongs to, if any.
+        quality: 0-1; better shelters rest you faster.
+        built_tick: When it went up.
+    """
+
+    id: int
+    position: tuple[float, float]
+    owner_id: int
+    tribe_id: int | None = None
+    quality: float = 1.0
+    built_tick: int = 0
+
+
+@dataclass(slots=True)
 class Tribe:
     """An emergent group with a leader, storage, camp and territory."""
 

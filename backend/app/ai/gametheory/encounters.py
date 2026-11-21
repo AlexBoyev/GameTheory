@@ -1,4 +1,11 @@
-"""Encounters: picking a game from context and applying its payoffs (SPEC 5.1)."""
+"""Encounters: picking a game from context and living with the result (SPEC 5.1).
+
+The resolver is the heart of the whole project. Two agents meet; the context
+decides *which* game they are in; their inherited strategies decide the moves;
+the payoff matrix decides the score; and then - the part that matters - the
+result is converted into food, health, trust and memory, so the next encounter
+between these two is shaped by this one.
+"""
 
 from dataclasses import dataclass
 from enum import StrEnum
@@ -56,27 +63,16 @@ class EncounterResult:
     payoff_a: float
     payoff_b: float
     trembled: bool = False
+    betrayal_by: tuple[int, ...] = ()
+    food_moved: float = 0.0
+    summary: str = ""
 
+    @property
+    def mutual_cooperation(self) -> bool:
+        """Both played C - the outcome the whole society depends on."""
+        return self.move_a is Move.COOPERATE and self.move_b is Move.COOPERATE
 
-class EncounterResolver:
-    """Chooses a game for a pair, asks both strategies, applies the payoffs.
-
-    Phase 4 implements selection, trembling-hand noise and the trust/food
-    consequences; the result type is fixed here so metrics and the event feed
-    can be built against it.
-    """
-
-    __slots__ = ("payoffs", "trembling_hand")
-
-    def __init__(
-        self,
-        payoffs: dict[GameKind, PayoffMatrix] | None = None,
-        trembling_hand: float = 0.02,
-    ) -> None:
-        self.payoffs = payoffs or {GameKind.PRISONERS_DILEMMA: PayoffMatrix()}
-        self.trembling_hand = trembling_hand
-
-    def resolve(self, agent_a: int, agent_b: int) -> EncounterResult:
-        """Resolve an encounter between two agents."""
-        msg = "EncounterResolver.resolve() arrives in Phase 4 (game theory)"
-        raise NotImplementedError(msg)
+    @property
+    def cooperations(self) -> int:
+        """How many of the two moves were cooperative."""
+        return sum(move is Move.COOPERATE for move in (self.move_a, self.move_b))

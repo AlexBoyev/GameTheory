@@ -11,51 +11,79 @@ Runs entirely on `localhost`. **No paid services, no API keys, no cloud AI.**
 
 - Design: [`docs/SPEC.md`](docs/SPEC.md)
 - Build plan: [`docs/PROMPTS.md`](docs/PROMPTS.md)
-- Architecture decisions: [`docs/adr/0001-architecture.md`](docs/adr/0001-architecture.md)
+- Architecture decisions: [`docs/adr/`](docs/adr/) - [0001 architecture](docs/adr/0001-architecture.md),
+  [0002 simulation core](docs/adr/0002-simulation-core.md),
+  [0003 game theory and tribes](docs/adr/0003-game-theory-and-tribes.md)
 - Working rules for Claude Code: [`CLAUDE.md`](CLAUDE.md)
 
 ---
 
-## Status: Phase 2 of 7 (simulation core)
+## Status: Phase 4 of 7 (game theory, manipulation and tribes)
 
 What works right now:
 
 | Works | Not yet |
 | --- | --- |
-| **A real simulation**: seeded island, resources with regrowth, day/night, seasons | Game theory, trust, gossip, tribes (Phase 4) |
-| Agents with needs, traits, inventory, ageing and named death causes | Social and manipulation skills (Phase 4) |
-| 8 survival skills - Wander, MoveTo, Gather, Eat, Drink, Sleep, HuntRabbit, Flee | Reproduction, metrics, charts (Phase 4) |
-| Utility AI with response curves, softmax personality and a top-3 decision trace | LLM minds and speech bubbles (Phase 5) |
-| Engine on a worker thread: pause / play / 1x-50x / MAX / step / reset | Snapshots, god tools, presets with real values (Phase 6) |
-| `GET /api/world/terrain`, `/api/agents`, `/api/agents/{id}`, `/api/events` | Vegetation detail, emoji states, inspector panel (Phase 3) |
-| `WS /ws/world`: real frames at 20 Hz with resource deltas and batched events | Tribes, snapshots, god tools (return **501** naming their phase) |
-| 3D island from the **backend heightmap**, biome colours, resources you can watch empty | Charts, event feed UI, minimap (Phase 3+) |
-| 7 layering contracts, 117 backend tests, 21 frontend tests | |
+| **A real simulation**: seeded island, resources with regrowth, day/night, seasons | LLM minds and speech bubbles with real dialogue (Phase 5) |
+| Agents with needs, traits, inventory, ageing and named death causes | Snapshots you can reload, god tools, presets with real values (Phase 6) |
+| **31 skills**: survival, building, social, manipulation, combat and tribe actions | Minimap, tournament report, polish pass (Phase 6-7) |
+| Utility AI with response curves, softmax personality and a top-3 decision trace | |
+| **Five games**: Prisoner's Dilemma, Stag Hunt, Hawk-Dove, Ultimatum, Public Goods | |
+| **Ten strategies** from AlwaysCooperate to Detective, inherited with mutation | |
+| **Trust you earn and reputation you only hear about**, gossip, lies, lie detection | |
+| **Tribes** that are founded and joined, with leaders, storage, territory, coups, wars and peace | |
+| Shelters that get built, reproduction with trait blending, deaths with causes | |
+| Engine on a worker thread: pause / play / 1x-50x / MAX / step / reset | |
+| Full UI: inspector, event feed with filters, charts, overlays, URL state, help | |
+| 7 layering contracts, **202 backend tests**, 21 frontend tests | |
 
-`GET /api/sim/state` now reports `"placeholder": false`. Determinism is
+`GET /api/sim/state` reports `"placeholder": false`. Determinism is
 machine-checked: same seed, same world, to the bit, after 1,000 ticks of the
-full pipeline.
+full pipeline, with the LLM off.
+
+### What a world actually does
+
+From a 25x run on the default seed (1337), around tick 10,000 - read from
+`/api/metrics` and `/api/tribes`, not from the design document:
+
+| | |
+| --- | --- |
+| Population | 120 spawned -> 140 alive (births outpacing deaths) |
+| Tribes | 16, named, each with a leader, a store and territory |
+| Shelters built | 69 |
+| Cooperation rate | 70% in the Prisoner's Dilemma, 77% Hawk-Dove, 100% Stag Hunt |
+| Food Gini | 0.79 - the island has developed a rich and a poor |
+| Gifts / betrayals | 717 / 77 |
+| Lies told / caught | 878 / 301 |
+| Wars declared | 9, with alliances, peace deals and 10 attempted coups |
 
 ### Measured on this machine
 
-`python driver.py --bench` (pure engine, no server, no pacing):
+`python driver.py --bench` (pure engine, no server, no pacing). These numbers
+are for the **full Phase 4 pipeline** - encounters, gossip and tribes included,
+which is roughly twice the per-tick work of Phase 2:
 
-| Agents | Ticks/sec | vs realtime (1x = 10 ticks/s) | World build |
+| Agents | Ticks/sec | vs realtime (1x = 10 ticks/s) | Phase 2 was |
 | --- | --- | --- | --- |
-| 100 | 618 | 62x | 0.4 s |
-| 500 | 85 | 8.4x | 0.5 s |
-| 1000 | 37 | 3.7x | 0.5 s |
+| 100 | 341 | 34x | 618 |
+| 500 | 42 | 4.2x | 85 |
+| 1000 | 17 | 1.7x | 37 |
 
-So 500 agents comfortably sustain the 5x preset and roughly reach 8x; 1000
-agents sustain 2x. Speed presets above the sustainable rate simply run as fast
-as the CPU allows rather than keeping up.
+The default world of 120 agents therefore runs comfortably at any preset up to
+25x. At 500 agents the sustainable preset is 5x; at 1,000 it is 1x. Presets
+above the sustainable rate are not an error - the engine runs as fast as the
+CPU allows and `ticks_per_second` in `/api/sim/state` tells you what you are
+really getting. World build is 0.4 s at every size.
 
 **Survivability is a tested invariant**, not an assumption: 92-99% of the
 population survives 6,000-12,000 ticks across seeds, with occasional
 starvation as the remaining pressure. See
 [`docs/adr/0002-simulation-core.md`](docs/adr/0002-simulation-core.md) for the
-two balance bugs that made the first cut of this phase kill 88% of its
-population while every unit test passed.
+two balance bugs that made the first cut of the simulation kill 88% of its
+population while every unit test passed, and
+[`docs/adr/0003-game-theory-and-tribes.md`](docs/adr/0003-game-theory-and-tribes.md)
+for the metrics-sampling and coup-accounting bugs that only a running world
+exposed.
 
 ---
 
@@ -102,6 +130,7 @@ python driver.py
 | `python driver.py --bench` | Throughput benchmark |
 | `python driver.py --port 8001` | Pin the backend port (default: first free from 8000) |
 | `python driver.py --no-frontend` | Backend only |
+| `python driver.py --no-reload` | Do not restart the backend when its sources change |
 | `python driver.py --install` | Install dependencies and exit |
 
 It needs nothing but the system Python - stdlib only - and Ctrl+C stops both
@@ -113,7 +142,9 @@ servers and their children.
 # 1. backend
 cd backend
 uv sync
-uv run uvicorn app.main:app --reload --port 8000      # or --port 8001
+uv run uvicorn app.main:app --port 8000                # or --port 8001
+# Note: --reload hangs on this host (see ADR 0003). `python driver.py`
+# watches the sources and restarts the backend itself instead.
 
 # 2. frontend (second terminal)
 cd frontend

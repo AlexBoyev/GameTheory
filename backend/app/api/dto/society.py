@@ -126,6 +126,7 @@ class TribeDTO(BaseModel):
     name: str
     colour: str
     leader_id: int | None = None
+    leader_name: str | None = None
     member_ids: list[int] = Field(default_factory=list)
     storage_food: float = 0.0
     camp_x: float = 0.0
@@ -133,3 +134,40 @@ class TribeDTO(BaseModel):
     territory_radius: float = 0.0
     at_war_with: list[int] = Field(default_factory=list)
     allied_with: list[int] = Field(default_factory=list)
+
+
+class ShelterDTO(BaseModel):
+    """One hut (`GET /api/world/shelters`)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    x: float
+    z: float
+    owner_id: int
+    tribe_id: int | None = None
+    quality: float = 1.0
+
+
+class TrustEdgeDTO(BaseModel):
+    """One bond or feud, for the trust-lines overlay."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    a: int
+    b: int
+    ax: float
+    az: float
+    bx: float
+    bz: float
+    trust: float = Field(ge=-1.0, le=1.0)
+    ally: bool = False
+
+
+class TrustGraphDTO(BaseModel):
+    """`GET /api/social/trust-graph`: the strongest relationships only."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    edges: list[TrustEdgeDTO] = Field(default_factory=list)
+    total: int = Field(default=0, description="Edges above the threshold before truncation.")

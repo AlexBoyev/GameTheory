@@ -5,36 +5,54 @@
 #   reward     (R) - both cooperate
 #   punishment (P) - both defect
 #   sucker     (S) - cooperate while the partner defects
-# A genuine Prisoner's Dilemma needs T > R > P > S.
-# Payoffs are converted into food, health and trust by the encounter resolver.
-# Loaded from Phase 4 onwards.
+#
+# A genuine Prisoner's Dilemma needs T > R > P > S. The encounter resolver
+# checks that and refuses to start with a matrix that is not a dilemma, so a
+# typo here fails loudly instead of quietly producing a boring world.
+#
+# Payoffs are in "utility", converted to food, health and trust by the
+# resolver. Edit freely: this file is the experiment.
 
-# prisoners_dilemma:
-#   temptation: 5.0
-#   reward: 3.0
-#   punishment: 1.0
-#   sucker: 0.0
-#
-# stag_hunt:                      # deer needs >= 2 hunters
-#   temptation: 1.0               # chase a rabbit alone while the other waits
-#   reward: 6.0                   # bring the deer down together
-#   punishment: 1.0               # both settle for rabbits
-#   sucker: 0.0                   # wait at the stag alone, go hungry
-#
-# hawk_dove:
-#   temptation: 4.0               # fight while the other yields
-#   reward: 2.0                   # share the resource
-#   punishment: -2.0              # both fight, both injured
-#   sucker: 0.0                   # yield
-#
-# ultimatum:
-#   fair_split: 0.5               # float - what counts as a fair offer
-#   rejection_trust_penalty: 0.2  # float - trust lost by a rejected lowball
-#
-# public_goods:
-#   contribution: 2.0             # food each contributor puts into storage
-#   multiplier: 1.6               # storage growth before redistribution
-#   free_rider_detection: 0.4     # chance a free-rider is noticed
-#
-# noise:
-#   trembling_hand: 0.02          # chance an intended action flips
+prisoners_dilemma:
+  temptation: 5.0
+  reward: 3.0
+  punishment: 1.0
+  sucker: 0.0
+
+# Deer needs two hunters. Cooperating together beats anything either can do
+# alone, but being the only one who waits at the stag is the worst outcome -
+# which is what makes trust worth having.
+stag_hunt:
+  temptation: 2.0
+  reward: 6.0
+  punishment: 1.5
+  sucker: 0.0
+
+# Fighting over a resource. Mutual aggression is the only negative payoff in
+# the game: two hawks both get hurt.
+hawk_dove:
+  temptation: 4.0
+  reward: 2.0
+  punishment: -2.0
+  sucker: 0.5
+
+ultimatum:
+  temptation: 4.0
+  reward: 2.5
+  punishment: 0.0
+  sucker: 0.5
+  fair_split: 0.4
+  rejection_trust_penalty: 0.25
+
+public_goods:
+  temptation: 3.0
+  reward: 2.5
+  punishment: 0.5
+  sucker: 0.0
+  contribution: 2.0
+  multiplier: 1.7
+
+noise:
+  # Chance an intended action comes out as its opposite. Axelrod's "trembling
+  # hand": without it, Tit-for-Tat pairs never test forgiveness.
+  trembling_hand: 0.02

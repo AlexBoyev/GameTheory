@@ -17,6 +17,12 @@ export type LlmStatus = components['schemas']['LLMStatusDTO'];
 export type AgentSummary = components['schemas']['AgentSummaryDTO'];
 export type AgentDetail = components['schemas']['AgentDetailDTO'];
 export type EventsPayload = components['schemas']['EventsDTO'];
+export type Tribe = components['schemas']['TribeDTO'];
+export type Shelter = components['schemas']['ShelterDTO'];
+export type TrustGraph = components['schemas']['TrustGraphDTO'];
+export type TrustEdge = components['schemas']['TrustEdgeDTO'];
+export type Metrics = components['schemas']['MetricsDTO'];
+export type MetricPoint = components['schemas']['MetricPointDTO'];
 
 /** One row of the event feed. */
 export interface EventItem {
