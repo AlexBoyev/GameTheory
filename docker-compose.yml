@@ -1,0 +1,75 @@
+# Game Theory - local stack (docs/SPEC.md section 14).
+#
+#   docker compose up --build                  backend + frontend
+#   docker compose --profile llm up --build    ... plus a containerised Ollama
+#
+# On Windows the simpler setup is to run Ollama natively (it gets the GPU
+# without any passthrough) and leave the `llm` profile alone: the backend
+# reaches the host daemon at host.docker.internal:11434.
+
+name: gametheory
+
+services:
+  backend:
+    build:
+      context: ./backend
+      target: ${BACKEND_TARGET:-dev}
+    # Host port is overridable: something else may already own 8000.
+    ports:
+      - '${BACKEND_PORT:-8000}:8000'
+    environment:
+      ENV: ${ENV:-dev}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_JSON: ${LOG_JSON:-false}
+      DATA_DIR: /data
+      SIM_SEED: ${SIM_SEED:-1337}
+      SIM_MAX_AGENTS: ${SIM_MAX_AGENTS:-1000}
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      LLM_MAX_AGENTS: ${LLM_MAX_AGENTS:-8}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:8b}
+    volumes:
+      - ./backend:/app
+      - backend-venv:/opt/venv
+      - ./data:/data
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      target: ${FRONTEND_TARGET:-dev}
+    ports:
+      - '${FRONTEND_PORT:-5173}:5173'
+    environment:
+      VITE_BACKEND_URL: http://backend:8000
+    volumes:
+      - ./frontend:/app
+      # Keep the image's node_modules: the host's are built for Windows.
+      - frontend-modules:/app/node_modules
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ['llm']
+    ports:
+      - '11434:11434'
+    volumes:
+      - ollama-models:/root/.ollama
+    restart: unless-stopped
+    # Uncomment for an NVIDIA GPU inside the container.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  backend-venv:
+  frontend-modules:
+  ollama-models:

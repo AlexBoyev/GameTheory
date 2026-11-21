@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+
+/* The "soft toy diorama" palette (SPEC 9.2): warm, pastel, low contrast. */
+@theme {
+  --color-sky-soft: #bfe3f2;
+  --color-sand: #f2e3c4;
+  --color-meadow: #c7e3a8;
+  --color-forest: #8fc08a;
+  --color-hill: #cbbf9b;
+  --color-peak: #efeae2;
+  --color-water: #86c5de;
+  --color-panel: #1c2230;
+  --color-panel-soft: #273043;
+  --color-ink: #f4f6fb;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-panel);
+  color: var(--color-ink);
+  font-family:
+    'Segoe UI Variable',
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    'Helvetica Neue',
+    sans-serif;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+  touch-action: none;
+}

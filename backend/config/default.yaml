@@ -1,0 +1,40 @@
+# Game Theory - default world configuration
+#
+# Schema: app/core/world_config.py :: WorldConfig
+# Values here are the defaults a new world is built from; environment variables
+# (SIM_*, LLM_*, see docs/SPEC.md section 12) override the process-level ones.
+# Loaded from Phase 2 onwards - until then WorldConfig's own defaults apply.
+
+# seed: 1337                      # int   - same seed + LLM off => identical world
+#
+# terrain:
+#   size: 256.0                   # float - world units across
+#   resolution: 128               # int   - heightmap cells per axis (16..512)
+#   octaves: 5                    # int   - OpenSimplex octaves
+#   falloff: 2.2                  # float - radial island falloff exponent
+#   water_level: 0.32             # float - 0..1 fraction of max_height
+#   max_height: 18.0              # float - world units
+#
+# population: 120                 # int   - agents spawned at tick 0
+# max_agents: 1000                # int   - hard cap (performance)
+# initial_tribes: 0               # int   - 0 => tribes must emerge on their own
+#
+# scarcity: 1.0                   # float - scales all resource yields (>1 = harsher)
+# season_start: spring            # spring | summer | autumn | winter
+#
+# strategy_mix:                   # relative weights, normalised at spawn
+#   TitForTat: 0.25
+#   AlwaysCooperate: 0.15
+#   AlwaysDefect: 0.15
+#   Grudger: 0.10
+#   GenerousTFT: 0.10
+#   Pavlov: 0.10
+#   Detective: 0.05
+#   Random: 0.05
+#   Opportunist: 0.05
+#
+# mutation_rate: 0.05             # float - chance a child's strategy flips
+# trembling_hand: 0.02            # float - chance an intended move flips
+#
+# llm_agents: 0                   # int   - how many agents get brain_type=llm
+# tournament_mode: false          # bool  - survival off, round-robin IPD

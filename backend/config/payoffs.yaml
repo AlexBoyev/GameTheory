@@ -1,0 +1,40 @@
+# Game Theory - payoff matrices (docs/SPEC.md section 5.1)
+#
+# Schema: app/ai/gametheory/encounters.py :: PayoffMatrix (T/R/P/S notation)
+#   temptation (T) - defect while the partner cooperates
+#   reward     (R) - both cooperate
+#   punishment (P) - both defect
+#   sucker     (S) - cooperate while the partner defects
+# A genuine Prisoner's Dilemma needs T > R > P > S.
+# Payoffs are converted into food, health and trust by the encounter resolver.
+# Loaded from Phase 4 onwards.
+
+# prisoners_dilemma:
+#   temptation: 5.0
+#   reward: 3.0
+#   punishment: 1.0
+#   sucker: 0.0
+#
+# stag_hunt:                      # deer needs >= 2 hunters
+#   temptation: 1.0               # chase a rabbit alone while the other waits
+#   reward: 6.0                   # bring the deer down together
+#   punishment: 1.0               # both settle for rabbits
+#   sucker: 0.0                   # wait at the stag alone, go hungry
+#
+# hawk_dove:
+#   temptation: 4.0               # fight while the other yields
+#   reward: 2.0                   # share the resource
+#   punishment: -2.0              # both fight, both injured
+#   sucker: 0.0                   # yield
+#
+# ultimatum:
+#   fair_split: 0.5               # float - what counts as a fair offer
+#   rejection_trust_penalty: 0.2  # float - trust lost by a rejected lowball
+#
+# public_goods:
+#   contribution: 2.0             # food each contributor puts into storage
+#   multiplier: 1.6               # storage growth before redistribution
+#   free_rider_detection: 0.4     # chance a free-rider is noticed
+#
+# noise:
+#   trembling_hand: 0.02          # chance an intended action flips

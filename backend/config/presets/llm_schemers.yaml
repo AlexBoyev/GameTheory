@@ -1,0 +1,19 @@
+# Preset: LLM Schemers
+# Overrides on top of config/default.yaml. Schema: WorldConfig.
+# A handful of LLM minds among utility agents. They get a glowing halo, speak
+# out loud, and their plans bias their own utility scores - so manipulation
+# shows up as speech bubbles before it shows up in the metrics.
+# Needs Ollama running, or it degrades to deterministic mock plans.
+# Loaded from Phase 6.
+
+# name: LLM Schemers
+# scarcity: 1.4
+# population: 60
+# llm_agents: 6
+# initial_tribes: 0
+# strategy_mix:
+#   LLM: 0.10
+#   TitForTat: 0.30
+#   AlwaysCooperate: 0.20
+#   Opportunist: 0.20
+#   AlwaysDefect: 0.20

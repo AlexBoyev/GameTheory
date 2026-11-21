@@ -1,0 +1,27 @@
+# Preset: Axelrod Tournament
+# Overrides on top of config/default.yaml. Schema: WorldConfig.
+# Survival off. Every strategy meets every other in an iterated Prisoner's
+# Dilemma; the next generation is proportional to score (replicator dynamics).
+# Rendered as agents in a ring arena. See docs/SPEC.md section 5.3.
+# Loaded from Phase 6.
+
+# name: Axelrod Tournament
+# tournament_mode: true
+# population: 100
+# initial_tribes: 0
+# mutation_rate: 0.0
+# trembling_hand: 0.0
+# strategy_mix:                   # equal weights: one cohort per strategy
+#   AlwaysCooperate: 1.0
+#   AlwaysDefect: 1.0
+#   TitForTat: 1.0
+#   GenerousTFT: 1.0
+#   Grudger: 1.0
+#   Pavlov: 1.0
+#   Detective: 1.0
+#   Random: 1.0
+#   Opportunist: 1.0
+# tournament:                     # Phase 6 adds these knobs
+#   rounds_per_pair: 200
+#   generations: 20
+# llm_agents: 0

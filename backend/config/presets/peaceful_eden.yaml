@@ -1,0 +1,19 @@
+# Preset: Peaceful Eden
+# Overrides on top of config/default.yaml. Schema: WorldConfig.
+# Abundant food and a cooperative strategy mix - the control group. Watch how
+# high trust accumulates when nothing forces anyone to cheat.
+# Loaded from Phase 6.
+
+# name: Peaceful Eden
+# scarcity: 0.6
+# population: 100
+# initial_tribes: 0
+# strategy_mix:
+#   AlwaysCooperate: 0.30
+#   TitForTat: 0.30
+#   GenerousTFT: 0.20
+#   Pavlov: 0.10
+#   AlwaysDefect: 0.05
+#   Opportunist: 0.05
+# trembling_hand: 0.01
+# llm_agents: 0

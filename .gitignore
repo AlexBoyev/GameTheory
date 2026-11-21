@@ -1,0 +1,51 @@
+# --- secrets and local config
+.env
+.env.local
+*.local
+
+# --- runtime data (SQLite, snapshots) - never committed
+/data/
+*.db
+*.db-journal
+*.db-wal
+
+# --- python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# --- node
+node_modules/
+frontend/dist/
+.vite/
+*.tsbuildinfo
+
+# --- generated API artefacts
+# `generated.ts` is committed so typecheck works without a running backend;
+# the schema dump it comes from is not.
+frontend/openapi.json
+
+# --- test artefacts
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+
+# --- editors and OS
+.idea/*
+!.idea/runConfigurations/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.swp

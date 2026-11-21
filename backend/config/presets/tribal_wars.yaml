@@ -1,0 +1,20 @@
+# Preset: Tribal Wars
+# Overrides on top of config/default.yaml. Schema: WorldConfig.
+# Four tribes start already formed on contested ground: raids, alliances,
+# coups and peace treaties, with loyalty mattering more than honesty.
+# Loaded from Phase 6.
+
+# name: Tribal Wars
+# scarcity: 1.6
+# population: 200
+# initial_tribes: 4
+# trait_bias:
+#   loyalty: 0.75
+#   aggression: 0.65
+# strategy_mix:
+#   TitForTat: 0.30
+#   Grudger: 0.25
+#   AlwaysDefect: 0.20
+#   Opportunist: 0.15
+#   GenerousTFT: 0.10
+# llm_agents: 0

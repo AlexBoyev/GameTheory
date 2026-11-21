@@ -1,0 +1,10 @@
+{# Reflection prompt (SPEC 7.2): condense events into durable beliefs. Phase 5. #}
+You are {{ agent.name }}. These things happened to you recently:
+
+{% for memory in memories -%}
+- (day {{ memory.day }}) {{ memory.summary }}
+{% endfor %}
+
+Write at most {{ max_beliefs }} short beliefs you now hold about specific people
+or about how this island works - the kind of lesson you would act on later
+("Rex steals - avoid him"). Reply with JSON matching the schema you were given.
