@@ -151,16 +151,23 @@ backwards: a mistyped test is a test that passes for the wrong reason.
 **Not fixed here**: 84 errors is a focused session of its own, and fixing them
 badly (blanket `Any`) would be worse than leaving them.
 
-### P2 - the event feed evicts rare events under load
+### ~~P2 - the event feed evicts rare events under load~~ (fixed)
 
 `RECENT_EVENTS = 500`, and a busy world generates mostly gossip. Twice during
 this build I queried the feed for something I had just caused - a god action,
 a speech line - and got nothing, each time concluding briefly that the feature
-was broken. It was not; the event had been pushed out by 500 gossip events.
+was broken. It was not; the event had been pushed out.
 
-The frontend's filters make this invisible in the UI (filtering a buffer that
-has already lost the interesting rows), so consider per-type retention: keep
-the last N of *each* type rather than the last N overall.
+Fixed by `services/event_store.py`, which retains the same events two ways: a
+chronological buffer for reading top to bottom, and a per-type buffer so the
+last 40 of each *kind* survive however much noise follows. Filtering now reads
+the per-type buffer, because filtering the chronological one filters rows that
+have already gone and quietly returns nothing.
+
+Demonstrated in a live world: after overflowing the 500-event cap, **zero** god
+actions remained in the chronological feed and both were still returned by
+`GET /api/events?type=god_action`. Retention stays bounded at
+`per_type x number of types`.
 
 ### P3 - `FrozenPacer` is an unused test seam
 

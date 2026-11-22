@@ -16,7 +16,7 @@ import asyncio
 import queue
 import threading
 import time
-from collections import Counter, deque
+from collections import Counter
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -31,6 +31,7 @@ from app.core.world_config import STRATEGY_NAMES, WorldConfig
 from app.services import envelopes
 from app.services.engine_factory import EngineBundle, build_engine_bundle
 from app.services.envelopes import Envelope
+from app.services.event_store import EventStore
 from app.services.god_tools import TOOLS, GodContext, Intervention, Outcome
 from app.services.metrics_service import MetricsService
 from app.services.serialisation import dump_world, load_world
@@ -59,7 +60,6 @@ FRAME_QUEUE_SIZE = 2
 """Keep the newest frames only: a slow client must not delay the engine."""
 
 EVENT_QUEUE_SIZE = 64
-RECENT_EVENTS = 500
 COMMAND_TIMEOUT_S = 5.0
 """Generous: a `Reset` has to generate a world before it can be applied."""
 
@@ -118,7 +118,7 @@ class SimulationService:
 
         self._frames: queue.Queue[WorldFrame] = queue.Queue(maxsize=FRAME_QUEUE_SIZE)
         self._event_batches: queue.Queue[list[SimEvent]] = queue.Queue(maxsize=EVENT_QUEUE_SIZE)
-        self._recent_events: deque[dict[str, Any]] = deque(maxlen=RECENT_EVENTS)
+        self._recent_events = EventStore()
         self._last_amounts: dict[int, float] = {}
 
         self._subscribers: set[Subscriber] = set()
@@ -254,12 +254,7 @@ class SimulationService:
         self, limit: int = 100, event_type: str | None = None
     ) -> list[dict[str, Any]]:
         """Return the newest events, newest first, optionally filtered."""
-        selected = [
-            event
-            for event in reversed(self._recent_events)
-            if event_type is None or event["type"] == event_type
-        ]
-        return selected[:limit]
+        return self._recent_events.recent(limit=limit, event_type=event_type)
 
     def hello(self) -> Envelope:
         """Build the `hello` envelope: config, terrain meta, legends, resources."""
