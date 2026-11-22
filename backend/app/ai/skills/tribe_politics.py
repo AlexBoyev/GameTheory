@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.ai import social
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import NoParams, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import NoParams, Requirement, Skill, SkillCategory, SkillRun, SkillStatus
 from app.ai.skills.helpers import stop
 from app.ai.skills.tribe import COUP_MARGIN, legitimacy
 from app.core.result import OK_NONE, Err, Result
@@ -19,6 +19,7 @@ class ChallengeLeader(Skill):
     name = "ChallengeLeader"
     description = "Challenge your tribe's leader for the leadership."
     category = SkillCategory.TRIBE
+    requires = frozenset({Requirement.IN_TRIBE})
     Params = NoParams
     visual_state = AgentState.SCHEME
     cooldown = 200.0
@@ -120,6 +121,7 @@ class DeclareWar(Skill):
     name = "DeclareWar"
     description = "Declare war on a rival tribe."
     category = SkillCategory.TRIBE
+    requires = frozenset({Requirement.TRIBE_LEADER})
     Params = TribeTargetParams
     visual_state = AgentState.SCHEME
     cooldown = 400.0
@@ -205,6 +207,7 @@ class OfferPeace(Skill):
     name = "OfferPeace"
     description = "Offer peace to a tribe you are at war with."
     category = SkillCategory.TRIBE
+    requires = frozenset({Requirement.TRIBE_LEADER})
     Params = TribeTargetParams
     visual_state = AgentState.TALK
     cooldown = 200.0

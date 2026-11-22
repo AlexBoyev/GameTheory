@@ -1,6 +1,7 @@
 """Choosing what to do next, and starting it (SPEC section 7.1)."""
 
 from app.ai.brains.base import Brain, Decision, DecisionContext
+from app.ai.facts import agent_facts
 from app.ai.minds import Mind, MindRegistry
 from app.ai.skills.registry import SkillRegistry
 from app.core.result import is_ok
@@ -92,6 +93,7 @@ class DecisionSystem:
             commitment_bonus=COMMITMENT_BONUS if mind.run is not None else 0.0,
             intention_skills=intention.skills if intention is not None else (),
             intention_bonus=INTENTION_BONUS if intention is not None else 0.0,
+            facts=agent_facts(agent, mind.observation),
         )
 
     def _begin(

@@ -3,7 +3,7 @@
 from pydantic import BaseModel
 
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import NoParams, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import NoParams, Requirement, Skill, SkillCategory, SkillRun, SkillStatus
 from app.ai.skills.helpers import stop
 from app.ai.skills.social import TargetParams, nearby_agents
 from app.ai.skills.tribe import FOUND_ALLIES, FOUND_CHARISMA, JOIN_TRUST
@@ -21,6 +21,7 @@ class FoundTribe(Skill):
     name = "FoundTribe"
     description = "Found a new tribe with the people who trust you."
     category = SkillCategory.TRIBE
+    requires = frozenset({Requirement.TRIBELESS})
     Params = NoParams
     visual_state = AgentState.TALK
     cooldown = 300.0
@@ -120,6 +121,7 @@ class JoinTribe(Skill):
     name = "JoinTribe"
     description = "Join a nearby tribe."
     category = SkillCategory.TRIBE
+    requires = frozenset({Requirement.TRIBELESS, Requirement.NEARBY_AGENTS})
     Params = TargetParams
     visual_state = AgentState.TALK
     cooldown = 60.0
@@ -196,6 +198,7 @@ class LeaveTribe(Skill):
     name = "LeaveTribe"
     description = "Leave your tribe."
     category = SkillCategory.TRIBE
+    requires = frozenset({Requirement.IN_TRIBE})
     Params = NoParams
     visual_state = AgentState.WANDER
     cooldown = 120.0

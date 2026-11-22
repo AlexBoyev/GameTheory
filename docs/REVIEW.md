@@ -18,9 +18,9 @@ document records.
 | Gate | Result |
 | --- | --- |
 | `ruff format`, `ruff check` | clean |
-| `mypy app` (strict) | clean, 130 files |
+| `mypy app` (strict) | clean, 132 files |
 | `lint-imports` | 7 contracts, 0 broken |
-| `pytest` | 350 passed |
+| `pytest` | 375 passed |
 | `tsc -b`, `eslint` | clean |
 | `vitest` | 34 passed |
 | `playwright` | 13 passed, repeated runs |
@@ -99,21 +99,42 @@ useful (it could name the *inputs*, not just the skill).
 not a cleanup. If it is taken on: do one skill first, prove the trace improves,
 then convert the rest.
 
-### P1 - every decision scores all 31 skills
+### ~~P1 - every decision scores all 31 skills~~ (partly fixed)
 
-`UtilityBrain._score_all` runs `check()` and `utility()` for every registered
-skill on every decision: 44% of runtime at 500 agents, and the reason the
-neighbour search is the hottest function in the profile.
+`UtilityBrain._score_all` ran `check()` and `utility()` for every registered
+skill on every decision: 44% of runtime at 500 agents. Most of those skills
+are ruled out by the agent's situation before any arithmetic - a tribeless
+agent alone in a field cannot gossip, raid, store food or declare war.
 
-Most of those skills are ruled out by the agent's situation before any
-arithmetic (tribe skills for a tribeless agent, combat for a pacifist, every
-social skill when nobody is nearby). A cheap pre-filter - by category against
-a handful of agent facts - is the real performance headroom.
+Each skill now declares the cheap facts it cannot run without
+(`Requirement.NEARBY_AGENTS`, `IN_TRIBE`, `TRIBELESS`, `TRIBE_LEADER`), the
+brain computes them once per decision from state it already has, and the
+impossible ones never get a call. The same gate filters the skills offered to
+the LLM, which previously ran all 31 `check()`s to build a prompt.
 
-**Not fixed here**: see ADR 0005 for the per-tick memo that was tried,
-measured at ~4% (inside the noise), found *unsafe* (skills mutate the world
-during a tick, so a cached answer goes stale silently) and reverted. The
-structural fix is the one worth making, and it belongs in a phase of its own.
+**It is safe because it is machine-checked, not because it looks right.** The
+rule is that an unmet requirement must *imply* a failing `check()` - a
+requirement is a cheap pre-test of something `check()` already enforces, never
+a new condition. `test_an_unmet_requirement_implies_a_failing_check` asserts
+exactly that for every agent and every annotated skill in a world that has run
+240 ticks, because getting it wrong would silently disable a skill with no
+error anywhere. That test is the reason this landed and the per-tick memo (ADR
+0005) did not.
+
+**Measured, A/B, median of three runs:**
+
+| | skipped scoring | with gate | without |
+| --- | --- | --- | --- |
+| 100 agents | 24% | 374 ticks/s | 346 |
+| 500 agents | 23% | 56 ticks/s | 54 |
+
+So about a quarter of all skill scoring disappears, for 4-8% of wall clock.
+The gap is itself the finding: the skills being skipped are the ones with
+*cheap* checks, while the expensive part of `_score_all` is the survival
+skills' spatial queries - and those can never be skipped, because an agent
+always needs to eat. What remains is `nearest_resource`, which is exactly what
+the reverted memo targeted. A safe fix there would need the world to tell the
+cache when it changes, which is a bigger change than either attempt.
 
 ### P2 - seven files exceed the 300-line guideline
 

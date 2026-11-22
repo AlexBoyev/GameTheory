@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.ai import social
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import Requirement, Skill, SkillCategory, SkillRun, SkillStatus
 from app.ai.skills.helpers import stop
 from app.ai.skills.social import TargetParams, nearby_agents, resolve_target
 from app.core.result import OK_NONE, Err, Result
@@ -42,6 +42,7 @@ class Gossip(Skill):
     name = "Gossip"
     description = "Tell a neighbour your opinion of someone else."
     category = SkillCategory.MANIPULATION
+    requires = frozenset({Requirement.NEARBY_AGENTS})
     Params = GossipParams
     visual_state = AgentState.TALK
     cooldown = 18.0
@@ -204,6 +205,7 @@ class Lie(Skill):
     name = "Lie"
     description = "Tell someone food is somewhere it is not."
     category = SkillCategory.MANIPULATION
+    requires = frozenset({Requirement.NEARBY_AGENTS})
     Params = TargetParams
     visual_state = AgentState.SCHEME
     cooldown = 50.0
@@ -315,6 +317,7 @@ class Persuade(Skill):
     name = "Persuade"
     description = "Use charisma to improve how someone sees you."
     category = SkillCategory.MANIPULATION
+    requires = frozenset({Requirement.NEARBY_AGENTS})
     Params = TargetParams
     visual_state = AgentState.SCHEME
     cooldown = 30.0
@@ -372,6 +375,7 @@ class Bribe(Skill):
     name = "Bribe"
     description = "Give food specifically to buy someone's trust."
     category = SkillCategory.MANIPULATION
+    requires = frozenset({Requirement.NEARBY_AGENTS})
     Params = TargetParams
     visual_state = AgentState.SCHEME
     cooldown = 45.0
@@ -433,6 +437,7 @@ class Betray(Skill):
     name = "Betray"
     description = "Steal from someone who trusts you."
     category = SkillCategory.MANIPULATION
+    requires = frozenset({Requirement.NEARBY_AGENTS})
     Params = TargetParams
     visual_state = AgentState.SCHEME
     cooldown = 60.0

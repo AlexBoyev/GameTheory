@@ -55,6 +55,8 @@ class DecisionContext:
             not abandon a long errand for a marginally better idea. Without
             it, anything that takes more than one review interval - walking
             to a distant tree, say - never finishes.
+        facts: Cheap truths about this agent, used to skip skills that cannot
+            possibly run (see `ai.skills.base.Requirement`).
     """
 
     agent: Agent
@@ -66,6 +68,7 @@ class DecisionContext:
     intention_bonus: float = 0.0
     current_skill: str | None = None
     commitment_bonus: float = 0.0
+    facts: frozenset[str] = frozenset()
 
 
 class Brain(Protocol):

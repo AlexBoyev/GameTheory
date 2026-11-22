@@ -95,6 +95,12 @@ class UtilityBrain:
             definition = type(skill)
             if not definition.autonomous or definition.name in ctx.unavailable:
                 continue
+            # Skip what cannot possibly run before paying for `check()` and
+            # `utility()`. Each requirement is a cheap pre-test of something
+            # `check()` already enforces (see `Requirement`), so this changes
+            # the cost and never the outcome.
+            if not definition.requires.issubset(ctx.facts):
+                continue
             params = definition.Params()
             if not is_ok(skill.check(ctx.agent, ctx.world, params)):
                 continue

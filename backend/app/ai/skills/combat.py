@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from app.ai import social
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import NoParams, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import NoParams, Requirement, Skill, SkillCategory, SkillRun, SkillStatus
 from app.ai.skills.helpers import stop
 from app.ai.skills.social import TargetParams, nearby_agents, resolve_target
 from app.core.result import OK_NONE, Err, Result
@@ -30,6 +30,7 @@ class Attack(Skill):
     name = "Attack"
     description = "Attack a nearby agent and take their food."
     category = SkillCategory.COMBAT
+    requires = frozenset({Requirement.NEARBY_AGENTS})
     Params = TargetParams
     visual_state = AgentState.FIGHT
     cooldown = 30.0
@@ -131,6 +132,7 @@ class Defend(Skill):
     name = "Defend"
     description = "Brace against a threat instead of running."
     category = SkillCategory.COMBAT
+    requires = frozenset({Requirement.NEARBY_AGENTS})
     Params = NoParams
     visual_state = AgentState.FIGHT
     cooldown = 10.0
@@ -178,6 +180,7 @@ class Raid(Skill):
     name = "Raid"
     description = "Raid a hostile tribe's food store."
     category = SkillCategory.COMBAT
+    requires = frozenset({Requirement.IN_TRIBE})
     Params = RaidParams
     visual_state = AgentState.FIGHT
     cooldown = 90.0

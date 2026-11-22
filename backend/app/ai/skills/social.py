@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.ai import social
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import Requirement, Skill, SkillCategory, SkillRun, SkillStatus
 from app.ai.skills.helpers import need_urgency, stop
 from app.core.result import OK_NONE, Err, Result
 from app.core.world_config import StrategyName, WorldConfig
@@ -99,6 +99,7 @@ class Talk(Skill):
     name = "Talk"
     description = "Chat with a nearby agent."
     category = SkillCategory.SOCIAL
+    requires = frozenset({Requirement.NEARBY_AGENTS})
     Params = TargetParams
     visual_state = AgentState.TALK
     cooldown = 6.0
@@ -151,6 +152,7 @@ class Share(Skill):
     name = "Share"
     description = "Give food to a nearby agent."
     category = SkillCategory.SOCIAL
+    requires = frozenset({Requirement.NEARBY_AGENTS})
     Params = TargetParams
     visual_state = AgentState.TRADE
     cooldown = 15.0
@@ -230,6 +232,7 @@ class ProposeAlliance(Skill):
     name = "ProposeAlliance"
     description = "Offer an alliance to someone you trust."
     category = SkillCategory.SOCIAL
+    requires = frozenset({Requirement.NEARBY_AGENTS})
     Params = TargetParams
     visual_state = AgentState.TALK
     cooldown = 40.0
@@ -305,6 +308,7 @@ class Trade(Skill):
     name = "Trade"
     description = "Offer a trade; a greedy offer may be refused out of spite."
     category = SkillCategory.SOCIAL
+    requires = frozenset({Requirement.NEARBY_AGENTS})
     Params = TargetParams
     visual_state = AgentState.TRADE
     cooldown = 25.0
@@ -389,6 +393,7 @@ class Reproduce(Skill):
     name = "Reproduce"
     description = "Have a child with a partner you both trust."
     category = SkillCategory.SOCIAL
+    requires = frozenset({Requirement.NEARBY_AGENTS})
     Params = TargetParams
     visual_state = AgentState.TALK
     cooldown = 240.0

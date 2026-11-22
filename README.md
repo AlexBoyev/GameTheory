@@ -46,7 +46,7 @@ What works right now:
 | Shelters that get built, reproduction with trait blending, deaths with causes | |
 | Engine on a worker thread: pause / play / 1x-50x / MAX / step / reset | |
 | Full UI: inspector, event feed with filters, charts, overlays, speech bubbles, URL state, help | |
-| 7 layering contracts, **350 backend tests**, 34 unit + **13 browser tests** | |
+| 7 layering contracts, **375 backend tests**, 34 unit + **13 browser tests** | |
 
 `GET /api/sim/state` reports `"placeholder": false`. Determinism is
 machine-checked: same seed, same world, to the bit, after 1,000 ticks of the
@@ -107,15 +107,17 @@ Profiled at 500 agents (`cProfile`, 400 ticks of the full pipeline):
 | `SpatialHash.query_radius` | 495,097 | 26% |
 | `UtilityBrain._score_all` (cumulative) | 13,983 | 44% |
 
-The brain scores all 31 skills per decision and each skill queries its own
-neighbourhood, so a third of the neighbour searches in a tick are the same
-question asked twice. Caching them per tick was implemented, measured at
-**~4% (52.1 vs 49.8 ticks/s, inside the run-to-run noise)**, found to be
-*unsafe* - skills mutate the world during a tick, so a cached answer goes
-stale with nothing to notice it - and reverted. The hot path is documented in
-[`docs/adr/0005`](docs/adr/0005-god-tools-presets-snapshots.md) rather than
-optimised by guesswork; the real headroom is not scoring 31 skills when an
-agent's situation rules most of them out.
+The brain used to score all 31 skills per decision. Each skill now declares
+the cheap facts it cannot run without, and the impossible ones are skipped -
+about a quarter of all scoring, worth 4-8% of wall clock. It is safe because
+a test asserts, over every agent in a running world, that a skipped skill's
+`check()` would have failed anyway; that machine check is why this landed and
+a per-tick neighbour cache did not (measured at ~4%, *unsafe*, reverted - see
+[`docs/adr/0005`](docs/adr/0005-god-tools-presets-snapshots.md)).
+
+The remaining cost is the survival skills' spatial queries, which can never be
+skipped because an agent always needs to eat. Full detail, with the A/B
+numbers, in [`docs/REVIEW.md`](docs/REVIEW.md).
 
 **Survivability is a tested invariant**, not an assumption: 92-99% of the
 population survives 6,000-12,000 ticks across seeds, with occasional

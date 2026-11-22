@@ -31,6 +31,32 @@ class SkillCategory(StrEnum):
     TRIBE = "tribe"
 
 
+class Requirement(StrEnum):
+    """A cheap fact about an agent that a skill cannot run without.
+
+    The utility brain scores every registered skill on every decision, and
+    most of them are ruled out before any arithmetic: a tribeless agent alone
+    in a field cannot possibly gossip, raid, store food or declare war. Each
+    skill declares the facts it needs, the brain computes them once, and the
+    impossible ones never get a `check()` call - which was 44% of runtime at
+    500 agents.
+
+    The rule these must obey: **if a requirement is unmet, `check()` must fail
+    too.** A requirement is a cheap pre-test of something `check()` already
+    enforces, never a new condition. `test_requirements_are_safe` asserts
+    exactly that against a running world, because getting it wrong would
+    silently disable a skill with no error anywhere.
+    """
+
+    NEARBY_AGENTS = "nearby_agents"
+    """Somebody else is in sight. A conservative superset of the interaction
+    radius: if nobody is visible at vision range, nobody is within 4 units."""
+
+    IN_TRIBE = "in_tribe"
+    TRIBELESS = "tribeless"
+    TRIBE_LEADER = "tribe_leader"
+
+
 class SkillStatus(StrEnum):
     """Result of advancing a running skill."""
 
@@ -84,6 +110,12 @@ class Skill(ABC):
     autonomous: ClassVar[bool] = True
     """False for skills only an explicit plan may call (they need real params,
     so the utility brain - which always passes defaults - must skip them)."""
+
+    requires: ClassVar[frozenset[Requirement]] = frozenset()
+    """Facts without which this skill cannot run (see `Requirement`).
+
+    Declaring none is always correct and merely slower; declaring one that
+    `check()` does not enforce is a bug, and there is a test for it."""
 
     @abstractmethod
     def check(self, agent: Agent, world: World, params: BaseModel) -> Result[None, str]:

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from app.ai import social
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import NoParams, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import NoParams, Requirement, Skill, SkillCategory, SkillRun, SkillStatus
 from app.ai.skills.helpers import stop
 from app.ai.skills.tribe import STORE_AMOUNT, TAKE_AMOUNT
 from app.core.result import OK_NONE, Err, Result
@@ -19,6 +19,7 @@ class StoreFood(Skill):
     name = "StoreFood"
     description = "Contribute food to your tribe's store."
     category = SkillCategory.TRIBE
+    requires = frozenset({Requirement.IN_TRIBE})
     Params = NoParams
     visual_state = AgentState.TRADE
     cooldown = 30.0
@@ -72,6 +73,7 @@ class TakeFromStorage(Skill):
     name = "TakeFromStorage"
     description = "Take food from your tribe's store."
     category = SkillCategory.TRIBE
+    requires = frozenset({Requirement.IN_TRIBE})
     Params = NoParams
     visual_state = AgentState.TRADE
     cooldown = 25.0

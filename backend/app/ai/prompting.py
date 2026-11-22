@@ -13,6 +13,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from app.ai.facts import agent_facts
 from app.ai.llm.context import PromptContext
 from app.ai.memory import AgentMemory
 from app.ai.perception import Observation
@@ -111,6 +112,7 @@ def _skills(
     agent: Agent,
     world: World,
     unavailable: frozenset[str],
+    observation: Observation | None = None,
 ) -> list[dict[str, str]]:
     """The skills worth offering, preferring ones known to be possible now.
 
@@ -123,9 +125,15 @@ def _skills(
     actually executed.
     """
     available: list[dict[str, str]] = []
+    facts = agent_facts(agent, observation)
     for skill in registry.all():
         definition = type(skill)
         if definition.name in unavailable:
+            continue
+        # The same declarative gate the utility brain uses: a skill whose
+        # requirements the agent does not meet cannot run, so offering it to
+        # the model would only teach it to plan no-ops.
+        if not definition.requires.issubset(facts):
             continue
         try:
             params = definition.Params()
@@ -176,7 +184,7 @@ def build_intention_context(
         "nearby": _nearby(world, memory, observation),
         "relationships": _relationships(world, memory),
         "memories": _memories(memory, clock.sim_seconds, clock.day_seconds),
-        "skills": _skills(registry, agent, world, unavailable),
+        "skills": _skills(registry, agent, world, unavailable, observation),
         "max_steps": MAX_PLAN_STEPS,
     }
     return PromptContext(agent_id=agent.id, kind="intention", context=context)
