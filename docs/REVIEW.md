@@ -20,7 +20,7 @@ document records.
 | `ruff format`, `ruff check` | clean |
 | `mypy app tests` (strict) | clean, 173 files |
 | `lint-imports` | 7 contracts, 0 broken |
-| `pytest` | 396 passed |
+| `pytest` | 401 passed |
 | `tsc -b`, `eslint` | clean |
 | `vitest` | 34 passed |
 | `playwright` | 13 passed, repeated runs |
@@ -199,19 +199,25 @@ actions remained in the chronological feed and both were still returned by
 `GET /api/events?type=god_action`. Retention stays bounded at
 `per_type x number of types`.
 
-### P3 - `FrozenPacer` is an unused test seam
+### ~~P3 - `FrozenPacer` is an unused test seam~~ (fixed)
 
-`services/pacer.py` provides a deterministic pacer "for tests", and no test
-uses it; the engine tests drive the real clock with bounded polling instead.
-Either adopt it (engine tests would get faster and fully deterministic) or
-delete it. I left it because it is correct, documented, and cheap - but it is
-currently a promise nothing keeps.
+`services/pacer.py` provided a deterministic pacer "for tests" and no test
+used it. Rather than delete it, it turned out to enable a test that was
+missing: **nothing checked the pacing arithmetic at all.** With a real clock
+the question "does 2x earn twice the ticks" is unanswerable; with a frozen one
+it is five assertions.
 
-### P3 - constant tables are mutable dicts
+So there are now tests that one real second at 1x earns exactly ten ticks
+(dt is 0.1), that speed multiplies that, that fractional ticks are *banked*
+rather than lost (at 20 Hz each slice earns half a tick at 1x), that a long
+stall cannot run an unbounded catch-up batch, and that a clock going backwards
+earns nothing. An unused seam became coverage of a contract nothing was
+testing.
 
-`TOOLS`, `DESCRIPTIONS`, `DEFAULT_PAYOFFS` are module-level `dict`s used as
-constants. Nothing mutates them, and `Mapping` annotations would make that a
-guarantee rather than a convention.
+### ~~P3 - constant tables are mutable dicts~~ (fixed)
+
+`TOOLS`, `DESCRIPTIONS` and `DEFAULT_PAYOFFS` are now annotated `Mapping`, so
+"nothing mutates them" is a guarantee rather than a convention.
 
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 

@@ -6,6 +6,7 @@ is one - a matrix where defection does not tempt produces a world where
 nothing interesting happens, and that should fail loudly.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -14,7 +15,7 @@ import yaml
 
 from app.ai.gametheory.encounters import GameKind, PayoffMatrix
 
-DEFAULT_PAYOFFS: dict[GameKind, PayoffMatrix] = {
+DEFAULT_PAYOFFS: Mapping[GameKind, PayoffMatrix] = {
     GameKind.PRISONERS_DILEMMA: PayoffMatrix(5.0, 3.0, 1.0, 0.0),
     GameKind.STAG_HUNT: PayoffMatrix(2.0, 6.0, 1.5, 0.0),
     GameKind.HAWK_DOVE: PayoffMatrix(4.0, 2.0, -2.0, 0.5),

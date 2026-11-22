@@ -10,6 +10,7 @@ descriptions here as well would mean two places to change and one of them
 eventually lying.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -24,7 +25,7 @@ LOG = structlog.get_logger(__name__)
 
 PRESET_DIRNAME = "presets"
 
-DESCRIPTIONS: dict[str, str] = {
+DESCRIPTIONS: Mapping[str, str] = {
     "peaceful_eden": "Abundant food, cooperative strategy mix - watch trust accumulate.",
     "harsh_winter": "Scarcity high, starts in winter - cooperation under hunger.",
     "liars_island": "Low honesty, high cunning - gossip and deception dominate.",

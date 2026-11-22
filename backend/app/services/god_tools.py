@@ -11,7 +11,7 @@ the event feed a liar, and the feed is the main way anyone reads this thing.
 """
 
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from app.ai.minds import MindRegistry
@@ -261,7 +261,7 @@ def smite(world: World, request: Intervention, context: GodContext) -> Outcome:
 
 type GodTool = Callable[[World, Intervention, GodContext], Outcome]
 
-TOOLS: dict[str, GodTool] = {
+TOOLS: Mapping[str, GodTool] = {
     "drop_food": drop_food,
     "drought": drought,
     "bounty": bounty,

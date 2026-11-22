@@ -13,9 +13,10 @@ from app.ai.minds import MindRegistry
 from app.ai.skills.registry import build_registry
 from app.core.world_config import WorldConfig
 from app.services.engine_factory import build_pipeline
-from app.services.pacer import MonotonicPacer
+from app.services.pacer import FrozenPacer, MonotonicPacer
 from app.sim.clock import MAX_SPEED
 from app.sim.engine import (
+    MAX_TICKS_PER_SLICE,
     EngineStatus,
     Pause,
     Reset,
@@ -202,3 +203,80 @@ def test_shutdown_stops_a_busy_engine_promptly(engine: SimulationEngine) -> None
     assert wait_until(lambda: engine.snapshot().status is EngineStatus.STOPPED, timeout=3.0), (
         "the engine ignored Shutdown while running at MAX speed"
     )
+
+
+# ------------------------------------------------------------------ pacing
+
+
+def paced_engine(pacer: FrozenPacer) -> SimulationEngine:
+    """An engine on a fake clock, not started - the pacing maths only."""
+    config = WorldConfig(seed=4, population=6, max_agents=16, terrain=SMALL_TERRAIN)
+    return SimulationEngine(
+        config=config,
+        builder=IslandWorldBuilder(),
+        pacer=pacer,
+        pipeline=build_pipeline(MindRegistry(), build_registry(), temperature=0.35),
+        frame_hz=50.0,
+    )
+
+
+def ticks_for(speed: float, elapsed: float) -> int:
+    """How many ticks `elapsed` real seconds earn at `speed`.
+
+    Driven through `_run_slice` directly rather than the thread: the question
+    is the arithmetic, and a real clock makes it unanswerable. This is what
+    `FrozenPacer` exists for - it was an unused seam until this test.
+    """
+    pacer = FrozenPacer()
+    engine = paced_engine(pacer)
+    engine.submit(SetSpeed(speed))
+    engine._drain_commands()
+    before = engine.snapshot().tick
+    engine._run_slice(elapsed, pacer.monotonic())
+    engine._publish()
+    return engine.snapshot().tick - before
+
+
+def test_one_real_second_at_1x_is_the_tick_rate() -> None:
+    """Dt is 0.1 sim-seconds, so 1x earns ten ticks a second."""
+    assert ticks_for(1.0, 1.0) == 10
+
+
+def test_speed_multiplies_the_ticks_earned() -> None:
+    assert ticks_for(2.0, 1.0) == 20
+    assert ticks_for(5.0, 1.0) == 50
+    assert ticks_for(10.0, 0.5) == 50
+
+
+def test_fractional_ticks_are_banked_rather_than_lost() -> None:
+    """At 20 Hz each slice earns half a tick at 1x; they must accumulate."""
+    pacer = FrozenPacer()
+    engine = paced_engine(pacer)
+    engine.submit(SetSpeed(1.0))
+    engine._drain_commands()
+
+    engine._run_slice(0.05, pacer.monotonic())
+    engine._publish()
+    assert engine.snapshot().tick == 0, "half a tick is not a tick"
+
+    engine._run_slice(0.05, pacer.monotonic())
+    engine._publish()
+    assert engine.snapshot().tick == 1, "two halves are"
+
+
+def test_a_long_stall_cannot_run_an_unbounded_batch() -> None:
+    """A debugger pause must not then freeze the world catching up."""
+    pacer = FrozenPacer()
+    engine = paced_engine(pacer)
+    engine.submit(SetSpeed(10.0))
+    engine._drain_commands()
+
+    engine._run_slice(60.0, pacer.monotonic())
+    engine._publish()
+
+    assert 0 < engine.snapshot().tick <= MAX_TICKS_PER_SLICE
+
+
+def test_negative_elapsed_time_earns_nothing() -> None:
+    """A clock that goes backwards must not rewind or explode the debt."""
+    assert ticks_for(1.0, -5.0) == 0
