@@ -31,8 +31,15 @@ def create_tables(engine: Engine) -> None:
 
 @contextmanager
 def session_scope(engine: Engine) -> Iterator[Session]:
-    """Yield a session, committing on success and rolling back on error."""
-    session = Session(engine)
+    """Yield a session, committing on success and rolling back on error.
+
+    `expire_on_commit=False` so rows stay readable after the session closes.
+    By default SQLAlchemy expires every attribute on commit and reloads it on
+    next access - which raises `DetachedInstanceError` once the session is
+    gone. Every repository method here hands rows back to a caller outside the
+    scope, so the default would make reading any of them a landmine.
+    """
+    session = Session(engine, expire_on_commit=False)
     try:
         yield session
         session.commit()

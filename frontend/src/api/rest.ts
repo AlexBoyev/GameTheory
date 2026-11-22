@@ -7,6 +7,9 @@ import type {
   AgentDetail,
   AgentSummary,
   EventsPayload,
+  GodAction,
+  GodRequest,
+  GodResult,
   Health,
   LlmSettings,
   LlmStats,
@@ -15,6 +18,7 @@ import type {
   Preset,
   Shelter,
   SimState,
+  Snapshot,
   Tribe,
   TrustGraph,
   WorldConfig,
@@ -91,4 +95,12 @@ export const api = {
   llmStats: (): Promise<LlmStats> => request<LlmStats>('/llm/stats'),
   putLlmSettings: (settings: LlmSettings): Promise<LlmStatus> =>
     request<LlmStatus>('/llm/settings', { method: 'PUT', body: JSON.stringify(settings) }),
+
+  god: (action: GodAction, payload: GodRequest = {}): Promise<GodResult> =>
+    post<GodResult>(`/god/${action}`, payload),
+
+  snapshots: (): Promise<Snapshot[]> => request<Snapshot[]>('/snapshots'),
+  saveSnapshot: (label: string): Promise<Snapshot> => post<Snapshot>('/snapshots', { label }),
+  loadSnapshot: (id: number): Promise<{ ok: boolean; detail: string }> =>
+    post<{ ok: boolean; detail: string }>(`/snapshots/${id}/load`),
 };

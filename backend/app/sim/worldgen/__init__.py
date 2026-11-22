@@ -8,9 +8,11 @@ from app.sim.worldgen.builder import IslandWorldBuilder
 from app.sim.worldgen.population import spawn_population
 from app.sim.worldgen.resources import scatter_resources
 from app.sim.worldgen.terrain import generate_terrain
+from app.sim.worldgen.tribes import form_initial_tribes
 
 __all__ = [
     "IslandWorldBuilder",
+    "form_initial_tribes",
     "generate_terrain",
     "scatter_resources",
     "spawn_population",

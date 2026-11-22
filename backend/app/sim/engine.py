@@ -78,11 +78,37 @@ class Reset:
 
 
 @dataclass(frozen=True, slots=True)
+class Restore:
+    """Replace the world with one `build` produces (a snapshot load).
+
+    The engine passes its own builder in, because terrain comes from the
+    config and the seed rather than from the snapshot, and applies the swap
+    itself - a world replaced from another thread would be swapped out from
+    under a half-finished tick.
+    """
+
+    build: Callable[[WorldBuilder], World]
+
+
+@dataclass(frozen=True, slots=True)
+class Intervene:
+    """Run `apply` against the live world, under the engine lock (SPEC 9.4).
+
+    The god tools are the observer's only way to touch a running world, and
+    they have to happen between ticks rather than during one. Carrying a
+    callable keeps `sim/` out of it: the engine knows how to apply something
+    safely, and the service layer knows what dropping food means.
+    """
+
+    apply: Callable[[World], None]
+
+
+@dataclass(frozen=True, slots=True)
 class Shutdown:
     """Terminate the worker thread."""
 
 
-type EngineCommand = Start | Pause | SetSpeed | Step | Reset | Shutdown
+type EngineCommand = Start | Pause | SetSpeed | Step | Reset | Restore | Intervene | Shutdown
 
 
 @dataclass(frozen=True, slots=True)
@@ -311,6 +337,15 @@ class SimulationEngine:
                 self._step_remaining += max(1, n)
             case Reset(seed, config):
                 self._rebuild(seed, config)
+            case Restore(build):
+                world = build(self._builder)
+                self._config = world.config
+                self._adopt(world)
+            case Intervene(apply):
+                # Under the lock: readers (the API) and the tick loop must
+                # never see a half-applied intervention.
+                with self._lock:
+                    apply(self._world)
             case Shutdown():
                 self._shutdown = True
         self._commands_applied += 1
@@ -329,6 +364,10 @@ class SimulationEngine:
             days_per_season=self._config.days_per_season,
             season_offset=season_offset_for(self._config.season_start),
         )
+        self._adopt(world)
+
+    def _adopt(self, world: World) -> None:
+        """Make `world` the live one and leave the engine paused on it."""
         with self._lock:
             self._world = world
             self._pipeline.on_world_replaced(world)
@@ -337,6 +376,7 @@ class SimulationEngine:
         self._tick_debt = 0.0
         self._pending_events.clear()
         self._last_frame_at = 0.0
+        self._publish()
 
     # ---------------------------------------------------------------- output
 
@@ -345,6 +385,13 @@ class SimulationEngine:
         if now - self._last_frame_at < self._frame_interval:
             return
         self._last_frame_at = now
+
+        # Ticking is the usual source of events, but not the only one: a god
+        # tool can change a *paused* world, and that has to show up in the
+        # feed straight away rather than waiting for somebody to press play.
+        with self._lock:
+            if len(self._world.events) > 0:
+                self._pending_events.extend(self._world.events.drain())
 
         if self._on_frame is not None:
             with self._lock:

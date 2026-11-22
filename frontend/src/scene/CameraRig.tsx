@@ -14,8 +14,11 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 
 import { frameAlpha, interpolatePose, readPose } from '@/lib/interpolation';
 import type { IslandSampler } from '@/lib/terrain';
+import { cameraState } from '@/state/cameraStore';
 import { useSelectionStore } from '@/state/selectionStore';
 import { simState } from '@/state/simStore';
+
+const REPORT_INTERVAL_MS = 80;
 
 export interface CameraRigProps {
   /** World extent; zoom limits are derived from it. */
@@ -32,6 +35,7 @@ export function CameraRig({ size, sampler }: CameraRigProps): React.ReactElement
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const keys = useRef(new Set<string>());
   const flyTo = useRef<THREE.Vector3 | null>(null);
+  const lastReport = useRef(0);
   const camera = useThree((three) => three.camera);
 
   useEffect(() => {
@@ -141,6 +145,20 @@ export function CameraRig({ size, sampler }: CameraRigProps): React.ReactElement
     }
 
     controls.update();
+
+    // Publish where we are looking, for the minimap. Throttled because the
+    // minimap redraws on its own timer and has no use for 60 Hz.
+    const now = performance.now();
+    if (now - lastReport.current >= REPORT_INTERVAL_MS) {
+      lastReport.current = now;
+      const facing = camera.position.clone().sub(controls.target);
+      cameraState().report(
+        controls.target.x,
+        controls.target.z,
+        Math.atan2(facing.x, facing.z),
+        facing.length(),
+      );
+    }
   });
 
   return (

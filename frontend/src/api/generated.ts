@@ -137,8 +137,10 @@ export interface paths {
          * Build a new world
          * @description Rebuild the world; it stays paused at tick 0 so you can inspect it first.
          *
-         *     `preset` is accepted but only applied from Phase 6, when the preset files
-         *     carry values.
+         *     A `preset` names a file in `config/presets/`; an explicit `config` is the
+         *     base it applies to, so "Tribal Wars, but 400 agents" is one request. The
+         *     seed is never overridden by a preset - picking one must not throw away a
+         *     seed typed in beside it.
          */
         post: operations["reset_api_sim_reset_post"];
         delete?: never;
@@ -183,7 +185,7 @@ export interface paths {
         };
         /**
          * Named world presets
-         * @description Return the preset catalogue.
+         * @description Return the preset catalogue, read from `config/presets/`.
          */
         get: operations["presets_api_sim_presets_get"];
         put?: never;
@@ -402,6 +404,9 @@ export interface paths {
         /**
          * Save the current world
          * @description Serialise and store the current world.
+         *
+         *     Terrain is not stored - it comes back from the config and the seed - but
+         *     agents, resources, tribes, shelters and every agent's memories are.
          */
         post: operations["create_snapshot_api_snapshots_post"];
         delete?: never;
@@ -421,7 +426,7 @@ export interface paths {
         put?: never;
         /**
          * Load a snapshot
-         * @description Replace the running world with a saved one.
+         * @description Replace the running world with a saved one, paused at its saved tick.
          */
         post: operations["load_snapshot_api_snapshots__snapshot_id__load_post"];
         delete?: never;
@@ -506,6 +511,10 @@ export interface paths {
         /**
          * Intervene
          * @description Drop food, start a drought or a plague, spawn an agent, or smite one.
+         *
+         *     The response describes what actually happened, not what was asked for:
+         *     the tool runs on the engine thread and this waits for it, so "smite an
+         *     agent that is already dead" comes back as `affected: 0` with a reason.
          */
         post: operations["act_api_god__action__post"];
         delete?: never;
@@ -1481,6 +1490,13 @@ export interface components {
              * @description Relative weights, normalised at spawn time.
              */
             strategy_mix?: {
+                [key: string]: number;
+            };
+            /**
+             * Trait Bias
+             * @description Per-trait mean in 0..1; omitted traits stay centred on 0.5.
+             */
+            trait_bias?: {
                 [key: string]: number;
             };
             /**

@@ -6,7 +6,8 @@ running total or the difference between two samples.
 """
 
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
+from typing import Any
 
 from app.ai.gametheory.encounters import EncounterResult, GameKind
 from app.core.world_config import StrategyName
@@ -86,24 +87,43 @@ class SocialLedger:
         }
 
     def clear(self) -> None:
-        """Reset every tally; called when the world is rebuilt."""
-        self.cooperations.clear()
-        self.defections.clear()
-        self.rounds.clear()
-        self.payoff_by_strategy.clear()
-        self.rounds_by_strategy.clear()
-        self.betrayals = 0
-        self.gifts = 0
-        self.trades = 0
-        self.attacks = 0
-        self.lies_told = 0
-        self.lies_caught = 0
-        self.gossip_spread = 0
-        self.alliances = 0
-        self.shelters_built = 0
-        self.births = 0
-        self.tribes_founded = 0
-        self.wars_declared = 0
-        self.peace_made = 0
-        self.coups = 0
-        self.coup_attempts = 0
+        """Reset every tally; called when the world is rebuilt.
+
+        Derived from the dataclass fields rather than listing them, because
+        listing them is a trap: `coup_attempts` was added and this method was
+        not updated, so one world's attempted coups leaked into the next.
+        """
+        for spec in fields(self):
+            value = getattr(self, spec.name)
+            if isinstance(value, Counter | dict):
+                value.clear()
+            else:
+                setattr(self, spec.name, 0)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialise every tally, for a snapshot (SPEC 11)."""
+        payload: dict[str, Any] = {}
+        for spec in fields(self):
+            value = getattr(self, spec.name)
+            payload[spec.name] = dict(value) if isinstance(value, Counter | dict) else value
+        return payload
+
+    def load(self, payload: dict[str, Any]) -> None:
+        """Restore tallies from `to_dict` output, ignoring anything unknown.
+
+        Unknown keys are skipped rather than rejected: a snapshot taken before
+        a counter existed should still load, just without that counter.
+        """
+        for spec in fields(self):
+            if spec.name not in payload:
+                continue
+            incoming = payload[spec.name]
+            current = getattr(self, spec.name)
+            if isinstance(current, Counter):
+                current.clear()
+                current.update({str(key): int(count) for key, count in incoming.items()})
+            elif isinstance(current, dict):
+                current.clear()
+                current.update({str(key): float(value) for key, value in incoming.items()})
+            else:
+                setattr(self, spec.name, int(incoming))

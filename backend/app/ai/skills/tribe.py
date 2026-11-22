@@ -18,18 +18,8 @@ from app.core.result import OK_NONE, Err, Result
 from app.sim import balance
 from app.sim.entities import Agent, AgentState, Tribe, TribeRole
 from app.sim.events import EventType, SimEvent
+from app.sim.tribe_identity import TRIBE_COLOURS, tribe_name
 from app.sim.world import World
-
-TRIBE_COLOURS: tuple[str, ...] = (
-    "#e8a6a6",
-    "#a6c8e8",
-    "#b6e0a6",
-    "#e8d2a6",
-    "#c9a6e8",
-    "#a6e8d8",
-    "#e8bda6",
-    "#bfbfe8",
-)
 
 FOUND_CHARISMA = 0.55
 FOUND_ALLIES = 1
@@ -37,23 +27,6 @@ JOIN_TRUST = 0.3
 STORE_AMOUNT = 2.0
 TAKE_AMOUNT = 2.0
 COUP_MARGIN = 0.25
-
-
-_TRIBE_FIRST = ("Ash", "Bay", "Cliff", "Dune", "Elm", "Fen", "Glen", "Holt")
-_TRIBE_SECOND = ("folk", "kin", "clan", "band", "hearth", "circle")
-
-
-def tribe_name(tribe_id: int) -> str:
-    """A readable name, unique per tribe id.
-
-    Derived from the id alone rather than hashed, so two tribes can never
-    end up both called Holtclan - which they did, three times, before this.
-    """
-    first = _TRIBE_FIRST[tribe_id % len(_TRIBE_FIRST)]
-    second = _TRIBE_SECOND[(tribe_id // len(_TRIBE_FIRST)) % len(_TRIBE_SECOND)]
-    cycle = tribe_id // (len(_TRIBE_FIRST) * len(_TRIBE_SECOND))
-    suffix = "" if cycle == 0 else f" {cycle + 1}"
-    return f"{first}{second}{suffix}"
 
 
 def legitimacy(world: World, agent: Agent, tribe: Tribe, minds: MindRegistry) -> float:

@@ -1,9 +1,12 @@
 """World generation: an island, with resources where they belong."""
 
+import math
+
 import numpy as np
+import pytest
 
 from app.core.world_config import TerrainConfig, WorldConfig
-from app.sim.entities import Biome, BrainType, ResourceKind
+from app.sim.entities import Biome, BrainType, ResourceKind, TribeRole
 from app.sim.world import World
 from app.sim.worldgen import IslandWorldBuilder
 from app.sim.worldgen.grid import BIOME_ORDINALS, shore_cells
@@ -129,3 +132,116 @@ def test_a_bigger_resolution_still_produces_an_island() -> None:
     assert world.terrain.resolution == 128
     assert world.terrain.biomes[0, 0] == WATER
     assert world.population == 4
+
+
+# ------------------------------------------- personality and starting tribes
+
+
+def test_trait_bias_moves_the_mean_without_flattening_the_spread() -> None:
+    """A dishonest world still has to contain the occasional honest agent.
+
+    Clamping everyone to the bias would be easier and much worse: the whole
+    point of Liars' Island is that an honest agent there is an interesting
+    minority, not an impossibility.
+    """
+    import statistics
+
+    config = WorldConfig(
+        seed=11,
+        population=300,
+        max_agents=400,
+        terrain=SMALL_TERRAIN,
+        trait_bias={"honesty": 0.2},
+    )
+    agents = IslandWorldBuilder().build(config).living_agents()
+    honesty = [agent.traits.honesty for agent in agents]
+
+    assert statistics.mean(honesty) == pytest.approx(0.2, abs=0.05)
+    assert statistics.stdev(honesty) > 0.1, "a distribution, not a constant"
+    assert max(honesty) > 0.5, "somebody honest should still turn up"
+    # An untouched trait stays centred.
+    assert statistics.mean([agent.traits.loyalty for agent in agents]) == pytest.approx(
+        0.5, abs=0.05
+    )
+
+
+def test_a_trait_bias_is_clamped_away_from_the_extremes() -> None:
+    """A world of pure saints has nothing to show, so 0.0 is not honoured."""
+    config = WorldConfig(
+        seed=12,
+        population=60,
+        max_agents=80,
+        terrain=SMALL_TERRAIN,
+        trait_bias={"aggression": 0.0},
+    )
+    agents = IslandWorldBuilder().build(config).living_agents()
+
+    assert all(agent.traits.aggression >= 0.0 for agent in agents)
+    assert max(agent.traits.aggression for agent in agents) > 0.0
+
+
+def test_initial_tribes_are_formed_with_leaders_and_camps() -> None:
+    config = WorldConfig(
+        seed=13, population=80, max_agents=100, terrain=SMALL_TERRAIN, initial_tribes=4
+    )
+
+    world = IslandWorldBuilder().build(config)
+
+    assert len(world.tribes) == 4
+    for tribe in world.tribes.values():
+        assert tribe.size >= 2
+        assert tribe.leader_id in tribe.member_ids
+        leader = world.agents[tribe.leader_id]
+        assert leader.role is TribeRole.LEADER
+        assert leader.tribe_id == tribe.id
+    # Every member belongs to exactly one tribe.
+    assigned = [agent for agent in world.living_agents() if agent.tribe_id is not None]
+    assert len(assigned) == sum(tribe.size for tribe in world.tribes.values())
+
+
+def test_initial_tribes_claim_different_ground() -> None:
+    """Scattered membership would leave nothing to go to war over."""
+    config = WorldConfig(
+        seed=14, population=120, max_agents=150, terrain=SMALL_TERRAIN, initial_tribes=3
+    )
+
+    camps = [tribe.camp_position for tribe in IslandWorldBuilder().build(config).tribes.values()]
+
+    assert len(camps) == 3
+    distances = [
+        math.dist(first, second)
+        for index, first in enumerate(camps)
+        for second in camps[index + 1 :]
+    ]
+    assert min(distances) > 1.0, "two tribes camped on the same spot"
+
+
+def test_a_world_with_no_initial_tribes_starts_tribeless() -> None:
+    config = WorldConfig(seed=15, population=40, max_agents=60, terrain=SMALL_TERRAIN)
+
+    world = IslandWorldBuilder().build(config)
+
+    assert world.tribes == {}
+    assert all(agent.tribe_id is None for agent in world.living_agents())
+
+
+def test_initial_tribes_are_deterministic() -> None:
+    config = WorldConfig(
+        seed=16, population=60, max_agents=80, terrain=SMALL_TERRAIN, initial_tribes=3
+    )
+
+    first = IslandWorldBuilder().build(config)
+    second = IslandWorldBuilder().build(config)
+
+    assert {tribe.id: sorted(tribe.member_ids) for tribe in first.tribes.values()} == {
+        tribe.id: sorted(tribe.member_ids) for tribe in second.tribes.values()
+    }
+
+
+def test_too_few_agents_to_go_round_forms_no_tribes() -> None:
+    """Four tribes out of three people is nobody's idea of a society."""
+    config = WorldConfig(
+        seed=17, population=3, max_agents=10, terrain=SMALL_TERRAIN, initial_tribes=4
+    )
+
+    assert IslandWorldBuilder().build(config).tribes == {}

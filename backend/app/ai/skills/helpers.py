@@ -67,7 +67,15 @@ def nearest_resource(
     kinds: frozenset[ResourceKind],
     radius: float = balance.VISION_RADIUS,
 ) -> ResourceNode | None:
-    """Return the closest non-depleted node of one of `kinds`, or `None`."""
+    """Return the closest non-depleted node of one of `kinds`, or `None`.
+
+    Not memoised, though a third of these calls within a tick are the same
+    question asked twice. Caching them per tick was tried and reverted: the
+    world changes *during* a tick (a skill depletes a node, a god tool drops
+    food), so a cached answer goes stale in a way nothing would notice at
+    runtime - and the measured gain was about 4%, inside the noise. See
+    ADR 0005.
+    """
     x, z = agent.position
     best: ResourceNode | None = None
     best_distance = float("inf")

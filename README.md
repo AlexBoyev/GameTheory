@@ -14,23 +14,28 @@ Runs entirely on `localhost`. **No paid services, no API keys, no cloud AI.**
 - Architecture decisions: [`docs/adr/`](docs/adr/) - [0001 architecture](docs/adr/0001-architecture.md),
   [0002 simulation core](docs/adr/0002-simulation-core.md),
   [0003 game theory and tribes](docs/adr/0003-game-theory-and-tribes.md),
-  [0004 LLM minds](docs/adr/0004-llm-minds.md)
+  [0004 LLM minds](docs/adr/0004-llm-minds.md),
+  [0005 god tools, presets, snapshots](docs/adr/0005-god-tools-presets-snapshots.md)
 - Working rules for Claude Code: [`CLAUDE.md`](CLAUDE.md)
 
 ---
 
-## Status: Phase 5 of 7 (LLM minds)
+## Status: Phase 6 of 7 (god tools, presets, snapshots)
 
 What works right now:
 
 | Works | Not yet |
 | --- | --- |
-| **A real simulation**: seeded island, resources with regrowth, day/night, seasons | Snapshots you can reload, god tools, presets with real values (Phase 6) |
-| Agents with needs, traits, inventory, ageing and named death causes | New World dialog, minimap, screenshot, heatmap, name tags (Phase 6) |
-| **31 skills**: survival, building, social, manipulation, combat and tribe actions | Tournament report, senior review pass (Phase 6-7) |
+| **A real simulation**: seeded island, resources with regrowth, day/night, seasons | Activity heatmap and name tags (the last two overlay toggles) |
+| Agents with needs, traits, inventory, ageing and named death causes | Tournament report for the Axelrod preset |
+| **31 skills**: survival, building, social, manipulation, combat and tribe actions | Senior review and hardening pass (Phase 7) |
 | Utility AI with response curves, softmax personality and a top-3 decision trace | |
 | **Deliberative minds**: goals, plans, spoken lines and beliefs, via local Ollama **or an offline mock** | |
 | LLM monitor: provider, reachability, call log with real prompts and replies | |
+| **Six presets** with real values, from Peaceful Eden to Liars' Island | |
+| **God tools**: drop food, bounty, drought, plague, spawn, smite | |
+| **Snapshots**: save and reload a whole society, memories included | |
+| Minimap with a camera marker, click-to-fly, and a screenshot button | |
 | **Five games**: Prisoner's Dilemma, Stag Hunt, Hawk-Dove, Ultimatum, Public Goods | |
 | **Ten strategies** from AlwaysCooperate to Detective, inherited with mutation | |
 | **Trust you earn and reputation you only hear about**, gossip, lies, lie detection | |
@@ -38,7 +43,7 @@ What works right now:
 | Shelters that get built, reproduction with trait blending, deaths with causes | |
 | Engine on a worker thread: pause / play / 1x-50x / MAX / step / reset | |
 | Full UI: inspector, event feed with filters, charts, overlays, speech bubbles, URL state, help | |
-| 7 layering contracts, **276 backend tests**, 31 frontend tests | |
+| 7 layering contracts, **329 backend tests**, 34 frontend tests | |
 
 `GET /api/sim/state` reports `"placeholder": false`. Determinism is
 machine-checked: same seed, same world, to the bit, after 1,000 ticks of the
@@ -69,8 +74,8 @@ From a 25x run on the default seed (1337), around tick 10,000 - read from
 ### Measured on this machine
 
 `python driver.py --bench` (pure engine, no server, no pacing). These numbers
-are for the **full Phase 4 pipeline** - encounters, gossip and tribes included,
-which is roughly twice the per-tick work of Phase 2:
+are for the **full pipeline** - encounters, gossip, tribes and the
+deliberative layer included:
 
 | Agents | Ticks/sec | vs realtime (1x = 10 ticks/s) | Phase 4 was |
 | --- | --- | --- | --- |
@@ -89,6 +94,25 @@ The default world of 120 agents therefore runs comfortably at any preset up to
 above the sustainable rate are not an error - the engine runs as fast as the
 CPU allows and `ticks_per_second` in `/api/sim/state` tells you what you are
 really getting. World build is 0.4 s at every size.
+
+### Where the time actually goes
+
+Profiled at 500 agents (`cProfile`, 400 ticks of the full pipeline):
+
+| | calls per 400 ticks | self time |
+| --- | --- | --- |
+| `SpatialHash.query_radius` | 495,097 | 26% |
+| `UtilityBrain._score_all` (cumulative) | 13,983 | 44% |
+
+The brain scores all 31 skills per decision and each skill queries its own
+neighbourhood, so a third of the neighbour searches in a tick are the same
+question asked twice. Caching them per tick was implemented, measured at
+**~4% (52.1 vs 49.8 ticks/s, inside the run-to-run noise)**, found to be
+*unsafe* - skills mutate the world during a tick, so a cached answer goes
+stale with nothing to notice it - and reverted. The hot path is documented in
+[`docs/adr/0005`](docs/adr/0005-god-tools-presets-snapshots.md) rather than
+optimised by guesswork; the real headroom is not scoring 31 skills when an
+agent's situation rules most of them out.
 
 **Survivability is a tested invariant**, not an assumption: 92-99% of the
 population survives 6,000-12,000 ticks across seeds, with occasional
@@ -155,6 +179,108 @@ carry on with utility AI, and the circuit breaker stops the retry storm.
 
 ---
 
+## How it fits together
+
+```mermaid
+flowchart LR
+  subgraph browser["Browser (React + three.js)"]
+    scene["3D scene<br/>instanced agents, terrain, overlays"]
+    hud["HUD<br/>inspector · feed · charts · god tools · minimap"]
+  end
+
+  subgraph backend["Backend (FastAPI)"]
+    api["api/<br/>transport only"]
+    services["services/<br/>SimulationService · snapshots · metrics · LLM pump"]
+    engine["sim/engine<br/>worker thread, fixed dt"]
+    world["sim/world<br/>agents · resources · tribes · spatial hash"]
+    ai["ai/<br/>perception · utility brain · 31 skills · game theory"]
+    db[("SQLite<br/>snapshots · metrics")]
+  end
+
+  ollama["Ollama (optional)<br/>localhost:11434"]
+
+  scene -->|"WS /ws/world<br/>frames at 20 Hz"| api
+  hud -->|"REST /api/*"| api
+  api --> services
+  services -->|"commands<br/>(queue, acknowledged)"| engine
+  engine -->|"frames · events"| services
+  engine --> world
+  engine --> ai
+  ai -->|reads| world
+  services --> db
+  services -->|"IntentionBroker<br/>never awaited by the engine"| ollama
+```
+
+The arrow that matters is the last one: the engine posts a request and carries
+on ticking, so a slow or missing model costs you thoughts, never frame rate.
+`ai/` reads `sim/` and never the reverse, and seven import-linter contracts
+fail the build if any of that stops being true.
+
+## Controls
+
+| Key | Does |
+| --- | --- |
+| `Space` | Play / pause |
+| `.` | Step one tick |
+| `1` … `7` | Speed 1x, 2x, 5x, 10x, 25x, 50x, MAX |
+| `R` | New world (preset picker, seed, dials) |
+| Drag / scroll | Orbit and zoom |
+| `WASD` / arrows | Pan |
+| `Q` / `E` | Rotate |
+| Click an agent | Inspect it |
+| Double-click | Fly there |
+| `F` / `Esc` | Follow the selected agent / stop following |
+| `T` | Trust lines (green ally, red enemy) |
+| `G` | Tribe territories |
+| `B` | Speech bubbles |
+| `C` | Charts |
+| `L` | Event log |
+| `M` | LLM minds monitor |
+| `K` | God tools |
+| `O` | Minimap |
+| `?` | This list, in the app |
+
+Every panel toggle is also a button, bottom right. The URL keeps the seed,
+speed, selected agent and open panels, so a link reproduces what you are
+looking at.
+
+## Presets
+
+`config/presets/*.yaml`, loaded at runtime - they are plain `WorldConfig`
+overrides, so you can edit them or add your own without touching code.
+
+| Preset | The question it asks |
+| --- | --- |
+| **Peaceful Eden** | What does trust look like when nothing forces anyone to cheat? |
+| **Harsh Winter** | Does cooperation survive hunger? (winter, scarcity 2.2) |
+| **Liars' Island** | What happens to reputation when nobody is honest? |
+| **Tribal Wars** | Four tribes, contested ground, loyalty over honesty |
+| **Axelrod Tournament** | Which strategy actually wins, with survival switched off |
+| **LLM Schemers** | Six deliberative minds among reactive ones, plotting out loud |
+
+A preset applies *on top of* the dials in the New World dialog, and never
+overrides the seed - so "Tribal Wars with 300 agents on seed 99" is one click.
+
+## God tools
+
+Press `K`. Local tools land on the selected agent, or the middle of the island
+when nothing is selected, and everything you do appears in the event feed.
+
+| Tool | Effect |
+| --- | --- |
+| Drop food | Scatters bushes - the simplest way to end a famine |
+| Good season | Refills every patch nearby and speeds up its regrowth |
+| Drought | Dries up the water, which agents never plan around |
+| Plague | Hurts everyone nearby; lethal for the weak, survivable for the rest |
+| Spawn | One new agent, with a strategy and brain you choose |
+| Smite | Kills the selected agent |
+
+Snapshots live in the same panel: save the world as it is (agents, resources,
+tribes, huts *and* every agent's memories), then load it back later. Terrain is
+not stored - it comes back from the config and the seed.
+
+---
+
 ## Before you start: two things about this machine
 
 1. **Port 8000 is taken by Apache** (`httpd`). The backend cannot bind it as
@@ -200,8 +326,7 @@ python driver.py
 | `python driver.py --no-frontend` | Backend only |
 | `python driver.py --no-reload` | Do not restart the backend when its sources change |
 
-Keyboard: `m` opens the LLM minds monitor, `c` the charts, `l` the event log,
-`b` toggles speech bubbles, `?` lists everything.
+See [Controls](#controls) for the keyboard map.
 | `python driver.py --install` | Install dependencies and exit |
 
 It needs nothing but the system Python - stdlib only - and Ctrl+C stops both

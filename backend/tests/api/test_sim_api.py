@@ -83,12 +83,25 @@ def test_presets_are_listed(client: TestClient) -> None:
     assert all(preset["name"] and preset["description"] for preset in presets)
 
 
-def test_later_phases_still_announce_themselves(client: TestClient) -> None:
-    """Endpoints that are not built yet say so, and say when."""
-    response = client.post("/api/snapshots", json={"label": "test"})
+def test_every_endpoint_is_live(client: TestClient) -> None:
+    """Nothing answers 501 any more - Phase 6 was the last of them.
 
-    assert response.status_code == 501
-    assert "Phase 6" in response.json()["detail"]
+    This test used to assert the opposite (snapshots announcing "Phase 6"),
+    which is worth keeping as a test rather than deleting: if a future change
+    reintroduces a placeholder, the suite should say so out loud.
+    """
+    probes = (
+        ("POST", "/api/snapshots", {"label": "test"}),
+        ("GET", "/api/snapshots", None),
+        ("POST", "/api/god/drop_food", {}),
+        ("GET", "/api/sim/presets", None),
+        ("GET", "/api/llm/status", None),
+        ("PUT", "/api/llm/settings", {"enabled": True}),
+    )
+
+    for method, path, payload in probes:
+        response = client.request(method, path, json=payload)
+        assert response.status_code != 501, f"{method} {path} is still a placeholder"
 
 
 def test_tribes_and_the_social_graph_are_live(client: TestClient) -> None:

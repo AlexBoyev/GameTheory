@@ -26,6 +26,8 @@ export type ActionId =
   | 'toggleCharts'
   | 'toggleLog'
   | 'toggleLlm'
+  | 'toggleGod'
+  | 'toggleMinimap'
   | 'toggleHelp';
 
 export interface Keybinding {
@@ -57,6 +59,8 @@ export const KEYBINDINGS: readonly Keybinding[] = [
   { key: 'c', action: 'toggleCharts', label: 'Charts panel', group: 'overlays' },
   { key: 'l', action: 'toggleLog', label: 'Event log', group: 'overlays' },
   { key: 'm', action: 'toggleLlm', label: 'LLM minds monitor', group: 'overlays' },
+  { key: 'k', action: 'toggleGod', label: 'God tools', group: 'overlays' },
+  { key: 'o', action: 'toggleMinimap', label: 'Minimap', group: 'overlays' },
   { key: '?', action: 'toggleHelp', label: 'This help', group: 'overlays' },
 ];
 

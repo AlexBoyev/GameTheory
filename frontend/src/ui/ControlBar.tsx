@@ -1,6 +1,9 @@
 /** Play, pause, step, speed and reset - the observer's hands. */
 
+import { useState } from 'react';
+
 import { SPEED_PRESETS, speedLabel, useSimControls } from '@/app/useSimControls';
+import { saveScreenshot } from '@/lib/screenshot';
 import { ResetDialog } from '@/ui/ResetDialog';
 import { Button } from '@/ui/primitives';
 import { usePerfStore } from '@/state/perfStore';
@@ -21,8 +24,10 @@ export function ControlBar(): React.ReactElement {
   const drawCalls = usePerfStore((state) => state.drawCalls);
   const triangles = usePerfStore((state) => state.triangles);
   const framesPerSecond = usePerfStore((state) => state.framesPerSecond);
+  const tick = useSimStore((state) => state.tick);
   const resetOpen = useUiStore((state) => state.resetOpen);
   const setResetOpen = (open: boolean): void => useUiStore.getState().set('resetOpen', open);
+  const [shotFailed, setShotFailed] = useState(false);
 
   const running = status === 'running';
 
@@ -80,6 +85,23 @@ export function ControlBar(): React.ReactElement {
               {option}
             </Button>
           ))}
+
+          <Button
+            onClick={() => {
+              if (!saveScreenshot(tick)) setShotFailed(true);
+            }}
+            title="Save a PNG of the island"
+          >
+            📷
+          </Button>
+          {shotFailed && (
+            <span
+              className="px-1 text-[10px] text-amber-300"
+              title="The browser would not export the canvas"
+            >
+              no image
+            </span>
+          )}
 
           <Button onClick={() => setResetOpen(true)} tone="danger" title="New world (R)">
             ⟲ Reset

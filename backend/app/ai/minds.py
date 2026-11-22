@@ -128,7 +128,16 @@ class MindRegistry:
         return agent_id in self._minds
 
     def on_world_replaced(self, world: World) -> None:
-        """Forget everything; `world` is a different world now."""
+        """Forget everything, unless this is a world we have already adopted.
+
+        Guarded on the uid because the call is not always the start of a blank
+        world: loading a snapshot restores every mind and *then* hands the
+        world to the engine, which announces the replacement in the usual way.
+        Clearing unconditionally wiped the restored memories a moment after
+        reading them, so a loaded world came back as a world of strangers.
+        """
+        if world.uid == self._world_uid:
+            return
         self._minds.clear()
         self._world_uid = world.uid
 

@@ -27,6 +27,10 @@ export type TrustGraph = components['schemas']['TrustGraphDTO'];
 export type TrustEdge = components['schemas']['TrustEdgeDTO'];
 export type Metrics = components['schemas']['MetricsDTO'];
 export type MetricPoint = components['schemas']['MetricPointDTO'];
+export type Snapshot = components['schemas']['SnapshotDTO'];
+export type GodAction = components['schemas']['GodAction'];
+export type GodRequest = components['schemas']['GodActionRequest'];
+export type GodResult = components['schemas']['GodActionResultDTO'];
 
 /** One row of the event feed. */
 export interface EventItem {

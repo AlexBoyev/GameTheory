@@ -25,6 +25,8 @@ const TOGGLES: OverlayToggle[] = [
   { key: 'showNames', label: 'Names', icon: '🏷️', shortcut: 'n', needsPhase: 6 },
   { key: 'showSpeechBubbles', label: 'Speech', icon: '💬', shortcut: 'b' },
   { key: 'llmPanelOpen', label: 'LLM minds', icon: '🧠', shortcut: 'm' },
+  { key: 'godPanelOpen', label: 'God tools', icon: '⚡', shortcut: 'k' },
+  { key: 'minimapOpen', label: 'Minimap', icon: '🗺️', shortcut: 'o' },
 ];
 
 export function OverlayBar(): React.ReactElement {

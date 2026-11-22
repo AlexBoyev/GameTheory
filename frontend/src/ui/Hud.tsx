@@ -8,9 +8,11 @@
 import { ChartsPanel } from '@/ui/ChartsPanel';
 import { ControlBar } from '@/ui/ControlBar';
 import { EventFeed } from '@/ui/EventFeed';
+import { GodPanel } from '@/ui/GodPanel';
 import { HelpOverlay } from '@/ui/HelpOverlay';
 import { HoverTooltip } from '@/ui/HoverTooltip';
 import { Inspector } from '@/ui/Inspector';
+import { Minimap } from '@/ui/Minimap';
 import { LlmPanel } from '@/ui/LlmPanel';
 import { OverlayBar } from '@/ui/OverlayBar';
 import { TopBar } from '@/ui/TopBar';
@@ -86,6 +88,8 @@ export function Hud(): React.ReactElement {
   const feedOpen = useUiStore((state) => state.eventFeedOpen);
   const chartsOpen = useUiStore((state) => state.chartsOpen);
   const llmOpen = useUiStore((state) => state.llmPanelOpen);
+  const godOpen = useUiStore((state) => state.godPanelOpen);
+  const minimapOpen = useUiStore((state) => state.minimapOpen);
   const setHelp = useUiStore((state) => state.set);
 
   return (
@@ -100,10 +104,14 @@ export function Hud(): React.ReactElement {
           {feedOpen && <EventFeed />}
           {chartsOpen && <ChartsPanel />}
           {llmOpen && <LlmPanel />}
+          {godOpen && <GodPanel />}
         </div>
         <div className="pointer-events-none flex items-start gap-3">
           <Inspector />
-          <OverlayBar />
+          <div className="pointer-events-none flex flex-col items-end gap-3">
+            <OverlayBar />
+            {minimapOpen && <Minimap />}
+          </div>
         </div>
       </div>
 

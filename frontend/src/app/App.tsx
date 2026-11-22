@@ -38,7 +38,10 @@ export function App(): React.ReactElement {
         shadows={profile.shadows}
         dpr={profile.dpr}
         camera={{ position: [140, 110, 140], fov: 42, near: 0.5, far: 2000 }}
-        gl={{ antialias: true }}
+        // `preserveDrawingBuffer` is what makes the screenshot button
+        // possible: without it the buffer is cleared before `toDataURL` can
+        // read it and you get a blank PNG.
+        gl={{ antialias: true, preserveDrawingBuffer: true }}
       >
         <World />
       </Canvas>

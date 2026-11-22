@@ -99,6 +99,14 @@ export function useKeyboard(): void {
           event.preventDefault();
           useUiStore.getState().toggle('llmPanelOpen');
           break;
+        case 'toggleGod':
+          event.preventDefault();
+          useUiStore.getState().toggle('godPanelOpen');
+          break;
+        case 'toggleMinimap':
+          event.preventDefault();
+          useUiStore.getState().toggle('minimapOpen');
+          break;
         case 'toggleHelp':
           event.preventDefault();
           useUiStore.getState().toggle('helpOpen');

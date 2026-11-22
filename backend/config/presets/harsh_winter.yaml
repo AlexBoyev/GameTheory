@@ -2,19 +2,18 @@
 # Overrides on top of config/default.yaml. Schema: WorldConfig.
 # Starts in winter with scarcity high: no berry regrowth, faster energy drain.
 # The question this preset asks is whether cooperation survives hunger.
-# Loaded from Phase 6.
 
-# name: Harsh Winter
-# season_start: winter
-# scarcity: 2.2
-# population: 140
-# initial_tribes: 0
-# strategy_mix:
-#   TitForTat: 0.25
-#   Grudger: 0.20
-#   AlwaysDefect: 0.20
-#   Opportunist: 0.15
-#   Pavlov: 0.10
-#   AlwaysCooperate: 0.10
-# mutation_rate: 0.08
-# llm_agents: 0
+name: Harsh Winter
+season_start: winter
+scarcity: 2.2
+population: 140
+initial_tribes: 0
+strategy_mix:
+  TitForTat: 0.25
+  Grudger: 0.20
+  AlwaysDefect: 0.20
+  Opportunist: 0.15
+  Pavlov: 0.10
+  AlwaysCooperate: 0.10
+mutation_rate: 0.08
+llm_agents: 0

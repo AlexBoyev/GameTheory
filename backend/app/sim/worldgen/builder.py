@@ -6,6 +6,7 @@ from app.sim.world import World, empty_world
 from app.sim.worldgen.population import spawn_population
 from app.sim.worldgen.resources import scatter_resources
 from app.sim.worldgen.terrain import generate_terrain
+from app.sim.worldgen.tribes import form_initial_tribes
 
 
 class IslandWorldBuilder:
@@ -39,4 +40,5 @@ class IslandWorldBuilder:
         world.uid = self._builds
         scatter_resources(world, config)
         spawn_population(world, config)
+        form_initial_tribes(world, config)
         return world

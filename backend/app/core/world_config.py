@@ -4,7 +4,7 @@ Lives in `core/` on purpose: `sim/` consumes it and `api/` exposes it verbatim,
 so neither layer has to duplicate the schema.
 """
 
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -21,6 +21,14 @@ StrategyName = Literal[
     "LLM",
 ]
 """The strategy "gene" pool (SPEC section 5.2)."""
+
+STRATEGY_NAMES: tuple[StrategyName, ...] = get_args(StrategyName)
+"""The same names at runtime, for validating what a caller asked for.
+
+Derived from the type rather than written out again, so the two can never
+drift - a god tool that accepted a strategy the engine has never heard of
+would spawn an agent that cannot play.
+"""
 
 Season = Literal["spring", "summer", "autumn", "winter"]
 
@@ -78,6 +86,18 @@ class WorldConfig(BaseModel):
         default_factory=default_strategy_mix,
         description="Relative weights, normalised at spawn time.",
     )
+    trait_bias: dict[str, float] = Field(
+        default_factory=dict,
+        description="Per-trait mean in 0..1; omitted traits stay centred on 0.5.",
+    )
+    """Shifts the personality distribution a whole world at a time.
+
+    This is what makes a preset a *place* rather than a different number of
+    berries: Liars' Island is low honesty and high cunning, Tribal Wars is
+    loyal and aggressive. Only the mean moves - the spread stays, so a liars'
+    island still has the occasional honest agent.
+    """
+
     mutation_rate: float = Field(default=0.05, ge=0.0, le=1.0)
     trembling_hand: float = Field(default=0.02, ge=0.0, le=0.5, description="Action-flip noise.")
 

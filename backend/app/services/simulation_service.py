@@ -27,17 +27,21 @@ from app.ai.llm.gateway import LLMGateway, LLMStatus
 from app.ai.skills.registry import SkillRegistry
 from app.core.logging import get_logger
 from app.core.settings import Settings
-from app.core.world_config import WorldConfig
+from app.core.world_config import STRATEGY_NAMES, WorldConfig
 from app.services import envelopes
 from app.services.engine_factory import EngineBundle, build_engine_bundle
 from app.services.envelopes import Envelope
+from app.services.god_tools import TOOLS, GodContext, Intervention, Outcome
 from app.services.metrics_service import MetricsService
+from app.services.serialisation import dump_world, load_world
 from app.services.world_queries import WorldQueries
 from app.sim.clock import SPEED_PRESETS
 from app.sim.engine import (
     EngineStatus,
+    Intervene,
     Pause,
     Reset,
+    Restore,
     SetSpeed,
     Shutdown,
     Start,
@@ -45,6 +49,7 @@ from app.sim.engine import (
 )
 from app.sim.events import EventType, SimEvent
 from app.sim.frames import WorldFrame, encode_resources
+from app.sim.world import World, WorldBuilder
 
 Subscriber = Callable[[Envelope], Awaitable[None]]
 
@@ -299,6 +304,79 @@ class SimulationService:
         state = await self._submit(Reset(seed=seed, config=config))
         LOG.info("simulation.reset", seed=state.seed, population=state.population)
         return state
+
+    async def intervene(self, action: str, request: Intervention) -> Outcome:
+        """Run a god tool against the live world (SPEC 9.4).
+
+        The tool itself runs on the engine thread, between ticks and under the
+        engine's lock, because mutating a world mid-tick is how you get an
+        agent halfway through an action it can no longer finish. This method
+        waits for the acknowledgement, so the HTTP response describes what
+        actually happened rather than what was requested.
+        """
+        tool = TOOLS.get(action)
+        if tool is None:
+            msg = f"unknown god action {action!r}"
+            raise KeyError(msg)
+
+        context = GodContext(minds=self._bundle.minds, strategies=STRATEGY_NAMES)
+        done: list[Outcome] = []
+
+        def apply(world: World) -> None:
+            done.append(tool(world, request, context))
+
+        sequence = self._engine.submit(Intervene(apply))
+        deadline = time.monotonic() + COMMAND_TIMEOUT_S
+        while self._engine.snapshot().commands_applied < sequence:
+            if time.monotonic() >= deadline:
+                LOG.warning("god.timeout", action=action)
+                break
+            await asyncio.sleep(0.005)
+
+        outcome = done[0] if done else Outcome(detail="the engine did not apply it in time")
+        LOG.info("god.applied", action=action, affected=outcome.affected, detail=outcome.detail)
+        return outcome
+
+    def capture(self) -> dict[str, Any]:
+        """Serialise the live world, minds and ledger (SPEC 11).
+
+        Reads under the engine lock, so the blob is one consistent instant
+        rather than a mix of two ticks.
+        """
+        with self._engine.read_world() as world:
+            return dump_world(world, self._bundle.minds, self._bundle.ledger)
+
+    async def restore(self, payload: dict[str, Any]) -> SimStateView:
+        """Replace the running world with a saved one.
+
+        Rebuilt on the engine thread like a `Reset`, because swapping the
+        world under a running tick would leave half the systems looking at
+        the old one. The world arrives paused, as after any reset.
+        """
+        self._last_amounts.clear()
+        self._recent_events.clear()
+        self._last_sampled_tick = -1
+        self._bundle.broker.clear()
+        if self._metrics is not None:
+            self._metrics.clear()
+
+        def build(builder: WorldBuilder) -> World:
+            return load_world(payload, builder, self._bundle.minds, self._bundle.ledger)
+
+        sequence = self._engine.submit(Restore(build))
+        await self._await_sequence(sequence)
+        state = self.state()
+        LOG.info("simulation.restored", tick=state.tick, population=state.population)
+        return state
+
+    async def _await_sequence(self, sequence: int) -> None:
+        """Wait until the engine has applied the command with `sequence`."""
+        deadline = time.monotonic() + COMMAND_TIMEOUT_S
+        while self._engine.snapshot().commands_applied < sequence:
+            if time.monotonic() >= deadline:
+                LOG.warning("simulation.command_timeout", sequence=sequence)
+                return
+            await asyncio.sleep(COMMAND_POLL_S)
 
     async def _submit(self, command: Start | Pause | SetSpeed | Step | Reset) -> SimStateView:
         """Queue `command`, wait for it to take effect, return the new state."""

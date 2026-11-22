@@ -24,7 +24,7 @@ export interface SimControls {
   toggle: () => Promise<void>;
   step: (n?: number) => Promise<void>;
   setSpeed: (multiplier: number) => Promise<void>;
-  reset: (options: { seed?: number; config?: WorldConfig }) => Promise<void>;
+  reset: (options: { seed?: number; config?: WorldConfig; preset?: string }) => Promise<void>;
 }
 
 export function useSimControls(): SimControls {
@@ -57,7 +57,8 @@ export function useSimControls(): SimControls {
       [apply],
     ),
     reset: useCallback(
-      async (options: { seed?: number; config?: WorldConfig }) => apply(await api.reset(options)),
+      async (options: { seed?: number; config?: WorldConfig; preset?: string }) =>
+        apply(await api.reset(options)),
       [apply],
     ),
   };

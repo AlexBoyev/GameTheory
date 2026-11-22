@@ -6,6 +6,8 @@ export interface UiStoreState {
   chartsOpen: boolean;
   eventFeedOpen: boolean;
   llmPanelOpen: boolean;
+  godPanelOpen: boolean;
+  minimapOpen: boolean;
   helpOpen: boolean;
   resetOpen: boolean;
 
@@ -28,6 +30,9 @@ export const useUiStore = create<UiStoreState>((set) => ({
   // Open by default: a simulation you cannot read is just a screensaver.
   eventFeedOpen: true,
   llmPanelOpen: false,
+  godPanelOpen: false,
+  // On by default: it is the only way to see the whole island at once.
+  minimapOpen: true,
   helpOpen: false,
   resetOpen: false,
 

@@ -5,9 +5,11 @@ their command before reporting state - so `POST /sim/step` returns the tick
 the step actually produced, not the one before it.
 """
 
+from pathlib import Path
+
 from fastapi import APIRouter
 
-from app.api.deps import SimulationDep
+from app.api.deps import SettingsDep, SimulationDep
 from app.api.dto.sim import (
     PresetDTO,
     ResetRequest,
@@ -15,45 +17,12 @@ from app.api.dto.sim import (
     SpeedRequest,
     StepRequest,
 )
-from app.api.errors import bad_request
+from app.api.errors import bad_request, not_found
+from app.core.presets import load_preset, load_presets
 from app.core.world_config import WorldConfig
 from app.services.simulation_service import SimStateView
 
 router = APIRouter(prefix="/sim", tags=["sim"])
-
-PRESETS: tuple[PresetDTO, ...] = (
-    PresetDTO(
-        id="peaceful_eden",
-        name="Peaceful Eden",
-        description="Abundant food, cooperative strategy mix - watch trust accumulate.",
-    ),
-    PresetDTO(
-        id="harsh_winter",
-        name="Harsh Winter",
-        description="Scarcity high, no berry regrowth - cooperation under pressure.",
-    ),
-    PresetDTO(
-        id="liars_island",
-        name="Liars' Island",
-        description="Low honesty, high cunning - gossip and deception dominate.",
-    ),
-    PresetDTO(
-        id="tribal_wars",
-        name="Tribal Wars",
-        description="Several starting tribes, contested territory, raids and peace deals.",
-    ),
-    PresetDTO(
-        id="axelrod_tournament",
-        name="Axelrod Tournament",
-        description="Survival off: round-robin iterated PD with replicator dynamics.",
-    ),
-    PresetDTO(
-        id="llm_schemers",
-        name="LLM Schemers",
-        description="A handful of LLM minds among utility agents - they plot out loud.",
-    ),
-)
-"""Preset catalogue. Phase 6 loads the actual values from `config/presets/`."""
 
 
 def _to_dto(state: SimStateView) -> SimStateDTO:
@@ -109,13 +78,24 @@ async def set_speed(request: SpeedRequest, simulation: SimulationDep) -> SimStat
 
 
 @router.post("/reset", response_model=SimStateDTO, summary="Build a new world")
-async def reset(request: ResetRequest, simulation: SimulationDep) -> SimStateDTO:
+async def reset(
+    request: ResetRequest, simulation: SimulationDep, settings: SettingsDep
+) -> SimStateDTO:
     """Rebuild the world; it stays paused at tick 0 so you can inspect it first.
 
-    `preset` is accepted but only applied from Phase 6, when the preset files
-    carry values.
+    A `preset` names a file in `config/presets/`; an explicit `config` is the
+    base it applies to, so "Tribal Wars, but 400 agents" is one request. The
+    seed is never overridden by a preset - picking one must not throw away a
+    seed typed in beside it.
     """
-    return _to_dto(await simulation.reset(seed=request.seed, config=request.config))
+    config = request.config
+    if request.preset is not None:
+        preset = load_preset(request.preset, Path(settings.config_dir))
+        if preset is None:
+            raise not_found(f"No preset named {request.preset!r}")
+        config = preset.apply_to(config or WorldConfig())
+
+    return _to_dto(await simulation.reset(seed=request.seed, config=config))
 
 
 @router.get("/config", response_model=WorldConfig, summary="Current world config")
@@ -135,6 +115,9 @@ async def put_config(config: WorldConfig, simulation: SimulationDep) -> SimState
 
 
 @router.get("/presets", response_model=list[PresetDTO], summary="Named world presets")
-def presets() -> list[PresetDTO]:
-    """Return the preset catalogue."""
-    return list(PRESETS)
+def presets(settings: SettingsDep) -> list[PresetDTO]:
+    """Return the preset catalogue, read from `config/presets/`."""
+    return [
+        PresetDTO(id=preset.id, name=preset.name, description=preset.description)
+        for preset in load_presets(Path(settings.config_dir))
+    ]
