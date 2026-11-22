@@ -11,12 +11,19 @@ from app.sim.world import World
 
 @dataclass(frozen=True, slots=True)
 class ScoredOption:
-    """One candidate action and why it scored what it scored."""
+    """One candidate action and why it scored what it scored.
+
+    `because` is the interesting part: the named inputs that made up the
+    score, so the inspector can say "Drink, because thirsty 1.15" rather than
+    just "Drink (1.15)". Empty for a skill that computes `utility()` directly
+    instead of declaring considerations.
+    """
 
     skill: str
     score: float
     params: dict[str, Any] = field(default_factory=dict)
     reason: str = ""
+    because: tuple[tuple[str, float], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

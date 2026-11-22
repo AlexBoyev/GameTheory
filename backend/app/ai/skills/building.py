@@ -8,7 +8,7 @@ a camp is what a tribe physically *is*.
 from pydantic import BaseModel
 
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import NoParams, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import Consideration, NoParams, Skill, SkillCategory, SkillRun, SkillStatus
 from app.ai.skills.helpers import nearest_resource, steer_towards, stop
 from app.core.result import OK_NONE, Err, Result
 from app.sim import balance
@@ -67,16 +67,20 @@ class GatherWood(Skill):
             return Err("no tree within reach")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Only worth doing when comfortable and without a roof."""
         if agent.inventory.wood >= WOOD_PER_SHELTER:
-            return 0.0
+            return []
         if shelter_for(ctx.world, agent) is not None:
-            return 0.0
+            return []
         comfort = min(agent.needs.hunger, agent.needs.thirst) / balance.NEED_MAX
         if comfort < 0.5:
-            return 0.0
-        return 0.3 * comfort * (0.4 + agent.traits.loyalty)
+            return []
+        # Value in [0, 1], magnitude in the weight: `apply_curve` clamps the
+        # value, so a loyal agent's 1.4 would quietly become 1.0.
+        return [
+            Consideration("comfortable enough to plan", comfort, 0.3 * (0.4 + agent.traits.loyalty))
+        ]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Walk to the nearest tree."""
@@ -135,11 +139,11 @@ class BuildShelter(Skill):
             return Err("too close to another shelter")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """With the wood in hand, building is close to a priority."""
         if agent.inventory.wood < WOOD_PER_SHELTER:
-            return 0.0
-        return 0.65
+            return []
+        return [Consideration("wood in hand", 1.0, 0.65)]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Begin construction where we stand."""

@@ -3,7 +3,8 @@
 import numpy as np
 
 from app.ai.brains.base import DecisionContext
-from app.ai.brains.utility_brain import Curve, UtilityBrain, apply_curve
+from app.ai.brains.curves import Curve, apply_curve
+from app.ai.brains.utility_brain import UtilityBrain
 from app.ai.gametheory.ledger import SocialLedger
 from app.ai.memory import AgentMemory
 from app.ai.minds import MindRegistry

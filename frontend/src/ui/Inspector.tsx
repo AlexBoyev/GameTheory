@@ -90,19 +90,34 @@ export function Inspector(): React.ReactElement | null {
 
           {trace.length > 0 && (
             <Section title="Why this, not that">
-              <ul className="space-y-0.5">
+              <ul className="space-y-1">
                 {trace.map((option) => (
                   <li
                     key={option.skill}
-                    className={`flex items-baseline justify-between gap-2 rounded px-1.5 py-0.5 text-[11px] ${
+                    className={`rounded px-1.5 py-0.5 text-[11px] ${
                       option.chosen ? 'bg-emerald-500/15 text-emerald-200' : 'text-slate-400'
                     }`}
                   >
-                    <span>
-                      {option.chosen ? '→ ' : ''}
-                      {option.skill}
-                    </span>
-                    <span className="font-mono tabular-nums">{option.score.toFixed(2)}</span>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span>
+                        {option.chosen ? '→ ' : ''}
+                        {option.skill}
+                      </span>
+                      <span className="font-mono tabular-nums">{option.score.toFixed(2)}</span>
+                    </div>
+                    {/* The named inputs the score is made of, which add up to
+                        it. Absent for skills that score themselves directly. */}
+                    {(option.because ?? []).map((reason) => (
+                      <div
+                        key={reason.name}
+                        className="flex items-baseline justify-between gap-2 pl-3 text-[10px] text-slate-500"
+                      >
+                        <span className="truncate">{reason.name}</span>
+                        <span className="font-mono tabular-nums">
+                          +{reason.score.toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
                   </li>
                 ))}
               </ul>

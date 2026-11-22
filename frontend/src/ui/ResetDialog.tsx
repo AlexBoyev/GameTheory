@@ -1,11 +1,15 @@
 /**
  * New world: pick a preset, a seed, and the handful of dials worth touching.
  *
- * A preset is a set of overrides the backend applies on top of the current
- * config, so "Tribal Wars, but 300 agents" is one request - which is why the
- * sliders stay live when a preset is selected rather than being replaced by
- * it. Reset leaves the world paused at tick 0 so you can look at the island
- * before anything happens to it; "start immediately" is the usual choice.
+ * A preset is a set of overrides applied on top of the *default* config, so
+ * "Tribal Wars, but 300 agents" is one request - which is why the sliders stay
+ * live when a preset is selected rather than being replaced by it. Building on
+ * defaults rather than on the running world matters: a bare reset rebuilds
+ * from the current config, so inheriting it made the Axelrod preset a one-way
+ * door with `tournament_mode` stuck on.
+ *
+ * Reset leaves the world paused at tick 0 so you can look at the island before
+ * anything happens to it; "start immediately" is the usual choice.
  */
 
 import { useEffect, useState } from 'react';
@@ -81,6 +85,7 @@ export function ResetDialog({ onClose }: ResetDialogProps): React.ReactElement {
   const [preset, setPreset] = useState<string | null>(null);
   const [autostart, setAutostart] = useState(true);
   const [presets, setPresets] = useState<Preset[]>([]);
+  const [defaults, setDefaults] = useState<WorldConfig | null>(null);
   const [busy, setBusy] = useState(false);
   const [dials, setDials] = useState<Record<Dial['key'], number>>({
     population: currentConfig?.population ?? 120,
@@ -95,14 +100,23 @@ export function ResetDialog({ onClose }: ResetDialogProps): React.ReactElement {
       .presets()
       .then(setPresets)
       .catch(() => setPresets([]));
+    // The base a new world is built on. Not the *current* config: a bare
+    // reset rebuilds from that, so picking Axelrod once would leave
+    // `tournament_mode` on with no way back.
+    void api
+      .getDefaults()
+      .then(setDefaults)
+      .catch(() => setDefaults(null));
   }, []);
 
   const submit = async (): Promise<void> => {
     setBusy(true);
     try {
-      const config: WorldConfig | undefined = currentConfig
-        ? { ...currentConfig, ...dials }
-        : undefined;
+      // Always from defaults, never from the running world: a preset is
+      // overrides on top of defaults, and inheriting the current config would
+      // carry a previous preset's settings into the new world.
+      const base = defaults ?? currentConfig;
+      const config: WorldConfig | undefined = base ? { ...base, ...dials } : undefined;
       await controls.reset({
         seed: Number(seed) || 0,
         ...(config ? { config } : {}),

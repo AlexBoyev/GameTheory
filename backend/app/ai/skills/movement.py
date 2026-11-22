@@ -5,7 +5,7 @@ import math
 from pydantic import BaseModel, ConfigDict
 
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import NoParams, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import Consideration, NoParams, Skill, SkillCategory, SkillRun, SkillStatus
 from app.ai.skills.helpers import (
     distance_to,
     nearest_threat,
@@ -54,9 +54,9 @@ class Wander(Skill):
         """Always available - this is the fallback behaviour."""
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
-        """Return a small constant so any real need outranks it."""
-        return WANDER_UTILITY
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
+        """A small constant, so any real need outranks doing nothing."""
+        return [Consideration("nothing better to do", 1.0, WANDER_UTILITY)]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Pick a direction and a duration from the action RNG stream."""
@@ -153,7 +153,7 @@ class Flee(Skill):
             return Err("nothing nearby is threatening")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Scale fear by how unsafe the agent feels and how timid it is.
 
         Fear yields to dying. An agent whose thirst or hunger is nearly gone
@@ -161,14 +161,22 @@ class Flee(Skill):
         without this, a crowded island panics itself to death.
         """
         if ctx.observation is not None and ctx.observation.threat_id is None:
-            return 0.0
+            return []
         timidity = 1.0 - agent.traits.courage
-        fear = need_urgency(agent.needs.safety) * (0.45 + 0.75 * timidity)
         desperation = max(
             need_urgency(agent.needs.thirst),
             need_urgency(agent.needs.hunger),
         )
-        return fear * max(0.0, 1.0 - desperation)
+        # One consideration, not two: desperation *discounts* the fear, and two
+        # considerations would be added instead. Timidity is the weight because
+        # it can exceed 1 and `apply_curve` clamps the value.
+        return [
+            Consideration(
+                "afraid",
+                need_urgency(agent.needs.safety) * max(0.0, 1.0 - desperation),
+                0.45 + 0.75 * timidity,
+            )
+        ]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Remember who we are running from."""

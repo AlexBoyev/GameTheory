@@ -16,6 +16,7 @@ if TYPE_CHECKING:  # pragma: no cover - import cycle avoidance
     from app.ai.skill_services import SkillServices
 
 from app.ai.brains.base import DecisionContext
+from app.ai.brains.curves import Curve, apply_curve
 from app.core.result import Result
 from app.sim.entities import Agent, AgentState
 from app.sim.world import World
@@ -29,6 +30,30 @@ class SkillCategory(StrEnum):
     MANIPULATION = "manipulation"
     COMBAT = "combat"
     TRIBE = "tribe"
+
+
+@dataclass(frozen=True, slots=True)
+class Consideration:
+    """One named input to a skill's score (SPEC 7.4).
+
+    Attributes:
+        name: What this input *is*, shown in the decision trace. The whole
+            reason considerations exist rather than one arithmetic expression:
+            "thirst 0.82" explains a choice, "1.15" does not.
+        value: The normalised input, `[0, 1]`.
+        weight: How much it matters relative to a skill's other inputs.
+        curve: Response shape applied to `value` before weighting.
+    """
+
+    name: str
+    value: float
+    weight: float = 1.0
+    curve: Curve = Curve.LINEAR
+
+    @property
+    def score(self) -> float:
+        """The weighted, curved contribution of this input."""
+        return apply_curve(self.curve, self.value) * self.weight
 
 
 class Requirement(StrEnum):
@@ -125,9 +150,23 @@ class Skill(ABC):
         referenced an impossible action.
         """
 
-    @abstractmethod
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
+        """The named inputs this skill's score is made of (SPEC 7.4).
+
+        Override this *or* `utility()`. Overriding this one is preferred: the
+        decision trace can then name the reasons rather than only the total,
+        and the default `utility()` sums them for you.
+        """
+        return []
+
     def utility(self, agent: Agent, ctx: DecisionContext) -> float:
-        """Score this skill for the utility brain (higher wins)."""
+        """Score this skill for the utility brain (higher wins).
+
+        Sums `considerations()` by default. A skill with arithmetic that does
+        not decompose into weighted inputs may override this instead and
+        return the number directly.
+        """
+        return sum(consideration.score for consideration in self.considerations(agent, ctx))
 
     @abstractmethod
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:

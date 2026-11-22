@@ -20,10 +20,10 @@ document records.
 | `ruff format`, `ruff check` | clean |
 | `mypy app tests` (strict) | clean, 173 files |
 | `lint-imports` | 7 contracts, 0 broken |
-| `pytest` | 401 passed |
+| `pytest` | 419 passed |
 | `tsc -b`, `eslint` | clean |
 | `vitest` | 34 passed |
-| `playwright` | 13 passed, repeated runs |
+| `playwright` | 14 passed, repeated runs |
 | `vite build` | clean |
 
 ### The hard rules
@@ -80,24 +80,58 @@ document records.
    naming: a field with a docstring, a test of the *function* and no caller
    reads as finished work in every review that does not run it.
 
+8. **A preset was a one-way door.** `POST /sim/reset` with no config
+   rebuilds from the *current* config, which is reasonable on its own ("same
+   world, new seed") but meant that choosing the Axelrod preset once left
+   `tournament_mode` on with no way to clear it from the UI - and a
+   tournament world runs no decision system, so it looks exactly like a
+   broken simulation. `GET /sim/defaults` now says what "default" means and
+   the New World dialog builds on that rather than on the running world.
+
+   Found by a browser test failing for the wrong reason: it reported no
+   decision traces anywhere, which was true, because the world it inherited
+   had no decision system.
+
 ## Findings, by priority
 
-### P1 - the declared utility-AI design is not the implemented one
+### ~~P1 - the declared utility-AI design is not the implemented one~~ (partly fixed)
 
-SPEC 7.4 and `utility_brain.py` describe "considerations + response curves".
-In practice all 32 skills compute `utility()` with hand-rolled arithmetic;
-`apply_curve` exists and is unit-tested but **production code never calls
-it**, and the `Consideration` wrapper was unreferenced scaffolding (now
-removed).
+SPEC 7.4 describes "considerations + response curves"; every skill instead
+computed `utility()` with hand-rolled arithmetic, and `apply_curve` was
+unit-tested while production code never called it.
 
-This is not a bug - the skills work and are individually readable - but the
-SPEC describes a composable, inspectable scoring mechanism and what exists is
-32 bespoke formulas. Adopting it would also make the decision trace far more
-useful (it could name the *inputs*, not just the skill).
+A skill may now declare `considerations()` - named inputs with a weight and a
+curve - which the base class sums. The nine survival skills are converted;
+the rest still override `utility()` and score exactly as before.
 
-**Not fixed here** because rewriting 32 utility functions is a design change,
-not a cleanup. If it is taken on: do one skill first, prove the trace improves,
-then convert the rest.
+**The payoff is the decision trace.** It said `Sleep 0.194`; it now says
+`Sleep 0.194 - tired +0.12, it is night +0.07`, and the inspector shows those
+lines under each option. That is the difference between watching a simulation
+and reading one, which was the original complaint that started the UI work.
+
+Three things worth recording about doing it:
+
+1. **The conversion had to be proved, not assumed.** 1,240 utility values
+   were captured before the change for comparison - which showed 356 drifting
+   and, more usefully, drifting for skills that had not been touched. That
+   ruled out transcription error and pointed at the world trajectory: one
+   last-bit difference changes a softmax draw, which changes every subsequent
+   decision. Whole-world comparison is therefore useless for this; the
+   verification that works is writing each original formula out again in a
+   test and comparing per-skill. Those tests exist.
+2. **It found a real bug.** `apply_curve` clamps its input to `[0, 1]`, so
+   three skills whose value could reach 1.4 (`Gather`'s greed term, wood
+   gathering's loyalty term, `Flee`'s timidity term) were silently scoring
+   1.0. The magnitude belongs in the weight, which is not clamped.
+3. **An explanation whose parts do not add up is worse than none.** The first
+   version listed only a skill's own considerations, so `BuildShelter` showed
+   0.90 against a single input of 0.65 - the missing 0.25 being the commitment
+   bonus the brain adds. The trace now names those bonuses too, and a test
+   asserts the parts sum to the score.
+
+Converting the remaining ~23 skills is mechanical and the pattern is
+established; several are genuinely one product of factors and read better as
+a single named consideration than as a forced decomposition.
 
 ### ~~P1 - every decision scores all 31 skills~~ (partly fixed)
 

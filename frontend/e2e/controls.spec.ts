@@ -31,6 +31,22 @@ async function pauseAt1x(request: Api): Promise<void> {
   await request.post('/api/sim/pause', { data: {} });
 }
 
+/**
+ * A plain island, paused.
+ *
+ * Needed by anything that assumes agents have skills and memories: the
+ * preset tests leave the world in whatever they built, and a tournament world
+ * runs no decision system at all - which is how this test first "failed" by
+ * finding no decision traces anywhere.
+ */
+async function plainWorld(request: Api): Promise<void> {
+  // Explicitly from the defaults: a bare reset rebuilds from the *current*
+  // config, which may be a preset a previous test built.
+  const defaults = await (await request.get('/api/sim/defaults')).json();
+  await request.post('/api/sim/reset', { data: { config: defaults } });
+  await pauseAt1x(request);
+}
+
 test.describe('control bar', () => {
   test.beforeEach(async ({ page, request }) => {
     await pauseAt1x(request);
@@ -169,5 +185,42 @@ test.describe('tournament mode', () => {
     // must be real names rather than placeholders.
     await expect(page.getByText('per round, not per agent')).toBeVisible();
     await expect(page.getByText('TitForTat').first()).toBeVisible({ timeout: 30_000 });
+  });
+});
+
+test.describe('the decision trace', () => {
+  test('explains a choice with named reasons that add up', async ({ page, request }) => {
+    await plainWorld(request);
+    await page.goto('/');
+    await expect(page.locator('canvas').first()).toBeVisible();
+
+    // Let the world run long enough for agents to be doing something.
+    await request.post('/api/sim/step', { data: { n: 300 } });
+
+    // Pick an agent that has a trace, and open it in the inspector.
+    const agents = (await (await request.get('/api/agents?limit=200')).json()) as {
+      id: number;
+    }[];
+    let chosen: { skill: string; score: number; because: { name: string; score: number }[] }[] = [];
+    for (const agent of agents.slice(0, 40)) {
+      const detail = (await (await request.get(`/api/agents/${agent.id}`)).json()) as {
+        decision_trace: typeof chosen;
+      };
+      if (detail.decision_trace.some((option) => option.because.length > 0)) {
+        chosen = detail.decision_trace;
+        break;
+      }
+    }
+
+    expect(chosen.length).toBeGreaterThan(0);
+    const explained = chosen.find((option) => option.because.length > 0);
+    expect(explained).toBeDefined();
+
+    // Every listed reason is named, and they sum to the score.
+    const total = explained!.because.reduce((sum, reason) => sum + reason.score, 0);
+    expect(total).toBeCloseTo(explained!.score, 2);
+    for (const reason of explained!.because) {
+      expect(reason.name).not.toBe('');
+    }
   });
 });

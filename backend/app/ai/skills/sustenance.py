@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.ai import social
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import NoParams, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import Consideration, NoParams, Skill, SkillCategory, SkillRun, SkillStatus
 from app.ai.skills.helpers import nearest_resource, need_urgency, steer_towards, stop
 from app.core.result import OK_NONE, Err, Result
 from app.sim import balance
@@ -76,11 +76,16 @@ class Gather(Skill):
             return Err("no food in sight")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Want food when hungry, or when the larder is empty and greed says so."""
-        hunger = need_urgency(agent.needs.hunger)
         stock = min(1.0, agent.inventory.food / balance.CARRY_TARGET)
-        return 0.6 * hunger + 0.3 * (1.0 - stock) * (0.4 + agent.traits.greed)
+        return [
+            Consideration("hungry", need_urgency(agent.needs.hunger), 0.6),
+            # The value stays in [0, 1] and the magnitude goes in the weight:
+            # `apply_curve` clamps the value, so a greedy agent's 1.4 would
+            # quietly become 1.0.
+            Consideration("larder empty", 1.0 - stock, 0.3 * (0.4 + agent.traits.greed)),
+        ]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Lock on to a node - unless someone has lied about where food is."""
@@ -191,11 +196,11 @@ class Eat(Skill):
             return Err("not hungry")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Eating beats fetching: it is the fastest fix for hunger."""
         if agent.inventory.food <= 0.0:
-            return 0.0
-        return need_urgency(agent.needs.hunger) * 1.25
+            return []
+        return [Consideration("hungry", need_urgency(agent.needs.hunger), 1.25)]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Take one unit out of the inventory up front."""
@@ -236,9 +241,9 @@ class Drink(Skill):
             return Err("no water in sight")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Thirst kills faster than hunger, so it scores higher."""
-        return need_urgency(agent.needs.thirst) * 1.4
+        return [Consideration("thirsty", need_urgency(agent.needs.thirst), 1.4)]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Head for the nearest water."""
@@ -285,11 +290,17 @@ class Sleep(Skill):
             return Err("not tired")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
-        """Sleep at night, or whenever exhaustion starts doing damage."""
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
+        """Sleep at night, or whenever exhaustion starts doing damage.
+
+        Two inputs rather than one so the trace can say *why* an agent is
+        turning in: the night bonus is the same tiredness, weighted again.
+        """
         tiredness = need_urgency(agent.needs.energy)
-        night_bonus = NIGHT_SLEEP_BONUS if world_is_night(ctx) else 0.0
-        return tiredness * (0.8 + night_bonus)
+        inputs = [Consideration("tired", tiredness, 0.8)]
+        if world_is_night(ctx):
+            inputs.append(Consideration("it is night", tiredness, NIGHT_SLEEP_BONUS))
+        return inputs
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Stop moving."""

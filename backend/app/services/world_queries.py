@@ -195,6 +195,7 @@ class WorldQueries:
                     "score": option.score,
                     "reason": option.reason,
                     "chosen": option.skill == current_skill,
+                    "because": [{"name": name, "score": score} for name, score in option.because],
                 }
                 for option in mind.trace
             ]

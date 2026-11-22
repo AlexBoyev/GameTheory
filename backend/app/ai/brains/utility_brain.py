@@ -1,10 +1,13 @@
-"""Utility AI: response curves and softmax choice (SPEC 7.4).
+"""Utility AI: considerations, response curves and softmax choice (SPEC 7.4).
 
-Each skill computes its own `utility()` directly rather than composing
-declarative considerations. `apply_curve` is the shared shaping function they
-can use; the `Consideration` wrapper the SPEC implies was unused scaffolding
-and has been removed. Adopting it across all 32 skills is a design decision,
-not a cleanup - see docs/REVIEW.md.
+A skill scores itself by listing *considerations* - named inputs with a weight
+and a response curve - which the base class sums. Naming them is the point:
+the inspector can then say "Drink, because thirst 0.82 x 1.4" instead of just
+"Drink (1.15)", which is the difference between watching a simulation and
+reading one.
+
+Skills that have not been converted still override `utility()` directly and
+score exactly as before; `docs/REVIEW.md` tracks the rest.
 
 Why softmax rather than "pick the best": two agents with the same needs but
 different personalities should not behave identically, and a world where every
@@ -13,7 +16,6 @@ temperature is how much personality beats arithmetic.
 """
 
 import math
-from enum import StrEnum
 
 from app.ai.brains.base import Decision, DecisionContext, ScoredOption
 from app.ai.skills.base import Skill
@@ -22,32 +24,6 @@ from app.core.result import is_ok
 
 MIN_SCORE = 1e-4
 """Below this a skill is treated as "not worth doing"."""
-
-
-class Curve(StrEnum):
-    """Response curve shapes applied to a normalised input."""
-
-    LINEAR = "linear"
-    QUADRATIC = "quadratic"
-    INVERSE = "inverse"
-    LOGISTIC = "logistic"
-    STEP = "step"
-
-
-def apply_curve(curve: Curve, value: float) -> float:
-    """Map `value` in `[0, 1]` through `curve`, result clamped to `[0, 1]`."""
-    clamped = min(1.0, max(0.0, value))
-    match curve:
-        case Curve.LINEAR:
-            return clamped
-        case Curve.QUADRATIC:
-            return clamped * clamped
-        case Curve.INVERSE:
-            return 1.0 - clamped
-        case Curve.LOGISTIC:
-            return 1.0 / (1.0 + math.exp(-12.0 * (clamped - 0.5)))
-        case Curve.STEP:
-            return 1.0 if clamped >= 0.5 else 0.0
 
 
 class UtilityBrain:
@@ -77,6 +53,7 @@ class UtilityBrain:
                 skill=type(skill).name,
                 score=round(score, 4),
                 reason=f"{type(skill).category.value} need",
+                because=self._because(skill, ctx),
             )
             for skill, score in shortlist
         )
@@ -86,6 +63,29 @@ class UtilityBrain:
             reason=self._explain(shortlist, chosen_index),
             from_intention=type(chosen_skill).name in ctx.intention_skills,
         )
+
+    @staticmethod
+    def _because(skill: Skill, ctx: DecisionContext) -> tuple[tuple[str, float], ...]:
+        """The named inputs behind a skill's score, biggest first.
+
+        Includes the two bonuses the brain itself adds, because an explanation
+        whose parts do not add up to the total is worse than none: a skill an
+        agent is already doing showed 0.90 against a single input of 0.65, and
+        the missing 0.25 was the commitment bonus.
+
+        Recomputed rather than captured during scoring: only the handful of
+        options that reach the shortlist are ever explained, so asking the
+        other twenty-odd skills to build a list nobody reads would be waste.
+        """
+        name = type(skill).name
+        inputs = [
+            (item.name, round(item.score, 4)) for item in skill.considerations(ctx.agent, ctx)
+        ]
+        if name in ctx.intention_skills and ctx.intention_bonus:
+            inputs.append(("it is the plan", round(ctx.intention_bonus, 4)))
+        if name == ctx.current_skill and ctx.commitment_bonus:
+            inputs.append(("already doing it", round(ctx.commitment_bonus, 4)))
+        return tuple(sorted(inputs, key=lambda entry: -entry[1]))
 
     def _score_all(self, ctx: DecisionContext) -> list[tuple[Skill, float]]:
         """Return runnable skills with scores, best first, ties broken by name."""

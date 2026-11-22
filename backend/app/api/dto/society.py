@@ -62,6 +62,15 @@ class RelationshipDTO(BaseModel):
     caught_lying: int = 0
 
 
+class ConsiderationDTO(BaseModel):
+    """One named input behind a score (SPEC section 7.4)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    score: float
+
+
 class DecisionOptionDTO(BaseModel):
     """One scored option from the decision trace (SPEC section 7.4)."""
 
@@ -71,6 +80,9 @@ class DecisionOptionDTO(BaseModel):
     score: float
     reason: str = ""
     chosen: bool = False
+    because: list[ConsiderationDTO] = Field(default_factory=list)
+    """The named inputs the score is made of, biggest first. Empty for a skill
+    that computes its score directly rather than declaring considerations."""
 
 
 class MemoryDTO(BaseModel):

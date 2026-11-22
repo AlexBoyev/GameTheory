@@ -77,6 +77,7 @@ export const api = {
     post<SimState>('/sim/reset', payload),
 
   getConfig: (): Promise<WorldConfig> => request<WorldConfig>('/sim/config'),
+  getDefaults: (): Promise<WorldConfig> => request<WorldConfig>('/sim/defaults'),
   putConfig: (config: WorldConfig): Promise<SimState> =>
     request<SimState>('/sim/config', { method: 'PUT', body: JSON.stringify(config) }),
   presets: (): Promise<Preset[]> => request<Preset[]>('/sim/presets'),

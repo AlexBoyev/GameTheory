@@ -22,6 +22,7 @@ from app.api.dto.sim import (
 from app.api.errors import bad_request, not_found
 from app.core.presets import load_preset, load_presets
 from app.core.world_config import WorldConfig
+from app.services.engine_factory import world_config_from_settings
 from app.services.simulation_service import SimStateView
 
 router = APIRouter(prefix="/sim", tags=["sim"])
@@ -98,6 +99,18 @@ async def reset(
         config = preset.apply_to(config or WorldConfig())
 
     return _to_dto(await simulation.reset(seed=request.seed, config=config))
+
+
+@router.get("/defaults", response_model=WorldConfig, summary="Default world config")
+def defaults(settings: SettingsDep) -> WorldConfig:
+    """The config a world is built from when nothing overrides it.
+
+    The New World dialog needs this to mean "a default island": a bare reset
+    rebuilds from the *current* config, so without it, choosing the Axelrod
+    preset once left `tournament_mode` on with no way back - an island with
+    no decision system, which looks exactly like a broken simulation.
+    """
+    return world_config_from_settings(settings)
 
 
 @router.get("/config", response_model=WorldConfig, summary="Current world config")

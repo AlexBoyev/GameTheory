@@ -144,3 +144,26 @@ def test_the_tournament_endpoint_reports_the_axelrod_preset(client: TestClient) 
     # Best first.
     scores = [row["score_per_round"] for row in report["standings"]]
     assert scores == sorted(scores, reverse=True)
+
+
+def test_a_preset_is_not_a_one_way_door(client: TestClient) -> None:
+    """You must be able to get back to a plain island.
+
+    A bare reset rebuilds from the *current* config, so after choosing the
+    Axelrod preset `tournament_mode` stayed on with no way to clear it from
+    the UI - and a tournament world runs no decision system, which looks
+    exactly like a broken simulation. `GET /sim/defaults` is what the New
+    World dialog uses to mean "default".
+    """
+    client.post("/api/sim/reset", json={"preset": "axelrod_tournament"})
+    assert client.get("/api/sim/config").json()["tournament_mode"] is True
+
+    # A bare reset keeps it, which is the behaviour that caused the trap.
+    client.post("/api/sim/reset", json={})
+    assert client.get("/api/sim/config").json()["tournament_mode"] is True
+
+    defaults = client.get("/api/sim/defaults").json()
+    assert defaults["tournament_mode"] is False
+
+    client.post("/api/sim/reset", json={"config": defaults})
+    assert client.get("/api/sim/config").json()["tournament_mode"] is False

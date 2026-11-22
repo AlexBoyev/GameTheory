@@ -637,6 +637,16 @@ export interface components {
             alive: boolean;
         };
         /**
+         * ConsiderationDTO
+         * @description One named input behind a score (SPEC section 7.4).
+         */
+        ConsiderationDTO: {
+            /** Name */
+            name: string;
+            /** Score */
+            score: number;
+        };
+        /**
          * DecisionOptionDTO
          * @description One scored option from the decision trace (SPEC section 7.4).
          */
@@ -655,6 +665,8 @@ export interface components {
              * @default false
              */
             chosen: boolean;
+            /** Because */
+            because?: components["schemas"]["ConsiderationDTO"][];
         };
         /**
          * EventDTO
