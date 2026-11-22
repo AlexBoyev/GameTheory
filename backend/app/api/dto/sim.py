@@ -60,3 +60,27 @@ class PresetDTO(BaseModel):
     id: str
     name: str
     description: str = ""
+
+
+class TournamentStandingDTO(BaseModel):
+    """One strategy's result in the current generation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    strategy: str
+    score_per_round: float
+    members: int
+
+
+class TournamentDTO(BaseModel):
+    """`GET /api/sim/tournament` - the Axelrod report (SPEC 5.3)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    active: bool = Field(description="False unless the world is in tournament mode.")
+    generation: int = 0
+    generations: int = 0
+    finished: bool = False
+    pairings_played: int = 0
+    pairings_total: int = 0
+    standings: list[TournamentStandingDTO] = Field(default_factory=list)

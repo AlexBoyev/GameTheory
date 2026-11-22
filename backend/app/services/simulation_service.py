@@ -16,7 +16,7 @@ import asyncio
 import queue
 import threading
 import time
-from collections import deque
+from collections import Counter, deque
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -64,6 +64,20 @@ COMMAND_TIMEOUT_S = 5.0
 """Generous: a `Reset` has to generate a world before it can be applied."""
 
 COMMAND_POLL_S = 0.004
+
+
+@dataclass(frozen=True, slots=True)
+class TournamentReport:
+    """What `GET /api/sim/tournament` reports (SPEC 5.3)."""
+
+    active: bool
+    generation: int
+    generations: int
+    finished: bool
+    pairings_played: int
+    pairings_total: int
+    standings: list[tuple[str, float, int]]
+    """`(strategy, score per round, members)`, best first."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -208,6 +222,28 @@ class SimulationService:
             is_night=snapshot.is_night,
             population=snapshot.population,
             ticks_per_second=snapshot.ticks_per_second,
+        )
+
+    def tournament(self) -> TournamentReport:
+        """Standings for the Axelrod preset, read under the engine lock."""
+        system = self._bundle.tournament
+        with self._engine.read_world() as world:
+            active = world.config.tournament_mode
+            standings = system.state.average_by_strategy(world) if active else {}
+            # Keyed by plain `str`: the standings come from the system as
+            # strings, and `StrategyName` is a Literal that will not take one.
+            members: Counter[str] = Counter(str(agent.strategy) for agent in world.living_agents())
+        return TournamentReport(
+            active=active,
+            generation=system.state.generation,
+            generations=system.generations,
+            finished=system.state.finished,
+            pairings_played=system.state.pair_index,
+            pairings_total=len(system.state.pairs),
+            standings=[
+                (name, score, members.get(name, 0))
+                for name, score in sorted(standings.items(), key=lambda item: -item[1])
+            ],
         )
 
     def llm_status(self) -> LLMStatus:

@@ -10,6 +10,7 @@ from app.sim import balance
 from app.sim.entities import Agent, Biome, BrainType, LifeStage, Traits
 from app.sim.names import make_name
 from app.sim.world import World
+from app.sim.worldgen.arena import ring_positions
 from app.sim.worldgen.grid import cells_in_biomes, jittered_positions
 
 SPAWN_BIOMES: tuple[Biome, ...] = (Biome.MEADOW, Biome.BEACH, Biome.FOREST)
@@ -79,6 +80,10 @@ def spawn_population(world: World, config: WorldConfig) -> None:
     if count <= 0:
         return
 
+    if config.tournament_mode:
+        _spawn_arena(world, config, count)
+        return
+
     candidates = cells_in_biomes(world.terrain, SPAWN_BIOMES)
     if candidates.size == 0:
         candidates = cells_in_biomes(world.terrain, (Biome.HILLS,))
@@ -102,6 +107,40 @@ def spawn_population(world: World, config: WorldConfig) -> None:
             age=age,
             life_stage=life_stage_for(age),
             heading=float(headings[index]),
+        )
+        world.agents[agent.id] = agent
+        world.next_agent_id += 1
+
+    world.agent_index.rebuild(
+        (agent.id, agent.position[0], agent.position[1]) for agent in world.living_agents()
+    )
+
+
+def _spawn_arena(world: World, config: WorldConfig, count: int) -> None:
+    """Stand the contestants in a ring (SPEC 5.3, tournament mode).
+
+    A tournament is not about terrain: pairings are scheduled rather than
+    spatial, so the ring is purely so you can see who is playing. Equal
+    cohorts rather than a weighted draw, because the question a tournament
+    asks is how the strategies compare, and starting them unequal answers a
+    different one.
+    """
+    rng = world.rngs["spawn"]
+    names: list[StrategyName] = sorted(config.normalised_strategy_mix)
+    used_names: set[str] = set()
+
+    for index, position in enumerate(ring_positions(count, world.terrain.size)):
+        age = balance.CHILD_UNTIL + 4.0
+        agent = Agent(
+            id=world.next_agent_id,
+            name=make_name(rng, used_names),
+            position=position,
+            traits=random_traits(rng, config.trait_bias),
+            strategy=names[index % len(names)],
+            brain_type=BrainType.UTILITY,
+            age=age,
+            life_stage=life_stage_for(age),
+            heading=math.atan2(-position[1], -position[0]),
         )
         world.agents[agent.id] = agent
         world.next_agent_id += 1

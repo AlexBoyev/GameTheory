@@ -115,3 +115,30 @@ def test_tribes_and_the_social_graph_are_live(client: TestClient) -> None:
     assert graph.status_code == 200
     assert "edges" in graph.json()
     assert shelters.status_code == 200
+
+
+def test_the_tournament_endpoint_answers_on_a_normal_island(client: TestClient) -> None:
+    """`active: false` rather than a 404, so the UI can ask once."""
+    report = client.get("/api/sim/tournament").json()
+
+    assert report["active"] is False
+    assert report["standings"] == []
+    assert report["generation"] == 0
+
+
+def test_the_tournament_endpoint_reports_the_axelrod_preset(client: TestClient) -> None:
+    client.post("/api/sim/reset", json={"preset": "axelrod_tournament"})
+    client.post("/api/sim/step", json={"n": 400})
+
+    report = client.get("/api/sim/tournament").json()
+
+    assert report["active"] is True
+    assert report["generations"] > 0
+    assert report["pairings_total"] > 0
+    assert report["standings"], "400 ticks should have produced standings"
+    first = report["standings"][0]
+    assert set(first) == {"strategy", "score_per_round", "members"}
+    assert 0.0 <= first["score_per_round"] <= 5.0
+    # Best first.
+    scores = [row["score_per_round"] for row in report["standings"]]
+    assert scores == sorted(scores, reverse=True)

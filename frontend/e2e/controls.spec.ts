@@ -148,3 +148,26 @@ test.describe('panels and overlays', () => {
     await expect(help).toBeVisible();
   });
 });
+
+test.describe('tournament mode', () => {
+  test('the report appears only for a tournament world', async ({ page, request }) => {
+    await pauseAt1x(request);
+    await page.goto('/');
+    await expect(page.locator('canvas').first()).toBeVisible();
+
+    // An island has no standings to show, so the panel must not be there.
+    await expect(page.getByRole('heading', { name: 'Tournament' })).toBeHidden();
+
+    await page.getByTitle('New world (R)').click();
+    await page.getByRole('button', { name: /Axelrod Tournament/ }).click();
+    await page.getByRole('button', { name: 'Build world' }).click();
+
+    const panel = page.getByRole('heading', { name: 'Tournament' });
+    await expect(panel).toBeVisible({ timeout: 30_000 });
+
+    // Standings fill in once the first pairings resolve, and the strategies
+    // must be real names rather than placeholders.
+    await expect(page.getByText('per round, not per agent')).toBeVisible();
+    await expect(page.getByText('TitForTat').first()).toBeVisible({ timeout: 30_000 });
+  });
+});

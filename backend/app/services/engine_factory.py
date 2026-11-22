@@ -20,6 +20,7 @@ from app.ai.skills.registry import SkillRegistry, build_registry
 from app.ai.systems import DecisionSystem, PerceptionSystem, SkillExecutionSystem
 from app.ai.systems.encounter_system import EncounterSystem
 from app.ai.systems.intention_system import IntentionSystem
+from app.ai.systems.tournament_system import TournamentSystem
 from app.ai.systems.tribe_system import TribeSystem
 from app.core.settings import Settings
 from app.core.world_config import WorldConfig
@@ -45,6 +46,9 @@ class EngineBundle:
     ledger: SocialLedger
     payoffs: PayoffConfig
     broker: IntentionBroker
+    tournament: TournamentSystem
+    """Holds the standings. Exposed because `GET /api/tournament` reports
+    them, and only this module knows which instance the pipeline is running."""
 
 
 def world_config_from_settings(settings: Settings) -> WorldConfig:
@@ -89,6 +93,15 @@ def build_pipeline(
     # so it is the only place that can guarantee the skills share them.
     skills.bind(SkillServices(minds=minds, ledger=resolved_ledger))
 
+    # Survival off for a tournament (SPEC 5.3): no needs decay, no skills, no
+    # lifecycle, because a tournament measures strategies and hunger would
+    # measure something else as well. Perception still runs so the inspector
+    # and the scene have something to show.
+    tournament = (
+        PerceptionSystem(minds),
+        TournamentSystem(minds, strategies, resolved_payoffs, resolved_ledger),
+    )
+
     return SystemPipeline(
         (
             IntentionSystem(minds, skills, broker or IntentionBroker()),
@@ -101,7 +114,9 @@ def build_pipeline(
             RegrowthSystem(),
             TribeSystem(minds, resolved_ledger),
             LifecycleSystem(),
-        )
+        ),
+        alternative=tournament,
+        chooses=lambda world: world.config.tournament_mode,
     )
 
 
@@ -121,6 +136,7 @@ def build_engine_bundle(
     payoffs = load_payoffs(payoff_path(settings))
     broker = IntentionBroker()
 
+    resolved_config = config or world_config_from_settings(settings)
     skills = build_registry(SkillServices(minds=minds, ledger=ledger))
     pipeline = build_pipeline(
         minds,
@@ -132,7 +148,7 @@ def build_engine_bundle(
     )
 
     engine = SimulationEngine(
-        config=config or world_config_from_settings(settings),
+        config=resolved_config,
         builder=IslandWorldBuilder(),
         pacer=pacer or MonotonicPacer(),
         pipeline=pipeline,
@@ -145,4 +161,8 @@ def build_engine_bundle(
         ledger=ledger,
         payoffs=payoffs,
         broker=broker,
+        # Found by name rather than threaded out of `build_pipeline`: that
+        # function's job is to return a pipeline, and three callers do not
+        # want a tuple.
+        tournament=pipeline.require("tournament", TournamentSystem),
     )

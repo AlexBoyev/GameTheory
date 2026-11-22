@@ -1,7 +1,7 @@
 # Senior review - Game Theory
 
-- **Date:** 2026-11-22
-- **Scope:** the whole repo at Phase 6, against `CLAUDE.md` and `docs/SPEC.md`
+- **Date:** 2026-11-23
+- **Scope:** the whole repo, against `CLAUDE.md` and `docs/SPEC.md`
 - **Method:** every linter, type check and test suite; machine-checked
   architecture contracts; a dead-code scan; repeated runs of the
   timing-sensitive tests; a real-browser pass; and a profile at 500 agents
@@ -9,19 +9,21 @@
 ## Verdict
 
 The architecture holds. The layering, determinism and cost rules are not
-merely followed but *machine-checked*, and the three times I assumed something
-about the running system rather than measuring it, I was wrong - which is the
-main thing this document records.
+merely followed but *machine-checked*. What this review actually found was
+four settings that were declared, documented, tested as functions and read by
+nothing - and every time I assumed something about the running system instead
+of measuring it, I was wrong. Those two patterns are the main thing this
+document records.
 
 | Gate | Result |
 | --- | --- |
 | `ruff format`, `ruff check` | clean |
-| `mypy app` (strict) | clean, 128 files |
+| `mypy app` (strict) | clean, 130 files |
 | `lint-imports` | 7 contracts, 0 broken |
-| `pytest` | 329 passed |
+| `pytest` | 350 passed |
 | `tsc -b`, `eslint` | clean |
 | `vitest` | 34 passed |
-| `playwright` | 12 passed, three consecutive runs |
+| `playwright` | 13 passed, repeated runs |
 | `vite build` | clean |
 
 ### The hard rules
@@ -63,6 +65,20 @@ main thing this document records.
      previous test left. Each now puts the engine in a known state first.
 6. **Stale documentation corrected**: `playwright.config.ts` claimed the
    backend must be on `:8000`, which Apache holds on this machine.
+
+7. **Tournament mode was the fourth "declared but wired to nothing".**
+   `WorldConfig.tournament_mode` had a field, a description, a SPEC section
+   and a preset - and nothing read it, so the Axelrod preset quietly built a
+   normal island with a flat strategy mix. It is now a real pipeline
+   (`Perception + TournamentSystem`, survival off), a ring arena, a
+   `GET /api/sim/tournament` report and a UI panel that appears only while a
+   tournament is running. 21 tests, including one that asserts the simulation
+   reproduces Axelrod's actual finding.
+
+   The other three were `trait_bias`, `initial_tribes` (both Phase 6) and
+   `SchedulerLimits.interval_for_speed` (Phase 5). The pattern is worth
+   naming: a field with a docstring, a test of the *function* and no caller
+   reads as finished work in every review that does not run it.
 
 ## Findings, by priority
 
@@ -177,6 +193,7 @@ Worth keeping, because the pattern repeats:
 | "No shelters are being built, so the skill must be wrong" | The cooldown started when a skill *began*, so any skill longer than the review interval could never finish. |
 | "Caching the repeated neighbour searches will be a clear win" | ~4%, inside the noise, and unsafe. Reverted. |
 | "The high-speed policy works, it is tested" | Nothing called it. The setting existed, the UI displayed it, and it did nothing. |
+| "Tournament mode is done, there is a preset for it" | Same again: a config field, a SPEC section and a preset, read by nothing. |
 
 Three of those four were found by probing a *running* world rather than by
 reading code or adding unit tests. The unit tests were green throughout.

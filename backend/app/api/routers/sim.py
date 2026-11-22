@@ -16,6 +16,8 @@ from app.api.dto.sim import (
     SimStateDTO,
     SpeedRequest,
     StepRequest,
+    TournamentDTO,
+    TournamentStandingDTO,
 )
 from app.api.errors import bad_request, not_found
 from app.core.presets import load_preset, load_presets
@@ -121,3 +123,25 @@ def presets(settings: SettingsDep) -> list[PresetDTO]:
         PresetDTO(id=preset.id, name=preset.name, description=preset.description)
         for preset in load_presets(Path(settings.config_dir))
     ]
+
+
+@router.get("/tournament", response_model=TournamentDTO, summary="Axelrod standings")
+def tournament(simulation: SimulationDep) -> TournamentDTO:
+    """Report the tournament (SPEC 5.3), or `active: false` on a normal island.
+
+    Answers on any world rather than 404ing off-tournament, so the UI can ask
+    once and decide whether to show the panel at all.
+    """
+    report = simulation.tournament()
+    return TournamentDTO(
+        active=report.active,
+        generation=report.generation,
+        generations=report.generations,
+        finished=report.finished,
+        pairings_played=report.pairings_played,
+        pairings_total=report.pairings_total,
+        standings=[
+            TournamentStandingDTO(strategy=name, score_per_round=score, members=members)
+            for name, score, members in report.standings
+        ],
+    )

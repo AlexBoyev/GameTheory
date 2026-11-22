@@ -19,6 +19,7 @@ import type {
   Shelter,
   SimState,
   Snapshot,
+  Tournament,
   Tribe,
   TrustGraph,
   WorldConfig,
@@ -98,6 +99,8 @@ export const api = {
 
   god: (action: GodAction, payload: GodRequest = {}): Promise<GodResult> =>
     post<GodResult>(`/god/${action}`, payload),
+
+  tournament: (): Promise<Tournament> => request<Tournament>('/sim/tournament'),
 
   snapshots: (): Promise<Snapshot[]> => request<Snapshot[]>('/snapshots'),
   saveSnapshot: (label: string): Promise<Snapshot> => post<Snapshot>('/snapshots', { label }),

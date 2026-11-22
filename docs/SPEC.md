@@ -145,6 +145,12 @@ Strategy lookup uses the **agent's memory of that partner** — and, if never me
 ### 5.3 Tournament mode
 Preset that disables survival and runs a classic round-robin iterated PD tournament among all strategies, with replicator dynamics (next generation proportional to score). Visualized as agents in a ring arena.
 
+**As built.** `tournament_mode` swaps the tick pipeline for `Perception + TournamentSystem` — no needs decay, no skills, no lifecycle, no food changing hands, because a tournament measures strategies and hunger would measure something else as well. Pairings are exhaustive and scheduled rather than spatial (24 pairs a tick, 10 iterated rounds each), so no strategy benefits from lucky neighbours. Cohorts start equal. Standings are **score per round**, not per agent, so a strategy is not rewarded for having more members this generation; `GET /api/sim/tournament` reports them and the UI shows a panel only while one is running.
+
+Selection is `exp(4 · (score − best))` rather than plain proportional: scores land between 2.0 and 2.7, a 1.35:1 advantage that drift drowns over twenty generations of a hundred agents. Every strategy keeps a non-zero share, so one bad generation cannot delete a contestant and stop the tournament being a comparison. Changing strategy clears an agent's pair history — otherwise a fresh defector inherits a reputation for cooperating.
+
+On seed 1337 this reproduces Axelrod's result: AlwaysDefect tops generation 1 and is extinct by generation 19, TitForTat finishes first, and mean score climbs from ~2.3 toward the mutual-cooperation payoff of 3.0. There is a test for it.
+
 ---
 
 ## 6. Social & manipulation layer

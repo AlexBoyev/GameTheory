@@ -31,6 +31,8 @@ export type Snapshot = components['schemas']['SnapshotDTO'];
 export type GodAction = components['schemas']['GodAction'];
 export type GodRequest = components['schemas']['GodActionRequest'];
 export type GodResult = components['schemas']['GodActionResultDTO'];
+export type Tournament = components['schemas']['TournamentDTO'];
+export type TournamentStanding = components['schemas']['TournamentStandingDTO'];
 
 /** One row of the event feed. */
 export interface EventItem {

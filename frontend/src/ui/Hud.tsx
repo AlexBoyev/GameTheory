@@ -16,6 +16,7 @@ import { Minimap } from '@/ui/Minimap';
 import { LlmPanel } from '@/ui/LlmPanel';
 import { OverlayBar } from '@/ui/OverlayBar';
 import { TopBar } from '@/ui/TopBar';
+import { TournamentPanel } from '@/ui/TournamentPanel';
 import { useSimStore } from '@/state/simStore';
 import { useSocietyStore } from '@/state/societyStore';
 import { useUiStore } from '@/state/uiStore';
@@ -105,6 +106,7 @@ export function Hud(): React.ReactElement {
           {chartsOpen && <ChartsPanel />}
           {llmOpen && <LlmPanel />}
           {godOpen && <GodPanel />}
+          <TournamentPanel />
         </div>
         <div className="pointer-events-none flex items-start gap-3">
           <Inspector />

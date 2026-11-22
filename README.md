@@ -28,7 +28,7 @@ What works right now:
 | Works | Not yet |
 | --- | --- |
 | **A real simulation**: seeded island, resources with regrowth, day/night, seasons | |
-| Agents with needs, traits, inventory, ageing and named death causes | Tournament report for the Axelrod preset |
+| Agents with needs, traits, inventory, ageing and named death causes | |
 | **31 skills**: survival, building, social, manipulation, combat and tribe actions | The P1/P2 items in [`docs/REVIEW.md`](docs/REVIEW.md) |
 | Utility AI with response curves, softmax personality and a top-3 decision trace | |
 | **Deliberative minds**: goals, plans, spoken lines and beliefs, via local Ollama **or an offline mock** | |
@@ -38,6 +38,7 @@ What works right now:
 | **Snapshots**: save and reload a whole society, memories included | |
 | Minimap with a camera marker, click-to-fly, and a screenshot button | |
 | Activity heatmap and name tags - every overlay toggle now does something | |
+| **Tournament mode**: round-robin iterated PD with replicator dynamics, in a ring arena | |
 | **Five games**: Prisoner's Dilemma, Stag Hunt, Hawk-Dove, Ultimatum, Public Goods | |
 | **Ten strategies** from AlwaysCooperate to Detective, inherited with mutation | |
 | **Trust you earn and reputation you only hear about**, gossip, lies, lie detection | |
@@ -45,7 +46,7 @@ What works right now:
 | Shelters that get built, reproduction with trait blending, deaths with causes | |
 | Engine on a worker thread: pause / play / 1x-50x / MAX / step / reset | |
 | Full UI: inspector, event feed with filters, charts, overlays, speech bubbles, URL state, help | |
-| 7 layering contracts, **329 backend tests**, 34 unit + **12 browser tests** | |
+| 7 layering contracts, **350 backend tests**, 34 unit + **13 browser tests** | |
 
 `GET /api/sim/state` reports `"placeholder": false`. Determinism is
 machine-checked: same seed, same world, to the bit, after 1,000 ticks of the
@@ -257,7 +258,7 @@ overrides, so you can edit them or add your own without touching code.
 | **Harsh Winter** | Does cooperation survive hunger? (winter, scarcity 2.2) |
 | **Liars' Island** | What happens to reputation when nobody is honest? |
 | **Tribal Wars** | Four tribes, contested ground, loyalty over honesty |
-| **Axelrod Tournament** | Which strategy actually wins, with survival switched off |
+| **Axelrod Tournament** | Which strategy actually wins, with survival switched off - and it reproduces the classic answer: AlwaysDefect leads generation 1 and is extinct by 19, TitForTat finishes first |
 | **LLM Schemers** | Six deliberative minds among reactive ones, plotting out loud |
 
 A preset applies *on top of* the dials in the New World dialog, and never
@@ -323,7 +324,7 @@ python driver.py
 | --- | --- |
 | `python driver.py` | Install if needed, start backend + frontend, open the browser |
 | `python driver.py --check` | Every linter, type check and test suite (9 checks) |
-| `cd frontend && npm run e2e` | 12 browser tests (needs the stack running; `npm run e2e:install` once) |
+| `cd frontend && npm run e2e` | 13 browser tests (needs the stack running; `npm run e2e:install` once) |
 | `python driver.py --bench` | Throughput benchmark |
 | `python driver.py --port 8001` | Pin the backend port (default: first free from 8000) |
 | `python driver.py --no-frontend` | Backend only |

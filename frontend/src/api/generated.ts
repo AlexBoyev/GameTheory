@@ -196,6 +196,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sim/tournament": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Axelrod standings
+         * @description Report the tournament (SPEC 5.3), or `active: false` on a normal island.
+         *
+         *     Answers on any world rather than 404ing off-tournament, so the UI can ask
+         *     once and decide whether to show the panel at all.
+         */
+        get: operations["tournament_api_sim_tournament_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/world/shelters": {
         parameters: {
             query?: never;
@@ -1315,6 +1338,56 @@ export interface components {
             biome_names: string[];
         };
         /**
+         * TournamentDTO
+         * @description `GET /api/sim/tournament` - the Axelrod report (SPEC 5.3).
+         */
+        TournamentDTO: {
+            /**
+             * Active
+             * @description False unless the world is in tournament mode.
+             */
+            active: boolean;
+            /**
+             * Generation
+             * @default 0
+             */
+            generation: number;
+            /**
+             * Generations
+             * @default 0
+             */
+            generations: number;
+            /**
+             * Finished
+             * @default false
+             */
+            finished: boolean;
+            /**
+             * Pairings Played
+             * @default 0
+             */
+            pairings_played: number;
+            /**
+             * Pairings Total
+             * @default 0
+             */
+            pairings_total: number;
+            /** Standings */
+            standings?: components["schemas"]["TournamentStandingDTO"][];
+        };
+        /**
+         * TournamentStandingDTO
+         * @description One strategy's result in the current generation.
+         */
+        TournamentStandingDTO: {
+            /** Strategy */
+            strategy: string;
+            /** Score Per Round */
+            score_per_round: number;
+            /** Members */
+            members: number;
+        };
+        /**
          * TraitsDTO
          * @description Personality, 0-1.
          */
@@ -1780,6 +1853,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresetDTO"][];
+                };
+            };
+        };
+    };
+    tournament_api_sim_tournament_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TournamentDTO"];
                 };
             };
         };
