@@ -29,8 +29,8 @@ What works right now:
 | --- | --- |
 | **A real simulation**: seeded island, resources with regrowth, day/night, seasons | |
 | Agents with needs, traits, inventory, ageing and named death causes | |
-| **31 skills**: survival, building, social, manipulation, combat and tribe actions | The P1/P2 items in [`docs/REVIEW.md`](docs/REVIEW.md) |
-| Utility AI with response curves, softmax personality and a top-3 decision trace | |
+| **31 skills**: survival, building, social, manipulation, combat and tribe actions | Converting the remaining ~23 skills to declared considerations |
+| Utility AI whose trace **names its reasons**: "Sleep 0.19 - tired +0.12, it is night +0.07" | |
 | **Deliberative minds**: goals, plans, spoken lines and beliefs, via local Ollama **or an offline mock** | |
 | LLM monitor: provider, reachability, call log with real prompts and replies | |
 | **Six presets** with real values, from Peaceful Eden to Liars' Island | |
@@ -46,7 +46,7 @@ What works right now:
 | Shelters that get built, reproduction with trait blending, deaths with causes | |
 | Engine on a worker thread: pause / play / 1x-50x / MAX / step / reset | |
 | Full UI: inspector, event feed with filters, charts, overlays, speech bubbles, URL state, help | |
-| 7 layering contracts, **375 backend tests**, 34 unit + **13 browser tests** | |
+| 7 layering contracts, **419 backend tests**, 34 unit + **14 browser tests** | |
 
 `GET /api/sim/state` reports `"placeholder": false`. Determinism is
 machine-checked: same seed, same world, to the bit, after 1,000 ticks of the
@@ -326,7 +326,7 @@ python driver.py
 | --- | --- |
 | `python driver.py` | Install if needed, start backend + frontend, open the browser |
 | `python driver.py --check` | Every linter, type check and test suite (9 checks) |
-| `cd frontend && npm run e2e` | 13 browser tests (needs the stack running; `npm run e2e:install` once) |
+| `cd frontend && npm run e2e` | 14 browser tests (needs the stack running; `npm run e2e:install` once) |
 | `python driver.py --bench` | Throughput benchmark |
 | `python driver.py --port 8001` | Pin the backend port (default: first free from 8000) |
 | `python driver.py --no-frontend` | Backend only |
