@@ -5,6 +5,8 @@ Grudger starts forgiving, every result the simulation has ever produced is
 meaningless - so each one is pinned here explicitly.
 """
 
+from typing import Any
+
 import pytest
 
 from app.ai.gametheory.strategies import (
@@ -27,12 +29,17 @@ C = Move.COOPERATE
 D = Move.DEFECT
 
 
-def ctx(partner: str = "", own: str = "", **kwargs: float) -> StrategyContext:
-    """Build a context from compact move strings like "CCD"."""
+def ctx(partner: str = "", own: str = "", **kwargs: Any) -> StrategyContext:
+    """Build a context from compact move strings like "CCD".
+
+    `kwargs` is `Any` because the fields it forwards are not one type -
+    `own_payoffs` is a tuple while `trust` is a float - and narrowing it to
+    `float` only bought four `type: ignore`s.
+    """
     return StrategyContext(
         partner_moves=tuple(Move(ch) for ch in partner),
         own_moves=tuple(Move(ch) for ch in own),
-        **kwargs,  # type: ignore[arg-type]
+        **kwargs,
     )
 
 

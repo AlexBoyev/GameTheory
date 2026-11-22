@@ -1,5 +1,7 @@
 """Health and the simulation control surface, end to end over HTTP."""
 
+from typing import Any
+
 from fastapi.testclient import TestClient
 
 
@@ -90,7 +92,7 @@ def test_every_endpoint_is_live(client: TestClient) -> None:
     which is worth keeping as a test rather than deleting: if a future change
     reintroduces a placeholder, the suite should say so out loud.
     """
-    probes = (
+    probes: tuple[tuple[str, str, dict[str, Any] | None], ...] = (
         ("POST", "/api/snapshots", {"label": "test"}),
         ("GET", "/api/snapshots", None),
         ("POST", "/api/god/drop_food", {}),

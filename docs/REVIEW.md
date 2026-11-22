@@ -162,15 +162,22 @@ kinds, and I would treat them differently:
   broadcast pump could become its own collaborator - but that is a refactor
   with a behavioural blast radius, not a tidy-up.
 
-### P2 - `mypy` does not cover `tests/`
+### ~~P2 - `mypy` does not cover `tests/`~~ (fixed)
 
-`driver.py --check` runs `mypy app`. Pointing it at `tests/` reports 84 errors
-(mostly missing annotations on fixtures and deliberate `object` parameters in
-helpers). The tests are the least type-safe code in the repo, which is
+`driver.py --check` ran `mypy app`, and pointing it at `tests/` reported 84
+errors. The tests were the least type-safe code in the repo, which is
 backwards: a mistyped test is a test that passes for the wrong reason.
 
-**Not fixed here**: 84 errors is a focused session of its own, and fixing them
-badly (blanket `Any`) would be worse than leaving them.
+It turned out to be far smaller than the count suggested. **74 of the errors
+came from one wrong annotation** - a helper in `test_encounters.py` declared
+`-> tuple[object, object]` when it returns two agents, so every attribute
+access on its result was an error. The rest were my own `dict[str, object]`
+on JSON responses (JSON is untyped, so `Any` is the honest annotation and
+`object` just forces a cast at every use), one missing annotation, and ten
+`type: ignore` comments that no longer suppressed anything.
+
+`mypy app tests` is now clean under the same strict settings and runs in the
+gate, so it stays that way.
 
 ### ~~P2 - the event feed evicts rare events under load~~ (fixed)
 

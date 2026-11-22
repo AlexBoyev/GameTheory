@@ -27,7 +27,7 @@ def an_intention(
     return Intention(
         thought="They would follow me.",
         goal=goal,
-        plan=[{"skill": skill, "params": {}}],  # type: ignore[list-item]
+        plan=[{"skill": skill, "params": {}}],
         say=say,
     )
 

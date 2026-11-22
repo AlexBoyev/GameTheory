@@ -5,22 +5,24 @@ what each tool computes but that it is applied *between ticks*, under the
 engine lock, with the response describing what actually happened.
 """
 
+from typing import Any
+
 from fastapi.testclient import TestClient
 
 from tests.conftest import wait_until
 
 
-def god(client: TestClient, action: str, **payload: object) -> dict[str, object]:
+def god(client: TestClient, action: str, **payload: Any) -> dict[str, Any]:
     """Call one god tool and return its result."""
     response = client.post(f"/api/god/{action}", json=payload)
     assert response.status_code == 200, response.text
-    body: dict[str, object] = response.json()
+    body: dict[str, Any] = response.json()
     return body
 
 
-def events(client: TestClient, kind: str = "god_action") -> list[dict[str, object]]:
+def events(client: TestClient, kind: str = "god_action") -> list[dict[str, Any]]:
     """Events of one type from the feed."""
-    items: list[dict[str, object]] = client.get(
+    items: list[dict[str, Any]] = client.get(
         "/api/events", params={"limit": 200, "type": kind}
     ).json()["items"]
     return items

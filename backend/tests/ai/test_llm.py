@@ -25,7 +25,7 @@ OLLAMA_URL = "http://localhost:11434"
 
 def request(agent_id: int = 1, prompt: str = "what now?", **extra: object) -> LLMRequest:
     """A minimal request."""
-    return LLMRequest(agent_id=agent_id, prompt=prompt, **extra)  # type: ignore[arg-type]
+    return LLMRequest(agent_id=agent_id, prompt=prompt, **extra)
 
 
 def chat_reply(content: str, **extra: object) -> httpx.Response:
@@ -38,7 +38,7 @@ def an_intention(goal: str = "stay fed", skill: str = "Gather") -> str:
     return Intention(
         thought="I am hungry.",
         goal=goal,
-        plan=[{"skill": skill, "params": {}}],  # type: ignore[list-item]
+        plan=[{"skill": skill, "params": {}}],
     ).model_dump_json()
 
 

@@ -1,5 +1,7 @@
 """Payoffs, consequences and the social bookkeeping of an encounter."""
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -9,7 +11,7 @@ from app.ai.gametheory.payoffs import load_payoffs
 from app.ai.gametheory.resolver import EncounterResolver
 from app.ai.gametheory.strategies import Move, build_strategy_registry
 from app.ai.minds import MindRegistry
-from app.sim.entities import ResourceKind
+from app.sim.entities import Agent, ResourceKind
 from app.sim.world import World
 from tests.factories import centre_agent, clear_resources, place
 
@@ -22,7 +24,7 @@ def resolver(minds: MindRegistry) -> EncounterResolver:
     return EncounterResolver(load_payoffs(), build_strategy_registry(), minds)
 
 
-def pair(world: World) -> tuple[object, object]:
+def pair(world: World) -> tuple[Agent, Agent]:
     """Two agents standing next to each other in the middle of the island."""
     first = centre_agent(world)
     agents = world.living_agents()
@@ -45,7 +47,7 @@ def test_payoff_matrix_follows_the_classic_table() -> None:
     assert matrix.is_dilemma
 
 
-def test_a_matrix_that_is_not_a_dilemma_is_rejected(tmp_path: object) -> None:
+def test_a_matrix_that_is_not_a_dilemma_is_rejected(tmp_path: Path) -> None:
     from pathlib import Path
 
     path = Path(str(tmp_path)) / "payoffs.yaml"

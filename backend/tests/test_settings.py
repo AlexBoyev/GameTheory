@@ -6,7 +6,7 @@ from app.core.settings import Settings, get_settings
 
 
 def test_defaults_are_local_and_free() -> None:
-    settings = Settings(_env_file=None)  # type: ignore[call-arg]
+    settings = Settings(_env_file=None)
 
     assert settings.llm_provider == "mock"
     assert settings.ollama_url.startswith("http://localhost")
@@ -19,7 +19,7 @@ def test_environment_overrides_fields(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LLM_PROVIDER", "ollama")
     monkeypatch.setenv("LLM_MAX_AGENTS", "3")
 
-    settings = Settings(_env_file=None)  # type: ignore[call-arg]
+    settings = Settings(_env_file=None)
 
     assert settings.sim_seed == 999
     assert settings.llm_provider == "ollama"
@@ -27,7 +27,7 @@ def test_environment_overrides_fields(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_database_url_lives_under_data_dir(tmp_path: object) -> None:
-    settings = Settings(_env_file=None, data_dir=tmp_path)  # type: ignore[call-arg]
+    settings = Settings(_env_file=None, data_dir=tmp_path)
 
     assert settings.database_url.startswith("sqlite:///")
     assert settings.database_url.endswith("gametheory.db")
@@ -35,7 +35,7 @@ def test_database_url_lives_under_data_dir(tmp_path: object) -> None:
 
 def test_invalid_values_are_rejected() -> None:
     with pytest.raises(ValueError, match="sim_tick_rate"):
-        Settings(_env_file=None, sim_tick_rate=0)  # type: ignore[call-arg]
+        Settings(_env_file=None, sim_tick_rate=0)
 
 
 def test_get_settings_is_cached() -> None:

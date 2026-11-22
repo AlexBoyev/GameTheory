@@ -21,7 +21,7 @@ from app.services.llm_pump import LLMPump, cache_key
 AN_INTENTION = Intention(
     thought="They trust me enough to follow.",
     goal="lead them",
-    plan=[{"skill": "FoundTribe", "params": {}}],  # type: ignore[list-item]
+    plan=[{"skill": "FoundTribe", "params": {}}],
     say="Someone has to decide.",
 ).model_dump_json()
 

@@ -36,7 +36,7 @@ def tournament_config(population: int = 18, **extra: object) -> WorldConfig:
         max_agents=population + 10,
         terrain=ARENA_TERRAIN,
         tournament_mode=True,
-        **extra,  # type: ignore[arg-type]
+        **extra,
     )
 
 

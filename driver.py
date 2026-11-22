@@ -392,7 +392,9 @@ def check() -> int:
     steps: list[tuple[str, list[str], Path]] = [
         ("ruff format", [uv, "run", "ruff", "format", "--check", "."], BACKEND),
         ("ruff check", [uv, "run", "ruff", "check", "."], BACKEND),
-        ("mypy", [uv, "run", "mypy", "app"], BACKEND),
+        # Tests are type-checked too, under the same strict settings: a
+        # mistyped test is a test that passes for the wrong reason.
+        ("mypy", [uv, "run", "mypy", "app", "tests"], BACKEND),
         ("import-linter", [uv, "run", "lint-imports"], BACKEND),
         ("pytest", [uv, "run", "pytest"], BACKEND),
         ("tsc", [npm, "run", "typecheck"], FRONTEND),

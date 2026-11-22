@@ -28,7 +28,7 @@ SMALL_TERRAIN = TerrainConfig(resolution=48, size=160.0)
 def settings(tmp_path: Path) -> Settings:
     """Settings that ignore the developer's `.env` and write to a temp dir."""
     return Settings(
-        _env_file=None,  # type: ignore[call-arg]
+        _env_file=None,
         env="test",
         log_level="WARNING",
         data_dir=tmp_path / "data",

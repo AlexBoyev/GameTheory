@@ -5,13 +5,15 @@ memories would look identical for one tick and then behave like a world of
 strangers, which is the failure mode worth guarding against.
 """
 
+from typing import Any
+
 from fastapi.testclient import TestClient
 
 
-def save(client: TestClient, label: str = "test") -> dict[str, object]:
+def save(client: TestClient, label: str = "test") -> dict[str, Any]:
     response = client.post("/api/snapshots", json={"label": label})
     assert response.status_code == 200, response.text
-    body: dict[str, object] = response.json()
+    body: dict[str, Any] = response.json()
     return body
 
 
