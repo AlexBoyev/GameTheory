@@ -11,7 +11,7 @@ from app.ai import social
 from app.ai.brains.base import DecisionContext
 from app.ai.skills.base import NoParams, Requirement, Skill, SkillCategory, SkillRun, SkillStatus
 from app.ai.skills.helpers import stop
-from app.ai.skills.social import TargetParams, nearby_agents, resolve_target
+from app.ai.skills.targeting import TargetParams, nearby_agents, resolve_target
 from app.core.result import OK_NONE, Err, Result
 from app.sim import balance
 from app.sim.entities import Agent, AgentState, DeathCause

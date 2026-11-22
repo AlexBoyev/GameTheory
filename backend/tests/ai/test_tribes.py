@@ -11,7 +11,7 @@ from app.ai.gametheory.ledger import SocialLedger
 from app.ai.minds import MindRegistry
 from app.ai.skills.base import NoParams, Skill, SkillStatus
 from app.ai.skills.registry import SkillRegistry
-from app.ai.skills.social import TargetParams
+from app.ai.skills.targeting import TargetParams
 from app.ai.skills.tribe import (
     COUP_MARGIN,
     JOIN_TRUST,

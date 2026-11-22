@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from app.ai.brains.base import DecisionContext
 from app.ai.skills.base import NoParams, Requirement, Skill, SkillCategory, SkillRun, SkillStatus
 from app.ai.skills.helpers import stop
-from app.ai.skills.social import TargetParams, nearby_agents
+from app.ai.skills.targeting import TargetParams, nearby_agents
 from app.ai.skills.tribe import FOUND_ALLIES, FOUND_CHARISMA, JOIN_TRUST
 from app.core.result import OK_NONE, Err, Result
 from app.sim import balance
