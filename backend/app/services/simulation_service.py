@@ -13,12 +13,9 @@ state, so `POST /sim/step` returns the tick the step produced.
 """
 
 import asyncio
-import queue
 import threading
 import time
 from collections import Counter
-from collections.abc import Awaitable, Callable
-from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any
 
@@ -29,9 +26,9 @@ from app.core.logging import get_logger
 from app.core.settings import Settings
 from app.core.world_config import STRATEGY_NAMES, WorldConfig
 from app.services import envelopes
+from app.services.broadcast import BroadcastPump, Subscriber
 from app.services.engine_factory import EngineBundle, build_engine_bundle
 from app.services.envelopes import Envelope
-from app.services.event_store import EventStore
 from app.services.god_tools import TOOLS, GodContext, Intervention, Outcome
 from app.services.metrics_service import MetricsService
 from app.services.serialisation import dump_world, load_world
@@ -48,18 +45,12 @@ from app.sim.engine import (
     Start,
     Step,
 )
-from app.sim.events import EventType, SimEvent
 from app.sim.frames import WorldFrame, encode_resources
 from app.sim.world import World, WorldBuilder
 
-Subscriber = Callable[[Envelope], Awaitable[None]]
-
 LOG = get_logger(__name__)
 
-FRAME_QUEUE_SIZE = 2
-"""Keep the newest frames only: a slow client must not delay the engine."""
 
-EVENT_QUEUE_SIZE = 64
 COMMAND_TIMEOUT_S = 5.0
 """Generous: a `Reset` has to generate a world before it can be applied."""
 
@@ -116,16 +107,12 @@ class SimulationService:
         self._last_sampled_tick = -1
         self._queries = WorldQueries(self._engine, self._bundle.minds, self._bundle.ledger)
 
-        self._frames: queue.Queue[WorldFrame] = queue.Queue(maxsize=FRAME_QUEUE_SIZE)
-        self._event_batches: queue.Queue[list[SimEvent]] = queue.Queue(maxsize=EVENT_QUEUE_SIZE)
-        self._recent_events = EventStore()
-        self._last_amounts: dict[int, float] = {}
-
-        self._subscribers: set[Subscriber] = set()
+        self._pump = BroadcastPump(settings.sim_broadcast_hz, on_frame=self._on_frame)
         self._thread: threading.Thread | None = None
-        self._pump_task: asyncio.Task[None] | None = None
 
-        self._engine.install_callbacks(on_frame=self._on_frame, on_events=self._on_events)
+        self._engine.install_callbacks(
+            on_frame=self._pump.accept_frame, on_events=self._pump.accept_events
+        )
 
     # ------------------------------------------------------------ properties
 
@@ -152,7 +139,7 @@ class SimulationService:
     @property
     def subscriber_count(self) -> int:
         """How many transports are currently attached."""
-        return len(self._subscribers)
+        return self._pump.subscriber_count
 
     # ------------------------------------------------------------- lifecycle
 
@@ -161,8 +148,7 @@ class SimulationService:
         if self._thread is None or not self._thread.is_alive():
             self._thread = threading.Thread(target=self._engine.run, name="sim-engine", daemon=True)
             self._thread.start()
-        if self._pump_task is None or self._pump_task.done():
-            self._pump_task = asyncio.create_task(self._pump(), name="sim-broadcast")
+        self._pump.start()
 
         await self._submit(Start())
         LOG.info(
@@ -174,11 +160,7 @@ class SimulationService:
 
     async def shutdown(self) -> None:
         """Stop the pump, then the engine thread."""
-        task, self._pump_task = self._pump_task, None
-        if task is not None:
-            task.cancel()
-            with suppress(asyncio.CancelledError):
-                await task
+        await self._pump.stop()
 
         thread, self._thread = self._thread, None
         if thread is not None and thread.is_alive():
@@ -190,21 +172,15 @@ class SimulationService:
 
     def subscribe(self, subscriber: Subscriber) -> None:
         """Register an async callback that receives every envelope."""
-        self._subscribers.add(subscriber)
+        self._pump.subscribe(subscriber)
 
     def unsubscribe(self, subscriber: Subscriber) -> None:
         """Remove a previously registered callback."""
-        self._subscribers.discard(subscriber)
+        self._pump.unsubscribe(subscriber)
 
     async def broadcast(self, envelope: Envelope) -> None:
-        """Send `envelope` to every subscriber, dropping ones that fail."""
-        for subscriber in tuple(self._subscribers):
-            try:
-                await subscriber(envelope)
-            # A failing subscriber must never stop the broadcast loop.
-            except Exception as exc:
-                LOG.warning("broadcast.subscriber_failed", error=str(exc))
-                self._subscribers.discard(subscriber)
+        """Send `envelope` to every subscriber."""
+        await self._pump.broadcast(envelope)
 
     # ----------------------------------------------------------------- state
 
@@ -254,7 +230,7 @@ class SimulationService:
         self, limit: int = 100, event_type: str | None = None
     ) -> list[dict[str, Any]]:
         """Return the newest events, newest first, optionally filtered."""
-        return self._recent_events.recent(limit=limit, event_type=event_type)
+        return self._pump.recent_events(limit=limit, event_type=event_type)
 
     def hello(self) -> Envelope:
         """Build the `hello` envelope: config, terrain meta, legends, resources."""
@@ -323,8 +299,7 @@ class SimulationService:
         config: WorldConfig | None = None,
     ) -> SimStateView:
         """Rebuild the world and stay paused at tick 0."""
-        self._last_amounts.clear()
-        self._recent_events.clear()
+        self._pump.clear()
         self._last_sampled_tick = -1
         # Deliberations in flight belong to the world being thrown away. The
         # broker also stamps a world uid, so a reply that is already on its
@@ -384,8 +359,7 @@ class SimulationService:
         world under a running tick would leave half the systems looking at
         the old one. The world arrives paused, as after any reset.
         """
-        self._last_amounts.clear()
-        self._recent_events.clear()
+        self._pump.clear()
         self._last_sampled_tick = -1
         self._bundle.broker.clear()
         if self._metrics is not None:
@@ -420,42 +394,17 @@ class SimulationService:
             await asyncio.sleep(COMMAND_POLL_S)
         return self.state()
 
-    # ---------------------------------------------------- engine-thread hooks
+    # ----------------------------------------------------- per-frame policy
 
-    def _on_frame(self, frame: WorldFrame) -> None:
-        """Engine thread: hand a frame to the pump, dropping the stale one.
+    async def _on_frame(self, frame: WorldFrame) -> None:
+        """What happens once per broadcast frame, besides broadcasting.
 
-        Dropping the old frame rather than the new one is the point: a client
-        that falls behind should see the present, not a backlog of the past.
+        Both of these are *policies*, not transport, which is why they stayed
+        here when the pump moved out: one decides how often agents may think,
+        the other decides when to sample the charts.
         """
-        try:
-            self._frames.put_nowait(frame)
-        except queue.Full:
-            with suppress(queue.Empty):
-                self._frames.get_nowait()
-            with suppress(queue.Full):
-                self._frames.put_nowait(frame)
-
-    def _on_events(self, batch: list[SimEvent]) -> None:
-        """Engine thread: hand a batch of events to the pump."""
-        try:
-            self._event_batches.put_nowait(batch)
-        except queue.Full:
-            LOG.debug("events.dropped", count=len(batch))
-
-    # ------------------------------------------------------------------- pump
-
-    async def _pump(self) -> None:
-        """Drain engine output and broadcast it at the configured rate."""
-        interval = 1.0 / max(1.0, self._settings.sim_broadcast_hz)
-        while True:
-            await asyncio.sleep(interval)
-            frame = self._latest_frame()
-            if frame is not None:
-                await self.broadcast(self._frame_envelope(frame))
-                self._apply_speed_policy(frame.speed)
-                await self._maybe_sample(frame.tick)
-            await self._drain_events()
+        self._apply_speed_policy(frame.speed)
+        await self._maybe_sample(frame.tick)
 
     def _apply_speed_policy(self, speed: float) -> None:
         """Tell the deliberative layer how often to think at this speed.
@@ -508,77 +457,3 @@ class SimulationService:
                 },
             )
         )
-
-    def _latest_frame(self) -> WorldFrame | None:
-        """Return the newest queued frame, discarding anything older."""
-        newest: WorldFrame | None = None
-        while True:
-            try:
-                newest = self._frames.get_nowait()
-            except queue.Empty:
-                return newest
-
-    def _frame_envelope(self, frame: WorldFrame) -> Envelope:
-        """Build a frame envelope, sending resource amounts as deltas."""
-        changed: list[float] = []
-        for node_id, fullness in frame.resource_fullness.items():
-            if self._last_amounts.get(node_id) != fullness:
-                changed.extend((float(node_id), fullness))
-        gone = self._last_amounts.keys() - frame.resource_fullness.keys()
-        removed = [float(node_id) for node_id in sorted(gone)]
-        self._last_amounts = frame.resource_fullness
-
-        return envelopes.frame(
-            frame.tick,
-            frame.agents,
-            frame.time_of_day,
-            status=frame.status,
-            speed=frame.speed,
-            day=frame.day,
-            season=frame.season,
-            population=frame.population,
-            resources=changed,
-            removed=removed,
-        )
-
-    async def _drain_events(self) -> None:
-        """Broadcast and remember every queued event batch."""
-        while True:
-            try:
-                batch = self._event_batches.get_nowait()
-            except queue.Empty:
-                return
-            items = [self._event_dict(event) for event in batch]
-            self._recent_events.extend(items)
-            if items:
-                await self.broadcast(envelopes.events(items[-1]["tick"], items))
-            await self._broadcast_speech(batch)
-
-    async def _broadcast_speech(self, batch: list[SimEvent]) -> None:
-        """Send what was said as its own envelope, as well as an event.
-
-        Speech is in the event feed because it is part of the story, and on
-        its own channel because the scene needs it separately: a bubble has
-        to appear over the right head and expire on its own timer, which the
-        feed knows nothing about.
-        """
-        for event in batch:
-            if event.type is not EventType.SPEECH:
-                continue
-            text = event.data.get("text")
-            if not isinstance(text, str) or not text or not event.actors:
-                continue
-            await self.broadcast(envelopes.speech(event.tick, event.actors[0], text))
-
-    @staticmethod
-    def _event_dict(event: SimEvent) -> dict[str, Any]:
-        """Return the wire form of one event."""
-        return {
-            "tick": event.tick,
-            "type": event.type.value,
-            "summary": event.summary,
-            "importance": event.importance,
-            "actors": list(event.actors),
-            "x": None if event.position is None else round(event.position[0], 2),
-            "z": None if event.position is None else round(event.position[1], 2),
-        }

@@ -18,9 +18,9 @@ document records.
 | Gate | Result |
 | --- | --- |
 | `ruff format`, `ruff check` | clean |
-| `mypy app` (strict) | clean, 132 files |
+| `mypy app tests` (strict) | clean, 173 files |
 | `lint-imports` | 7 contracts, 0 broken |
-| `pytest` | 375 passed |
+| `pytest` | 396 passed |
 | `tsc -b`, `eslint` | clean |
 | `vitest` | 34 passed |
 | `playwright` | 13 passed, repeated runs |
@@ -136,31 +136,33 @@ always needs to eat. What remains is `nearest_resource`, which is exactly what
 the reverted memo targeted. A safe fix there would need the world to tell the
 cache when it changes, which is a bigger change than either attempt.
 
-### P2 - seven files exceed the 300-line guideline
+### ~~P2 - seven files exceed the 300-line guideline~~ (largely fixed)
 
-| File | Lines |
-| --- | --- |
-| `services/simulation_service.py` | 553 |
-| `ai/skills/manipulation.py` | 528 |
-| `ai/skills/social.py` | 493 |
-| `sim/engine.py` | 436 |
-| `services/serialisation.py` | 366 |
-| `ai/gametheory/resolver.py` | 350 |
-| `ai/skills/sustenance.py` | 325 |
+`tribe.py` (652) was the outlier and is now four files by subject.
+`manipulation.py` (533) split into `deception.py` and `coercion.py`;
+`social.py` (498) gave up reproduction to `heredity.py` and its targeting
+helpers to `targeting.py` - that last one a structural fix rather than a line
+count, since combat, manipulation and the tribe skills were all importing
+`social` purely to reach `nearby_agents`.
 
-`tribe.py` was the outlier at 652 and has been split. The rest divide into two
-kinds, and I would treat them differently:
+`simulation_service.py` was the remaining real one at 584, and the broadcast
+pump is now its own collaborator (`services/broadcast.py`). Two threads meet
+in that class and nothing else, which is why it deserved to be one: the engine
+thread only ever queues, the event loop only ever drains and fans out. What
+stayed behind are the *policies* that happen to run once per frame - metrics
+sampling and the LLM speed interval - handed in as a hook, because neither is
+transport.
 
-- **Collections of independent things** (`manipulation`, `social`,
-  `sustenance`): splitting these is safe and mechanical, exactly as done for
-  `tribe.py`. Worth doing, low risk, no urgency - a 500-line file of
-  independent skills reads nothing like a 500-line class.
-- **One responsibility that is genuinely large** (`simulation_service`,
-  `engine`, `serialisation`, `resolver`): splitting these would split *one*
-  responsibility across files and make the thing harder to follow, not
-  easier. `simulation_service` is the clearest candidate for real work - the
-  broadcast pump could become its own collaborator - but that is a refactor
-  with a behavioural blast radius, not a tidy-up.
+The extraction paid for itself immediately: 21 tests now cover behaviours that
+were previously reachable only through the HTTP API and a running simulation
+(dropping the stale frame, resource deltas, surviving a subscriber that
+throws, speech getting its own channel).
+
+What is left over 300 lines is either one genuinely large responsibility
+(`engine.py` 436, `serialisation.py` 366, `resolver.py` 350, and
+`simulation_service.py` still 459 - owning the engine thread, commands,
+queries, god tools and snapshots) or 5-25 lines over, where splitting is
+churn. I would leave all of them.
 
 ### ~~P2 - `mypy` does not cover `tests/`~~ (fixed)
 
