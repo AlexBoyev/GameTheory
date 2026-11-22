@@ -1,8 +1,16 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Smoke tests run against the real stack: Playwright starts Vite, and Vite
- * proxies to a backend that must already be running on :8000.
+ * Smoke tests run against the real stack, so start it first:
+ *
+ *     python driver.py --no-browser
+ *     cd frontend && npm run e2e
+ *
+ * `reuseExistingServer` means Playwright attaches to the Vite the driver
+ * already started, which matters because the driver picks the backend port
+ * (8000 is taken by Apache on this machine) and passes it to Vite as
+ * `VITE_BACKEND_URL`. Starting Vite here instead would proxy to the wrong
+ * port and every test would fail for the wrong reason.
  */
 export default defineConfig({
   testDir: './e2e',

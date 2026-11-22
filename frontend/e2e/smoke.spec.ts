@@ -1,20 +1,28 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Phase 1 smoke test: the page loads, WebGL renders and the socket connects.
- * Phase 3 adds control-bar and camera tests on top of this.
+ * The shell: the page loads, WebGL renders and the socket connects.
  *
- * Requires the backend on :8000 (Vite proxies /api and /ws to it).
+ * Start the stack first (`python driver.py --no-browser`); see
+ * `playwright.config.ts`. Control-bar and panel tests live in
+ * `controls.spec.ts`.
+ *
+ * Note the `.first()` on the canvas: the minimap is a canvas too, so a bare
+ * `locator('canvas')` is ambiguous under Playwright's strict mode - which is
+ * how adding the minimap broke this test.
  */
 test.describe('shell', () => {
   test('renders the canvas and the status bar', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.locator('canvas')).toBeVisible();
+    await expect(page.locator('canvas').first()).toBeVisible();
     await expect(page.getByText('Game Theory')).toBeVisible();
   });
 
-  test('connects to the world socket and receives frames', async ({ page }) => {
+  test('connects to the world socket and receives frames', async ({ page, request }) => {
+    // Start it explicitly: the other specs leave the engine paused, and a
+    // test that depends on what ran before it is not a test.
+    await request.post('/api/sim/start', { data: {} });
     await page.goto('/');
 
     // "live" appears only once the socket is open.

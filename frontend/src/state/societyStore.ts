@@ -8,7 +8,7 @@
 
 import { create } from 'zustand';
 
-import type { LlmStatus, MetricPoint, Shelter, Tribe, TrustEdge } from '@/api/types';
+import type { AgentSummary, LlmStatus, MetricPoint, Shelter, Tribe, TrustEdge } from '@/api/types';
 
 export interface SocietyStoreState {
   tribes: Tribe[];
@@ -25,12 +25,21 @@ export interface SocietyStoreState {
    * when you have not gone looking.
    */
   llm: LlmStatus | null;
+  /**
+   * `agent id -> name`, for the name-tag overlay.
+   *
+   * Frames carry ids and nothing else - a name per agent per frame would be
+   * most of the payload - so the names are polled separately and slowly.
+   * Names never change, so a stale entry is only ever a missing one.
+   */
+  names: Map<number, string>;
 
   setTribes: (tribes: Tribe[]) => void;
   setShelters: (shelters: Shelter[]) => void;
   setTrust: (edges: TrustEdge[], total: number) => void;
   setMetrics: (points: MetricPoint[]) => void;
   setLlm: (status: LlmStatus) => void;
+  setNames: (agents: AgentSummary[]) => void;
   tribeById: (id: number | null | undefined) => Tribe | undefined;
   reset: () => void;
 }
@@ -42,15 +51,26 @@ export const useSocietyStore = create<SocietyStoreState>((set, get) => ({
   trustTotal: 0,
   metrics: [],
   llm: null,
+  names: new Map<number, string>(),
 
   setTribes: (tribes) => set({ tribes }),
   setShelters: (shelters) => set({ shelters }),
   setTrust: (trustEdges, trustTotal) => set({ trustEdges, trustTotal }),
   setMetrics: (metrics) => set({ metrics }),
   setLlm: (llm) => set({ llm }),
+  setNames: (agents) =>
+    set({ names: new Map(agents.map((agent) => [agent.id, agent.name])) }),
   tribeById: (id) =>
     id === null || id === undefined ? undefined : get().tribes.find((tribe) => tribe.id === id),
   // `llm` is deliberately kept: the provider does not change because the
   // world was rebuilt.
-  reset: () => set({ tribes: [], shelters: [], trustEdges: [], trustTotal: 0, metrics: [] }),
+  reset: () =>
+    set({
+      tribes: [],
+      shelters: [],
+      trustEdges: [],
+      trustTotal: 0,
+      metrics: [],
+      names: new Map<number, string>(),
+    }),
 }));

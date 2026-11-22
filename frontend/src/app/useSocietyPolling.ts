@@ -18,6 +18,7 @@ const SLOW_MS = 2000;
 const TRUST_MS = 1500;
 const METRICS_MS = 3000;
 const LLM_MS = 4000;
+const NAMES_MS = 5000;
 
 /** Run `task` every `interval` ms until unmounted, skipping failures. */
 function usePoll(task: () => Promise<void>, interval: number, enabled: boolean): void {
@@ -46,6 +47,7 @@ function usePoll(task: () => Promise<void>, interval: number, enabled: boolean):
 
 export function useSocietyPolling(): void {
   const worldEpoch = useSimStore((state) => state.worldEpoch);
+  const showNames = useUiStore((state) => state.showNames);
   const showTrust = useUiStore((state) => state.showTrustLines);
   const showTerritories = useUiStore((state) => state.showTerritories);
   const chartsOpen = useUiStore((state) => state.chartsOpen);
@@ -81,6 +83,16 @@ export function useSocietyPolling(): void {
     },
     METRICS_MS,
     chartsOpen,
+  );
+
+  // Only while the overlay is on: names are the one poll whose payload grows
+  // with the population, and nothing else needs them.
+  usePoll(
+    async () => {
+      useSocietyStore.getState().setNames(await api.agents(500));
+    },
+    NAMES_MS,
+    showNames,
   );
 
   // Always polled, panel open or not: an unreachable model is something the

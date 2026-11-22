@@ -11,6 +11,7 @@ Runs entirely on `localhost`. **No paid services, no API keys, no cloud AI.**
 
 - Design: [`docs/SPEC.md`](docs/SPEC.md)
 - Build plan: [`docs/PROMPTS.md`](docs/PROMPTS.md)
+- Senior review, with what is left and why: [`docs/REVIEW.md`](docs/REVIEW.md)
 - Architecture decisions: [`docs/adr/`](docs/adr/) - [0001 architecture](docs/adr/0001-architecture.md),
   [0002 simulation core](docs/adr/0002-simulation-core.md),
   [0003 game theory and tribes](docs/adr/0003-game-theory-and-tribes.md),
@@ -20,15 +21,15 @@ Runs entirely on `localhost`. **No paid services, no API keys, no cloud AI.**
 
 ---
 
-## Status: Phase 6 of 7 (god tools, presets, snapshots)
+## Status: Phase 7 of 7 (reviewed and hardened)
 
 What works right now:
 
 | Works | Not yet |
 | --- | --- |
-| **A real simulation**: seeded island, resources with regrowth, day/night, seasons | Activity heatmap and name tags (the last two overlay toggles) |
+| **A real simulation**: seeded island, resources with regrowth, day/night, seasons | |
 | Agents with needs, traits, inventory, ageing and named death causes | Tournament report for the Axelrod preset |
-| **31 skills**: survival, building, social, manipulation, combat and tribe actions | Senior review and hardening pass (Phase 7) |
+| **31 skills**: survival, building, social, manipulation, combat and tribe actions | The P1/P2 items in [`docs/REVIEW.md`](docs/REVIEW.md) |
 | Utility AI with response curves, softmax personality and a top-3 decision trace | |
 | **Deliberative minds**: goals, plans, spoken lines and beliefs, via local Ollama **or an offline mock** | |
 | LLM monitor: provider, reachability, call log with real prompts and replies | |
@@ -36,6 +37,7 @@ What works right now:
 | **God tools**: drop food, bounty, drought, plague, spawn, smite | |
 | **Snapshots**: save and reload a whole society, memories included | |
 | Minimap with a camera marker, click-to-fly, and a screenshot button | |
+| Activity heatmap and name tags - every overlay toggle now does something | |
 | **Five games**: Prisoner's Dilemma, Stag Hunt, Hawk-Dove, Ultimatum, Public Goods | |
 | **Ten strategies** from AlwaysCooperate to Detective, inherited with mutation | |
 | **Trust you earn and reputation you only hear about**, gossip, lies, lie detection | |
@@ -43,7 +45,7 @@ What works right now:
 | Shelters that get built, reproduction with trait blending, deaths with causes | |
 | Engine on a worker thread: pause / play / 1x-50x / MAX / step / reset | |
 | Full UI: inspector, event feed with filters, charts, overlays, speech bubbles, URL state, help | |
-| 7 layering contracts, **329 backend tests**, 34 frontend tests | |
+| 7 layering contracts, **329 backend tests**, 34 unit + **12 browser tests** | |
 
 `GET /api/sim/state` reports `"placeholder": false`. Determinism is
 machine-checked: same seed, same world, to the bit, after 1,000 ticks of the
@@ -321,6 +323,7 @@ python driver.py
 | --- | --- |
 | `python driver.py` | Install if needed, start backend + frontend, open the browser |
 | `python driver.py --check` | Every linter, type check and test suite (9 checks) |
+| `cd frontend && npm run e2e` | 12 browser tests (needs the stack running; `npm run e2e:install` once) |
 | `python driver.py --bench` | Throughput benchmark |
 | `python driver.py --port 8001` | Pin the backend port (default: first free from 8000) |
 | `python driver.py --no-frontend` | Backend only |

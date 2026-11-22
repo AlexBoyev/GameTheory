@@ -19,6 +19,9 @@ import { PerfProbe } from '@/scene/PerfProbe';
 import { Resources } from '@/scene/Resources';
 import { SelectionRing } from '@/scene/SelectionRing';
 import { Shelters } from '@/scene/Shelters';
+import { Heatmap } from '@/scene/Heatmap';
+import { NameTags } from '@/scene/NameTags';
+import { Screenshotter } from '@/scene/Screenshotter';
 import { SpeechBubbles } from '@/scene/SpeechBubbles';
 import { StateIcons } from '@/scene/StateIcons';
 import { Terrain } from '@/scene/Terrain';
@@ -39,6 +42,8 @@ export function World(): React.ReactElement {
   const maxAgents = useSimStore((state) => state.config?.max_agents ?? 1024);
   const quality = useSettingsStore((state) => state.quality);
   const profile = useSettingsStore((state) => state.profile());
+  const showHeatmap = useUiStore((state) => state.showHeatmap);
+  const showNames = useUiStore((state) => state.showNames);
   const showTrustLines = useUiStore((state) => state.showTrustLines);
   const showTerritories = useUiStore((state) => state.showTerritories);
 
@@ -103,8 +108,11 @@ export function World(): React.ReactElement {
       <Agents sampler={sampler} capacity={Math.max(256, maxAgents)} shadows={profile.shadows} />
       <StateIcons sampler={sampler} capacity={Math.max(256, maxAgents)} />
       <SpeechBubbles sampler={sampler} />
+      <Screenshotter />
       <SelectionRing sampler={sampler} />
 
+      {showHeatmap && <Heatmap />}
+      {showNames && <NameTags sampler={sampler} />}
       {showTrustLines && <TrustLines sampler={sampler} />}
       {showTerritories && <Territories sampler={sampler} />}
 

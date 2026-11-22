@@ -1,12 +1,10 @@
 /** Play, pause, step, speed and reset - the observer's hands. */
 
-import { useState } from 'react';
-
 import { SPEED_PRESETS, speedLabel, useSimControls } from '@/app/useSimControls';
-import { saveScreenshot } from '@/lib/screenshot';
 import { ResetDialog } from '@/ui/ResetDialog';
 import { Button } from '@/ui/primitives';
 import { usePerfStore } from '@/state/perfStore';
+import { useScreenshotStore } from '@/state/screenshotStore';
 import { useSettingsStore, type Quality } from '@/state/settingsStore';
 import { useSimStore } from '@/state/simStore';
 import { useUiStore } from '@/state/uiStore';
@@ -24,10 +22,10 @@ export function ControlBar(): React.ReactElement {
   const drawCalls = usePerfStore((state) => state.drawCalls);
   const triangles = usePerfStore((state) => state.triangles);
   const framesPerSecond = usePerfStore((state) => state.framesPerSecond);
-  const tick = useSimStore((state) => state.tick);
   const resetOpen = useUiStore((state) => state.resetOpen);
   const setResetOpen = (open: boolean): void => useUiStore.getState().set('resetOpen', open);
-  const [shotFailed, setShotFailed] = useState(false);
+  const requestShot = useScreenshotStore((state) => state.request);
+  const shotFailed = useScreenshotStore((state) => state.lastSucceeded);
 
   const running = status === 'running';
 
@@ -86,15 +84,10 @@ export function ControlBar(): React.ReactElement {
             </Button>
           ))}
 
-          <Button
-            onClick={() => {
-              if (!saveScreenshot(tick)) setShotFailed(true);
-            }}
-            title="Save a PNG of the island"
-          >
+          <Button onClick={requestShot} title="Save a PNG of the island">
             📷
           </Button>
-          {shotFailed && (
+          {shotFailed === false && (
             <span
               className="px-1 text-[10px] text-amber-300"
               title="The browser would not export the canvas"

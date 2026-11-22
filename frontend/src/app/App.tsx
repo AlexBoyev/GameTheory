@@ -38,10 +38,10 @@ export function App(): React.ReactElement {
         shadows={profile.shadows}
         dpr={profile.dpr}
         camera={{ position: [140, 110, 140], fov: 42, near: 0.5, far: 2000 }}
-        // `preserveDrawingBuffer` is what makes the screenshot button
-        // possible: without it the buffer is cleared before `toDataURL` can
-        // read it and you get a blank PNG.
-        gl={{ antialias: true, preserveDrawingBuffer: true }}
+        // Deliberately no `preserveDrawingBuffer`: it makes the driver keep
+        // a copy of every frame (headless Chrome logs "GPU stall due to
+        // ReadPixels"). `Screenshotter` re-renders on demand instead.
+        gl={{ antialias: true }}
       >
         <World />
       </Canvas>

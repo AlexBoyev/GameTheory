@@ -1,4 +1,10 @@
-"""Utility AI: considerations, response curves and softmax choice (SPEC 7.4).
+"""Utility AI: response curves and softmax choice (SPEC 7.4).
+
+Each skill computes its own `utility()` directly rather than composing
+declarative considerations. `apply_curve` is the shared shaping function they
+can use; the `Consideration` wrapper the SPEC implies was unused scaffolding
+and has been removed. Adopting it across all 32 skills is a design decision,
+not a cleanup - see docs/REVIEW.md.
 
 Why softmax rather than "pick the best": two agents with the same needs but
 different personalities should not behave identically, and a world where every
@@ -7,8 +13,6 @@ temperature is how much personality beats arithmetic.
 """
 
 import math
-from collections.abc import Callable
-from dataclasses import dataclass
 from enum import StrEnum
 
 from app.ai.brains.base import Decision, DecisionContext, ScoredOption
@@ -28,27 +32,6 @@ class Curve(StrEnum):
     INVERSE = "inverse"
     LOGISTIC = "logistic"
     STEP = "step"
-
-
-@dataclass(frozen=True, slots=True)
-class Consideration:
-    """One input to a skill's utility score.
-
-    Attributes:
-        name: Shown in the decision trace.
-        value: Callable returning a normalised `[0, 1]` input.
-        curve: Shape applied to that input.
-        weight: Multiplier on the curved value.
-    """
-
-    name: str
-    value: Callable[[DecisionContext], float]
-    curve: Curve = Curve.LINEAR
-    weight: float = 1.0
-
-    def score(self, ctx: DecisionContext) -> float:
-        """Return the weighted, curved value of this consideration."""
-        return apply_curve(self.curve, self.value(ctx)) * self.weight
 
 
 def apply_curve(curve: Curve, value: float) -> float:

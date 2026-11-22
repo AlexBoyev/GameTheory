@@ -18,11 +18,11 @@ from app.ai.skills.tribe import (
     STORE_AMOUNT,
     TAKE_AMOUNT,
     legitimacy,
-    tribe_name,
 )
 from app.core.result import is_ok
 from app.sim.entities import Agent, Traits, Tribe, TribeRole
 from app.sim.events import EventType
+from app.sim.tribe_identity import tribe_name
 from app.sim.world import World
 
 

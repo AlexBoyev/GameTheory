@@ -75,12 +75,6 @@ def record_round(
     return relationship
 
 
-def believed_reputation(memory: AgentMemory, target_id: int) -> float:
-    """What this agent believes about `target_id` without having met them."""
-    relationship = memory.social.get(target_id)
-    return relationship.reputation if relationship is not None else 0.0
-
-
 def effective_opinion(memory: AgentMemory, target_id: int) -> float:
     """First-hand trust if there is any, otherwise hearsay (SPEC 5.2)."""
     relationship = memory.social.get(target_id)

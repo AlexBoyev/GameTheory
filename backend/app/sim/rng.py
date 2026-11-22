@@ -9,11 +9,6 @@ from zlib import crc32
 import numpy as np
 
 
-def make_generator(seed: int) -> np.random.Generator:
-    """Return the root generator for `seed`."""
-    return np.random.default_rng(np.random.SeedSequence(seed))
-
-
 def derive_generator(seed: int, stream: str) -> np.random.Generator:
     """Return an independent generator for the named `stream`.
 
