@@ -1,4 +1,4 @@
-# TheoryGames frontend. `dev` runs Vite; `prod` serves the build behind nginx.
+# Game Theory frontend. `dev` runs Vite; `prod` serves the build behind nginx.
 # syntax=docker/dockerfile:1
 
 FROM node:22-alpine AS deps

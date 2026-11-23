@@ -1,4 +1,4 @@
-# TheoryGames backend. Two targets: `dev` (bind-mounted, --reload) and `prod`.
+# Game Theory backend. Two targets: `dev` (bind-mounted, --reload) and `prod`.
 # syntax=docker/dockerfile:1
 
 FROM python:3.12-slim AS base
