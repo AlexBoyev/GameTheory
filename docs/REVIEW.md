@@ -303,6 +303,32 @@ That makes three dead features in one sweep, all of which had tests. A unit
 test proves a path works when you set the stage for it; only a running world
 tells you the stage ever gets set.
 
+### ~~P3 - two tribes could be drawn in the same colour~~ (fixed)
+
+`tribe_name` was made unique after three tribes came out called Holtclan.
+The colour kept indexing an eight-entry palette with `id % 8`, so Clifffolk
+and Cliffkin were drawn identically - and colour, not name, is what the
+scene puts on a bean and a territory ring. Sixteen tribes alive at once is
+ordinary, so every long run had collisions. `tribe_colour` now keeps the hue
+of the name's stem and deepens it per naming cycle: Cliffkin reads as a
+darker Clifffolk, 32 ids give 32 distinct colours, and none is near black.
+
+### The sweep is now a test
+
+Three dead features in one session is a pattern, not bad luck, so
+`tests/ai/test_reachability.py` keeps the instrument: it runs 6,000 ticks of
+a full society and asserts that every registered skill is wanted by somebody
+at some point, that tribes form, fight, settle and sign, and that a
+challenger somewhere reaches a position from which a coup could be won. It
+costs about 38 seconds, which is roughly a fifth of the suite, and it is the
+only test in the repo that could have caught any of the three.
+
+Two things about it are easy to get wrong and are written down in the file:
+read each skill's score rather than the decision trace, which keeps only an
+agent's top three and so hides a skill that is always wanted and never best;
+and sample every tick, because checking every 25th missed `OfferPeace` in a
+seed that demonstrably made peace - the war started and ended in between.
+
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 
 Deliberate and documented (ADR 0004, `WorldConfig.llm_agents`): the
