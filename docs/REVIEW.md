@@ -276,6 +276,33 @@ The general lesson, for the third time in this project: a skill can be
 registered, tested, reachable and still never fire. Only a running world
 tells you, and the decision trace is the instrument.
 
+### ~~P2 - no coup could ever succeed, and no tribe could ever sign a pact~~ (fixed)
+
+Two more found the same way as `Raid`, by asking a running world what its
+agents actually do rather than what the code says they can.
+
+**Coups.** 35 attempts in 12,000 ticks, none successful, and no deposed
+leader ever reached `TribeRole.ELDER` - the role only that path assigns. The
+cause was `COUP_MARGIN = 0.25`: `legitimacy` is a product of three bounded
+factors, so sampling every tribe every 200 ticks the best-placed rival beat
+the sitting leader by at most **+0.208**, median -0.047. The margin sat
+outside the entire observed distribution. `test_tribes.py` had a passing
+coup test the whole time, because it hand-built the scenario and asserted it
+was winnable - a scenario the world cannot produce. The margin is now 0.05,
+measured rather than guessed: across five seeds, 7 coups of 190 attempts.
+
+**Tribe pacts.** SPEC section 6 specifies alliances "between agents or
+tribes". The agent half worked. The tribe half had a `Tribe.allied_with`
+field, a DTO field, snapshot serialisation, a world query, and
+`DeclareWar` breaking a pact on sight - and no code anywhere that could add
+one. The only writes were `discard`. `OfferAlliance` now fills it: a leader
+courts the tribe whose members their own people think best of, and a
+belligerent leader on the other side refuses. Pacts form in every seed.
+
+That makes three dead features in one sweep, all of which had tests. A unit
+test proves a path works when you set the stage for it; only a running world
+tells you the stage ever gets set.
+
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 
 Deliberate and documented (ADR 0004, `WorldConfig.llm_agents`): the

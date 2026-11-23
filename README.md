@@ -29,7 +29,7 @@ What works right now:
 | --- | --- |
 | **A real simulation**: seeded island, resources with regrowth, day/night, seasons | |
 | Agents with needs, traits, inventory, ageing and named death causes | |
-| **31 skills**: survival, building, social, manipulation, combat and tribe actions - every one declaring the named inputs behind its score | |
+| **32 skills**: survival, building, social, manipulation, combat and tribe actions - every one declaring the named inputs behind its score | |
 | Utility AI whose trace **names its reasons**: "Sleep 0.19 - tired +0.12, it is night +0.07" | |
 | **Deliberative minds**: goals, plans, spoken lines and beliefs, via local Ollama **or an offline mock** | |
 | LLM monitor: provider, reachability, call log with real prompts and replies | |
@@ -42,7 +42,7 @@ What works right now:
 | **Five games**: Prisoner's Dilemma, Stag Hunt, Hawk-Dove, Ultimatum, Public Goods | |
 | **Ten strategies** from AlwaysCooperate to Detective, inherited with mutation | |
 | **Trust you earn and reputation you only hear about**, gossip, lies, lie detection | |
-| **Tribes** that are founded and joined, with leaders, storage, territory, coups, wars and peace | |
+| **Tribes** that are founded and joined, with leaders, storage, territory, coups that succeed, wars, peace deals and pacts between tribes | |
 | Shelters that get built, reproduction with trait blending, deaths with causes | |
 | Engine on a worker thread: pause / play / 1x-50x / MAX / step / reset | |
 | Full UI: inspector, event feed with filters, charts, overlays, speech bubbles, URL state, help | |
@@ -60,19 +60,21 @@ monitor all work with nothing installed. See
 
 ### What a world actually does
 
-From a 25x run on the default seed (1337), around tick 10,000 - read from
-`/api/metrics` and `/api/tribes`, not from the design document:
+From 10,000 ticks on the default seed (1337), engine only so that the run is
+reproducible - the same quantities the UI reads from `/api/metrics` and
+`/api/tribes`, measured rather than taken from the design document:
 
 | | |
 | --- | --- |
-| Population | 120 spawned -> 140 alive (births outpacing deaths) |
+| Population | 120 spawned -> 145 alive, 29 births against 4 deaths |
 | Tribes | 16, named, each with a leader, a store and territory |
-| Shelters built | 69 |
-| Cooperation rate | 70% in the Prisoner's Dilemma, 77% Hawk-Dove, 100% Stag Hunt |
-| Food Gini | 0.79 - the island has developed a rich and a poor |
-| Gifts / betrayals | 717 / 77 |
-| Lies told / caught | 878 / 301 |
-| Wars declared | 9, with alliances, peace deals and 10 attempted coups |
+| Shelters built | 71 |
+| Cooperation rate | 88% in the Prisoner's Dilemma, 80% Hawk-Dove, 70% Stag Hunt |
+| Food Gini | 0.81 - the island has developed a rich and a poor |
+| Trust density | 0.19 of all possible trust edges actually exist |
+| Gifts / betrayals | 733 / 82 |
+| Lies told / caught | 862 / 296 |
+| Diplomacy | 4 wars, 3 peace deals, 33 pacts, 3 coups won of 85 attempted |
 
 ### Measured on this machine
 
@@ -198,7 +200,7 @@ flowchart LR
     services["services/<br/>SimulationService · snapshots · metrics · LLM pump"]
     engine["sim/engine<br/>worker thread, fixed dt"]
     world["sim/world<br/>agents · resources · tribes · spatial hash"]
-    ai["ai/<br/>perception · utility brain · 31 skills · game theory"]
+    ai["ai/<br/>perception · utility brain · 32 skills · game theory"]
     db[("SQLite<br/>snapshots · metrics")]
   end
 

@@ -513,3 +513,97 @@ def test_a_warmonger_refuses_the_offer(
 
     assert second.id in first.at_war_with, "the war goes on"
     assert ledger.peace_made == 0
+
+
+# ------------------------------------------------------------------- pacts
+
+
+def warms_to(minds: MindRegistry, leader: Agent, tribe: Tribe, trust: float) -> None:
+    """Make `leader` think `trust` of every member of `tribe`."""
+    for member_id in tribe.member_ids:
+        relationship = minds.require(leader.id).memory.relationship(member_id)
+        relationship.trust = trust
+        relationship.interactions = 3
+
+
+def test_an_alliance_needs_a_tribe_worth_signing_with(
+    world: World, skills: SkillRegistry, minds: MindRegistry
+) -> None:
+    pact = skills.require("OfferAlliance")
+    leader, first, _, second = two_tribes(world, skills, minds)
+
+    assert not is_ok(pact.check(leader, world, pact.Params())), "no opinion of them yet"
+
+    warms_to(minds, leader, second, -0.5)
+    assert not is_ok(pact.check(leader, world, pact.Params())), (
+        "nobody allies with people they dislike"
+    )
+
+    warms_to(minds, leader, second, 0.7)
+    assert is_ok(pact.check(leader, world, pact.Params()))
+
+    first.at_war_with.add(second.id)
+    assert not is_ok(pact.check(leader, world, pact.Params())), "not while the war is on"
+
+
+def test_only_a_leader_may_sign(world: World, skills: SkillRegistry, minds: MindRegistry) -> None:
+    pact = skills.require("OfferAlliance")
+    leader, first, _, second = two_tribes(world, skills, minds)
+    member = world.agents[next(iter(sorted(first.member_ids - {leader.id})))]
+    warms_to(minds, member, second, 0.7)
+
+    assert not is_ok(pact.check(member, world, pact.Params()))
+
+
+def test_a_pact_binds_both_tribes(
+    world: World, skills: SkillRegistry, minds: MindRegistry, ledger: SocialLedger
+) -> None:
+    pact = skills.require("OfferAlliance")
+    leader, first, rival, second = two_tribes(world, skills, minds)
+    warms_to(minds, leader, second, 0.7)
+    rival.traits = Traits(aggression=0.2)
+
+    assert run(pact, world, leader, pact.Params()) is SkillStatus.DONE
+
+    assert second.id in first.allied_with
+    assert first.id in second.allied_with, "a pact is never one-sided"
+    assert ledger.alliances == 1
+    assert any(event.type is EventType.ALLIANCE for event in world.events.drain())
+
+    assert not is_ok(pact.check(leader, world, pact.Params())), "no signing it twice"
+
+
+def test_a_belligerent_leader_refuses_the_pact(
+    world: World, skills: SkillRegistry, minds: MindRegistry, ledger: SocialLedger
+) -> None:
+    pact = skills.require("OfferAlliance")
+    leader, first, rival, second = two_tribes(world, skills, minds)
+    warms_to(minds, leader, second, 0.7)
+    rival.traits = Traits(aggression=0.95)
+
+    assert run(pact, world, leader, pact.Params()) is SkillStatus.FAILED
+
+    assert not first.allied_with, "an offer refused binds nobody"
+    assert not second.allied_with
+    assert ledger.alliances == 0
+
+
+def test_a_small_tribe_wants_the_pact_more(
+    world: World, skills: SkillRegistry, minds: MindRegistry
+) -> None:
+    """Safety in numbers: weakness is half of why a leader signs."""
+    from app.ai.brains.base import DecisionContext
+
+    pact = skills.require("OfferAlliance")
+    leader, first, _, second = two_tribes(world, skills, minds)
+    warms_to(minds, leader, second, 0.7)
+    mind = minds.require(leader.id)
+    ctx = DecisionContext(
+        agent=leader, world=world, memory=mind.memory, observation=mind.observation
+    )
+
+    small = pact.utility(leader, ctx)
+    first.member_ids = set(range(20))
+    large = pact.utility(leader, ctx)
+
+    assert small > large, f"{small} should beat {large}"
