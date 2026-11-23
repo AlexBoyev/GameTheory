@@ -1,10 +1,9 @@
 """Ageing, death and what a body leaves behind (SPEC section 4.2)."""
 
 from app.sim import balance
-from app.sim.entities import Agent, AgentState, DeathCause, life_stage_for
-from app.sim.events import EventType, SimEvent
+from app.sim.entities import Agent, DeathCause, life_stage_for
+from app.sim.mortality import kill_agent
 from app.sim.world import World
-from app.sim.worldgen.resources import add_corpse
 
 
 class LifecycleSystem:
@@ -32,33 +31,4 @@ class LifecycleSystem:
                 dying.append(agent)
 
         for agent in dying:
-            self._kill(world, agent)
-
-    @staticmethod
-    def _kill(world: World, agent: Agent) -> None:
-        """Mark `agent` dead, drop it from the index and leave a corpse."""
-        agent.alive = False
-        agent.state = AgentState.DEAD
-        agent.velocity = (0.0, 0.0)
-        agent.current_skill = None
-        cause = agent.death_cause or DeathCause.STARVATION
-        agent.death_cause = cause
-
-        world.agent_index.remove(agent.id)
-        world.deaths += 1
-        world.invalidate_living()
-
-        corpse = add_corpse(world, agent.position)
-        world.resource_index.insert(corpse.id, corpse.position[0], corpse.position[1])
-
-        world.events.emit(
-            SimEvent(
-                tick=world.clock.tick,
-                type=EventType.DEATH,
-                summary=f"{agent.name} died of {cause.value.replace('_', ' ')}",
-                actors=(agent.id,),
-                importance=6,
-                position=agent.position,
-                data={"cause": cause.value, "age": round(agent.age, 1)},
-            )
-        )
+            kill_agent(world, agent)

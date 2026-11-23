@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { tribeRings, type TribeLike } from '@/scene/Territories';
+import { tribeRings, type TribeLike } from '@/scene/territoryRings';
 
 function tribe(overrides: Partial<TribeLike> = {}): TribeLike {
   return {

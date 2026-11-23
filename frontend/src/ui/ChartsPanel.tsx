@@ -1,9 +1,15 @@
 /**
- * The charts (SPEC section 10): what the society is doing over time.
+ * The charts (SPEC section 9.4): what the society is doing over time.
  *
- * Four questions, in order of how much they tell you: is the population
- * surviving, which strategies are winning, is anyone cooperating, and is the
- * food piling up with a few agents.
+ * Six questions, in order of how much they tell you: is the population
+ * surviving, which strategies are winning, which ones are actually *paying*,
+ * is anyone cooperating, is the food piling up with a few agents, and is the
+ * place getting more treacherous.
+ *
+ * Strategy share and average payoff are deliberately next to each other and
+ * share a colour scale: a strategy spreading while its payoff falls is the
+ * most interesting thing this panel can show you, and you can only see it by
+ * reading the two together.
  */
 
 import { useMemo } from 'react';
@@ -98,6 +104,40 @@ export function ChartsPanel(): React.ReactElement {
     [points, gameKeys],
   );
 
+  const payoffs = useMemo(
+    () =>
+      seriesFrom(
+        points,
+        strategyKeys,
+        // Undefined, not zero, for a strategy that has not played yet: a gap
+        // in the line is honest, a zero is a claim it earned nothing.
+        (point, key) => point.payoff_by_strategy?.[key],
+        STRATEGY_COLOURS,
+      ),
+    [points, strategyKeys],
+  );
+
+  const treachery = useMemo<ChartSeries[]>(
+    () => [
+      {
+        label: 'betrayals',
+        colour: '#f87171',
+        values: points.map((point) => point.extra?.betrayals ?? 0),
+      },
+      {
+        label: 'alliances',
+        colour: '#4ade80',
+        values: points.map((point) => point.extra?.alliances ?? 0),
+      },
+      {
+        label: 'lies caught',
+        colour: '#fbbf24',
+        values: points.map((point) => point.extra?.lies_caught ?? 0),
+      },
+    ],
+    [points],
+  );
+
   const inequality = useMemo<ChartSeries[]>(
     () => [
       { label: 'food Gini', colour: '#fbbf24', values: points.map((p) => p.food_gini ?? 0) },
@@ -128,6 +168,7 @@ export function ChartsPanel(): React.ReactElement {
         <div className="space-y-1 pt-1">
           <Chart title="Population" ticks={ticks} series={population} />
           <Chart title="Strategy shares" ticks={ticks} series={strategies} height={130} />
+          <Chart title="Average payoff per strategy" ticks={ticks} series={payoffs} height={130} />
           <Chart
             title="Cooperation rate by game"
             ticks={ticks}
@@ -135,6 +176,10 @@ export function ChartsPanel(): React.ReactElement {
             range={[0, 1]}
           />
           <Chart title="Food inequality & trust" ticks={ticks} series={inequality} range={[0, 1]} />
+          {/* Cumulative, not per-sample: these are running totals, so the
+              slope already is the rate, and differencing them would invent a
+              cliff every time a reset puts the counters back to zero. */}
+          <Chart title="Betrayals & alliances" ticks={ticks} series={treachery} />
 
           {latest && (
             <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 px-3 pb-3 pt-1 text-[11px]">

@@ -16,6 +16,7 @@ class MetricPointDTO(BaseModel):
     cooperation_rate: float = 0.0
     food_gini: float = 0.0
     trust_density: float = 0.0
+    deaths_by_cause: dict[str, int] = Field(default_factory=dict)
     by_tribe: dict[str, int] = Field(default_factory=dict)
     by_strategy: dict[str, int] = Field(default_factory=dict)
     payoff_by_strategy: dict[str, float] = Field(default_factory=dict)

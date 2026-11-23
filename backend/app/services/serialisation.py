@@ -148,6 +148,7 @@ def dump_world(world: World, minds: MindRegistry, ledger: SocialLedger) -> dict[
             "next_shelter_id": world.next_shelter_id,
             "births": world.births,
             "deaths": world.deaths,
+            "deaths_by_cause": dict(world.deaths_by_cause),
         },
         "agents": [_agent_to_dict(agent) for _, agent in sorted(world.agents.items())],
         "resources": [
@@ -344,6 +345,9 @@ def load_world(
     world.next_shelter_id = int(counters["next_shelter_id"])
     world.births = int(counters["births"])
     world.deaths = int(counters["deaths"])
+    world.deaths_by_cause = {
+        str(cause): int(count) for cause, count in counters.get("deaths_by_cause", {}).items()
+    }
 
     # Both indices are derived state; rebuilding is cheaper and safer than
     # storing them, and it cannot disagree with the positions above.

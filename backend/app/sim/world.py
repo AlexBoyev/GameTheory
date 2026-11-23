@@ -138,6 +138,13 @@ class World:
     """Incremented per built world, so per-agent caches know to start over."""
     births: int = 0
     deaths: int = 0
+    deaths_by_cause: dict[str, int] = field(default_factory=dict)
+    """Tally per `DeathCause`, which the metrics panel reports (SPEC 10).
+
+    Counted here rather than by reading the event feed: the sampler runs on
+    the broadcast thread and only sees the events that happen to be in flight,
+    so a death between two samples would never be counted at all.
+    """
     _living: list[Agent] | None = None
     _living_tick: int = -1
 

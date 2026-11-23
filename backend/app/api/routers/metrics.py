@@ -29,6 +29,7 @@ def get_metrics(metrics: MetricsDep, from_tick: int = Query(default=0, ge=0)) ->
                 cooperation_rate=point.cooperation_rate,
                 food_gini=point.food_gini,
                 trust_density=point.trust_density,
+                deaths_by_cause=point.deaths_by_cause,
                 by_tribe=point.by_tribe,
                 by_strategy=point.by_strategy,
                 payoff_by_strategy=point.payoff_by_strategy,

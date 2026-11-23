@@ -83,3 +83,24 @@ def test_the_feed_reads_through_to_the_database(client: TestClient, container: C
     assert len({(item["tick"], item["summary"]) for item in items}) == len(items), (
         "the same event must not appear twice when the two sources are stitched"
     )
+
+
+def test_deaths_are_counted_by_cause(client: TestClient, container: Container) -> None:
+    """`DeathCause` says it is "aggregated in the metrics panel" - now it is.
+
+    Smiting is the cheapest way to produce a death with a cause known in
+    advance; the tally is what SPEC section 10 asks for and what nothing
+    computed before.
+    """
+    agents = client.get("/api/agents").json()
+    victim = agents["agents"][0]["id"] if isinstance(agents, dict) else agents[0]["id"]
+
+    assert client.post("/api/god/smite", json={"agent_id": victim}).status_code == 200
+    settle(client, container, ticks=250, seconds=2.0)
+
+    point = container.metrics.latest
+    assert point is not None, "no sample was taken"
+    assert point.deaths_by_cause.get("smite", 0) >= 1, point.deaths_by_cause
+    assert sum(point.deaths_by_cause.values()) == point.deaths, (
+        "the per-cause tally and the bare count disagree"
+    )

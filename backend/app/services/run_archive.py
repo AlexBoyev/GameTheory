@@ -330,6 +330,7 @@ def _row_from_point(run_id: int, point: MetricPoint) -> MetricSample:
         trust_density=point.trust_density,
         payload_json=json.dumps(
             {
+                "deaths_by_cause": point.deaths_by_cause,
                 "by_tribe": point.by_tribe,
                 "by_strategy": point.by_strategy,
                 "payoff_by_strategy": point.payoff_by_strategy,
@@ -355,6 +356,7 @@ def _point_from_row(row: MetricSample) -> MetricPoint:
         cooperation_rate=row.cooperation_rate,
         food_gini=row.food_gini,
         trust_density=row.trust_density,
+        deaths_by_cause=payload.get("deaths_by_cause", {}),
         by_tribe=payload.get("by_tribe", {}),
         by_strategy=payload.get("by_strategy", {}),
         payoff_by_strategy=payload.get("payoff_by_strategy", {}),

@@ -131,6 +131,7 @@ class MetricsService:
             cooperation_rate=round(ledger.cooperation_rate(), 4),
             food_gini=round(gini([agent.inventory.food for agent in agents]), 4),
             trust_density=round(self._trust_density(agents, minds), 4),
+            deaths_by_cause=dict(world.deaths_by_cause),
             by_tribe=dict(by_tribe),
             by_strategy=dict(by_strategy),
             payoff_by_strategy={

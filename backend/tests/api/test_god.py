@@ -168,6 +168,30 @@ def test_smiting_kills_the_named_agent(client: TestClient) -> None:
     assert client.get(f"/api/agents/{agent_id}").json()["summary"]["alive"] is False
 
 
+def test_a_smitten_agent_dies_the_same_way_everyone_else_does(client: TestClient) -> None:
+    """God kills used to be a second, poorer death path.
+
+    `smite` and `plague` marked an agent dead and bumped the counter, and
+    that was all: the body stayed in the spatial index, left no corpse, and
+    produced no `DEATH` event, so the feed disagreed with the population
+    counter. Both now go through `kill_agent`.
+    """
+    agent_id = client.get("/api/agents").json()[0]["id"]
+
+    god(client, "smite", agent_id=agent_id)
+
+    def obituary() -> list[dict[str, Any]]:
+        return [
+            item
+            for item in events(client, "death")
+            if item["actors"] and item["actors"][0] == agent_id
+        ]
+
+    assert wait_until(lambda: bool(obituary())), "a death nobody was told about"
+    assert "smite" in obituary()[0]["summary"], obituary()[0]["summary"]
+    assert client.get(f"/api/agents/{agent_id}").json()["summary"]["alive"] is False
+
+
 def test_smiting_nobody_is_reported_not_crashed(client: TestClient) -> None:
     result = god(client, "smite", agent_id=999999)
 

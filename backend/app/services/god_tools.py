@@ -24,6 +24,7 @@ from app.sim.entities import (
     ResourceNode,
 )
 from app.sim.events import EventType, SimEvent
+from app.sim.mortality import kill_agent
 from app.sim.names import make_name
 from app.sim.world import World
 from app.sim.worldgen.population import life_stage_for, random_traits
@@ -193,14 +194,8 @@ def plague(world: World, request: Intervention, context: GodContext) -> Outcome:
     for agent in victims:
         agent.health = max(0.0, agent.health - severity)
         if agent.health <= 0.0:
-            agent.alive = False
-            agent.death_cause = DeathCause.PLAGUE
-            world.deaths += 1
+            kill_agent(world, agent, DeathCause.PLAGUE)
             died += 1
-    if died:
-        # `living_agents()` is cached per tick, and every system plus the API
-        # reads it. Without this the dead keep walking until the next tick.
-        world.invalidate_living()
 
     _emit(world, f"A plague swept {len(victims)} agents; {died} did not survive", centre)
     return Outcome(affected=len(victims), detail=f"{len(victims)} infected, {died} died")
@@ -249,11 +244,7 @@ def smite(world: World, request: Intervention, context: GodContext) -> Outcome:
     if agent is None or not agent.alive:
         return Outcome(detail="no such living agent")
 
-    agent.health = 0.0
-    agent.alive = False
-    agent.death_cause = DeathCause.SMITE
-    world.deaths += 1
-    world.invalidate_living()
+    kill_agent(world, agent, DeathCause.SMITE)
 
     _emit(world, f"{agent.name} was struck down", agent.position)
     return Outcome(affected=1, detail=f"{agent.name} (#{agent.id}) is dead")
