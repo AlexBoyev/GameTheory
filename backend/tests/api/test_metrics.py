@@ -3,12 +3,13 @@
 import pytest
 
 from app.core.settings import Settings
-from app.services.metrics_service import MetricPoint, MetricsService, gini
+from app.services.metric_point import MetricPoint
+from app.services.metrics_service import MetricsService, gini
 
 
 def service(settings: Settings, every: int = 100) -> MetricsService:
     """A metrics service with a known sampling interval."""
-    return MetricsService(settings, repository=None, sample_every_ticks=every)
+    return MetricsService(settings, archive=None, sample_every_ticks=every)
 
 
 def test_gini_is_zero_when_everyone_has_the_same() -> None:

@@ -11,7 +11,7 @@ from app.ai.gametheory.ledger import SocialLedger
 from app.ai.minds import MindRegistry
 from app.ai.skill_services import SkillServices
 from app.ai.skills.registry import SkillRegistry, build_registry
-from app.container import build_container
+from app.container import Container, build_container
 from app.core.settings import Settings
 from app.core.world_config import TerrainConfig, WorldConfig
 from app.main import create_app
@@ -44,9 +44,20 @@ def api_config() -> WorldConfig:
 
 
 @pytest.fixture
-def client(settings: Settings, api_config: WorldConfig) -> Iterator[TestClient]:
+def container(settings: Settings, api_config: WorldConfig) -> Container:
+    """The wired services behind `client`.
+
+    A fixture rather than a reach into `app.state` so a test can inspect the
+    archive or the repository without the type gymnastics - and so both
+    fixtures are guaranteed to be looking at the same instance.
+    """
+    return build_container(settings, api_config)
+
+
+@pytest.fixture
+def client(settings: Settings, container: Container) -> Iterator[TestClient]:
     """A client with the lifespan running, so the engine is live."""
-    app = create_app(settings, build_container(settings, api_config))
+    app = create_app(settings, container)
     with TestClient(app) as test_client:
         yield test_client
 

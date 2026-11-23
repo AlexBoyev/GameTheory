@@ -371,6 +371,17 @@ Every N ticks: population (total / by tribe / by strategy), births, deaths by ca
 ## 11. Persistence
 SQLite (SQLModel) in `./data/gametheory.db` (Docker volume): runs, metrics, snapshots (full world state JSON, gzipped), capped events table.
 
+**As built.** `RunArchive` owns all four of those except snapshots, which
+`SnapshotService` writes directly. A run opens wherever a world is born -
+startup, reset, restore - and metrics and events are stamped with its id.
+Writing happens on a dedicated daemon thread behind a bounded queue, so
+neither the engine thread nor the event loop ever waits on the disk; a full
+queue drops jobs rather than applying back pressure to the simulation. Reads
+stitch: the in-memory window answers first and the archive supplies only what
+the window has already dropped, so the charts panel and the event feed show
+the whole run. The event table is capped at 20,000 rows per run, pruned back
+to 15,000 in one statement rather than a row per insert. See ADR 0006.
+
 ## 12. Configuration
 `backend/config/default.yaml` + `payoffs.yaml` + `presets/*.yaml`; env overrides via pydantic-settings (`.env`). Keys: `SIM_SEED`, `SIM_TICK_RATE`, `SIM_MAX_AGENTS`, `LLM_*` (see §7.5), `OLLAMA_URL` (default `http://localhost:11434`; backend in Docker + native Ollama → `http://host.docker.internal:11434`; compose `llm` profile → `http://ollama:11434`), `OLLAMA_MODEL` (default `qwen3:8b`; smaller GPU: `qwen3:4b`).
 

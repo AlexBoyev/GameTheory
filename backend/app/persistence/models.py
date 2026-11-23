@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from sqlmodel import Field, SQLModel
 
 
-def _now() -> datetime:
+def utc_now() -> datetime:
     """Return the current UTC time (storage layer, so wall clock is fine here)."""
     return datetime.now(UTC)
 
@@ -20,7 +20,7 @@ class Run(SQLModel, table=True):
     label: str = ""
     preset: str | None = None
     config_json: str = "{}"
-    started_at: datetime = Field(default_factory=_now, index=True)
+    started_at: datetime = Field(default_factory=utc_now, index=True)
     ended_at: datetime | None = None
     last_tick: int = 0
 
@@ -54,7 +54,7 @@ class SnapshotRecord(SQLModel, table=True):
     tick: int = 0
     seed: int = 0
     population: int = 0
-    created_at: datetime = Field(default_factory=_now, index=True)
+    created_at: datetime = Field(default_factory=utc_now, index=True)
     size_bytes: int = 0
     blob_gzip: bytes = b""
 

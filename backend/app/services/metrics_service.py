@@ -2,39 +2,31 @@
 
 Sampling every N ticks (not every tick) is deliberate: at MAX speed the
 charts must not become the bottleneck.
+
+Memory holds a bounded window and the `RunArchive` holds the rest. Every
+sample goes to both, and `series` stitches them back together, so a long run
+keeps its own beginning instead of silently losing it to the ring buffer.
 """
 
 from collections import Counter
-from dataclasses import dataclass, field
 from typing import Any
 
 from app.ai.gametheory.ledger import SocialLedger
 from app.ai.minds import MindRegistry
 from app.core.settings import Settings
-from app.persistence.repository import Repository
+from app.services.metric_point import MetricPoint
+from app.services.run_archive import RunArchive
 from app.sim.world import World
 
 TRUST_EDGE_THRESHOLD = 0.25
 """Trust above which two agents count as connected, for graph density."""
 
 
-@dataclass(frozen=True, slots=True)
-class MetricPoint:
-    """One sample of the global metrics."""
+SERIES_LIMIT = 2000
+"""Samples kept in memory. Older ones live only in the archive."""
 
-    tick: int
-    sim_seconds: float
-    population: int
-    births: int = 0
-    deaths: int = 0
-    cooperation_rate: float = 0.0
-    food_gini: float = 0.0
-    trust_density: float = 0.0
-    by_tribe: dict[str, int] = field(default_factory=dict)
-    by_strategy: dict[str, int] = field(default_factory=dict)
-    payoff_by_strategy: dict[str, float] = field(default_factory=dict)
-    cooperation_by_game: dict[str, float] = field(default_factory=dict)
-    extra: dict[str, Any] = field(default_factory=dict)
+SERIES_TRIM = 1000
+"""How many are dropped at once, so trimming is rare rather than per-sample."""
 
 
 def gini(values: list[float]) -> float:
@@ -55,15 +47,15 @@ def gini(values: list[float]) -> float:
 class MetricsService:
     """Samples the world on a tick interval and exposes the series."""
 
-    __slots__ = ("_repository", "_series", "sample_every_ticks")
+    __slots__ = ("_archive", "_series", "sample_every_ticks")
 
     def __init__(
         self,
         settings: Settings,
-        repository: Repository | None = None,
+        archive: RunArchive | None = None,
         sample_every_ticks: int = 100,
     ) -> None:
-        self._repository = repository
+        self._archive = archive
         self.sample_every_ticks = sample_every_ticks
         self._series: list[MetricPoint] = []
         _ = settings
@@ -74,8 +66,17 @@ class MetricsService:
         return self._series[-1] if self._series else None
 
     def series(self, from_tick: int = 0) -> list[MetricPoint]:
-        """Return samples at or after `from_tick`."""
-        return [point for point in self._series if point.tick >= from_tick]
+        """Return samples at or after `from_tick`, oldest first.
+
+        Reads through to the archive for anything the in-memory window has
+        already dropped, so the charts panel shows the whole run rather than
+        its most recent 2,000 samples.
+        """
+        live = [point for point in self._series if point.tick >= from_tick]
+        if self._archive is None:
+            return live
+        oldest = live[0].tick if live else None
+        return self._archive.history(from_tick, before_tick=oldest) + live
 
     def is_due(self, tick: int, last_sampled: int) -> bool:
         """Whether enough ticks have passed since `last_sampled`.
@@ -90,10 +91,16 @@ class MetricsService:
         return tick - last_sampled >= self.sample_every_ticks
 
     def record(self, point: MetricPoint) -> None:
-        """Append a sample, bounding the series so a long run cannot grow forever."""
+        """Append a sample to memory and to the archive.
+
+        The in-memory list is bounded so a long run cannot grow forever; the
+        archive keeps what falls off the front.
+        """
         self._series.append(point)
-        if len(self._series) > 2000:
-            del self._series[:1000]
+        if len(self._series) > SERIES_LIMIT:
+            del self._series[:SERIES_TRIM]
+        if self._archive is not None:
+            self._archive.record_metrics(point)
 
     def clear(self) -> None:
         """Drop the series; the world was rebuilt."""

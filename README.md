@@ -16,7 +16,8 @@ Runs entirely on `localhost`. **No paid services, no API keys, no cloud AI.**
   [0002 simulation core](docs/adr/0002-simulation-core.md),
   [0003 game theory and tribes](docs/adr/0003-game-theory-and-tribes.md),
   [0004 LLM minds](docs/adr/0004-llm-minds.md),
-  [0005 god tools, presets, snapshots](docs/adr/0005-god-tools-presets-snapshots.md)
+  [0005 god tools, presets, snapshots](docs/adr/0005-god-tools-presets-snapshots.md),
+  [0006 the run archive](docs/adr/0006-the-run-archive.md)
 - Working rules for Claude Code: [`CLAUDE.md`](CLAUDE.md)
 
 ---
@@ -36,6 +37,7 @@ What works right now:
 | **Six presets** with real values, from Peaceful Eden to Liars' Island | |
 | **God tools**: drop food, bounty, drought, plague, spawn, smite | |
 | **Snapshots**: save and reload a whole society, memories included | |
+| **A durable record of every run** in SQLite - its seed and config, its metrics, and a capped event log - so the charts keep the whole run instead of their last 2,000 samples | |
 | Minimap with a camera marker, click-to-fly, and a screenshot button | |
 | Activity heatmap and name tags - every overlay toggle now does something | |
 | **Tournament mode**: round-robin iterated PD with replicator dynamics, in a ring arena | |

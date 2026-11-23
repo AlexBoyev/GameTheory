@@ -7,6 +7,7 @@ from fastapi import Depends, Request
 from app.container import Container
 from app.core.settings import Settings
 from app.services.metrics_service import MetricsService
+from app.services.run_archive import RunArchive
 from app.services.simulation_service import SimulationService
 from app.services.snapshot_service import SnapshotService
 
@@ -34,6 +35,11 @@ def get_metrics(container: ContainerDep) -> MetricsService:
     return container.metrics
 
 
+def get_archive(container: ContainerDep) -> RunArchive:
+    """Return the durable record of the current run."""
+    return container.archive
+
+
 def get_snapshots(container: ContainerDep) -> SnapshotService:
     """Return the snapshot service."""
     return container.snapshots
@@ -42,4 +48,5 @@ def get_snapshots(container: ContainerDep) -> SnapshotService:
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 SimulationDep = Annotated[SimulationService, Depends(get_simulation)]
 MetricsDep = Annotated[MetricsService, Depends(get_metrics)]
+ArchiveDep = Annotated[RunArchive, Depends(get_archive)]
 SnapshotsDep = Annotated[SnapshotService, Depends(get_snapshots)]

@@ -9,10 +9,11 @@ Two threads meet here, which is the whole reason this is its own class:
   rate and sends envelopes to every subscriber.
 
 What it deliberately does *not* own is anything that happens to be triggered
-by a frame. Metrics sampling and the LLM speed policy both run once per frame,
-but neither is broadcasting - they are policies belonging to
-`SimulationService`, handed in as `on_frame`. Keeping them out is what lets
-this file be about one thing and be tested without an engine.
+by a frame or a batch. Metrics sampling and the LLM speed policy both run once
+per frame, and the archive wants a copy of every event, but none of that is
+broadcasting - they are policies belonging to `SimulationService`, handed in
+as `on_frame` and `on_events`. Keeping them out is what lets this file be
+about one thing and be tested without an engine or a database.
 """
 
 import asyncio
@@ -32,6 +33,8 @@ LOG = get_logger(__name__)
 
 Subscriber = Callable[[Envelope], Awaitable[None]]
 FrameHook = Callable[[WorldFrame], Awaitable[None]]
+EventsHook = Callable[[list[dict[str, Any]]], None]
+"""Called with every batch the feed builds. Synchronous and must not block."""
 
 FRAME_QUEUE_SIZE = 2
 """Keep the newest frames only: a slow client must not delay the engine."""
@@ -47,15 +50,22 @@ class BroadcastPump:
         "_frames",
         "_interval",
         "_last_amounts",
+        "_on_events",
         "_on_frame",
         "_store",
         "_subscribers",
         "_task",
     )
 
-    def __init__(self, broadcast_hz: float, on_frame: FrameHook | None = None) -> None:
+    def __init__(
+        self,
+        broadcast_hz: float,
+        on_frame: FrameHook | None = None,
+        on_events: EventsHook | None = None,
+    ) -> None:
         self._interval = 1.0 / max(1.0, broadcast_hz)
         self._on_frame = on_frame
+        self._on_events = on_events
         self._frames: queue.Queue[WorldFrame] = queue.Queue(maxsize=FRAME_QUEUE_SIZE)
         self._events: queue.Queue[list[SimEvent]] = queue.Queue(maxsize=EVENT_QUEUE_SIZE)
         self._store = EventStore()
@@ -200,6 +210,8 @@ class BroadcastPump:
                 return
             items = [event_dict(event) for event in batch]
             self._store.extend(items)
+            if items and self._on_events is not None:
+                self._on_events(items)
             if items:
                 await self.broadcast(envelopes.events(items[-1]["tick"], items))
             await self._broadcast_speech(batch)

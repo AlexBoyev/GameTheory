@@ -1,7 +1,8 @@
 """Metrics time series for the charts panel (SPEC section 10).
 
-The endpoint is live from Phase 1 and simply returns an empty series until
-Phase 4 starts sampling, so the frontend can wire its charts immediately.
+`MetricsService.series` stitches the in-memory window together with whatever
+the run archive holds from earlier in the run, so this stays a straight
+mapping to DTOs.
 """
 
 from fastapi import APIRouter, Query

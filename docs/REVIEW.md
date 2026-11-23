@@ -329,6 +329,28 @@ agent's top three and so hides a skill that is always wanted and never best;
 and sample every tick, because checking every 25th missed `OfferPeace` in a
 seed that demonstrably made peace - the war started and ended in between.
 
+### ~~P1 - three of the four tables were never written to~~ (fixed)
+
+The fourth instance of the same failure, and the largest. SPEC sections 10
+and 11 promise runs, metrics, snapshots and a capped event log in SQLite.
+Only snapshots were ever written. `Repository` had `create_run`,
+`add_metrics`, `metrics_since`, `add_events` and `recent_events`; the tables
+were created on every startup; `EventRecord` was never constructed anywhere;
+and `MetricsService.__init__` took a `Repository`, stored it, and never
+called it. Both routers carried a comment saying the SQLite path would
+"arrive in Phase 4" - it never arrived in any phase.
+
+So charts and the feed lived in a ring buffer and died with the process, and
+a run longer than 2,000 samples silently lost its own beginning.
+
+`RunArchive` (ADR 0006) now owns the run, writes to it on its own thread
+behind a bounded queue, and reads it back; `MetricsService.series` and
+`GET /events` stitch memory and disk so the caller sees one series. The
+integration test asserts against the *running app* that rows land, because
+the unit tests for a correct, unreferenced collaborator would all have
+passed on the day nothing called it - which is precisely what happened here
+for six phases.
+
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 
 Deliberate and documented (ADR 0004, `WorldConfig.llm_agents`): the

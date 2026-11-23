@@ -4,6 +4,7 @@ Everything is constructor-injected and assembled exactly once, here. No module
 anywhere else reaches for a global service (CLAUDE.md architecture rule 4).
 """
 
+import asyncio
 from dataclasses import dataclass
 
 from app.ai.llm.gateway import LLMGateway
@@ -18,6 +19,7 @@ from app.persistence.database import build_engine
 from app.persistence.repository import Repository
 from app.services.llm_pump import LLMPump
 from app.services.metrics_service import MetricsService
+from app.services.run_archive import RunArchive
 from app.services.simulation_service import SimulationService
 from app.services.snapshot_service import SnapshotService
 
@@ -46,6 +48,7 @@ class Container:
 
     settings: Settings
     repository: Repository
+    archive: RunArchive
     gateway: LLMGateway
     skills: SkillRegistry
     simulation: SimulationService
@@ -56,6 +59,8 @@ class Container:
     async def startup(self) -> None:
         """Create tables, probe the LLM provider and start broadcasting."""
         self.repository.initialise()
+        # Before the simulation starts: the first thing it does is open a run.
+        self.archive.start()
         skill_count = len(self.skills)
         reachable = await self.gateway.check_health()
         if not reachable:
@@ -72,6 +77,8 @@ class Container:
         """Stop the pump and the broadcast loop, then release the transport."""
         await self.llm_pump.stop()
         await self.simulation.shutdown()
+        # After the simulation, so the closing `end` is already queued.
+        await asyncio.to_thread(self.archive.stop)
         await self.gateway.aclose()
 
 
@@ -82,12 +89,16 @@ def build_container(settings: Settings, config: WorldConfig | None = None) -> Co
     build a small island instead of waiting for a full one.
     """
     repository = Repository(build_engine(settings))
+    archive = RunArchive(repository)
     gateway = LLMGateway(settings, build_provider(settings))
-    metrics = MetricsService(settings, repository)
-    simulation = SimulationService(settings, gateway, config=config, metrics=metrics)
+    metrics = MetricsService(settings, archive)
+    simulation = SimulationService(
+        settings, gateway, config=config, metrics=metrics, archive=archive
+    )
     return Container(
         settings=settings,
         repository=repository,
+        archive=archive,
         gateway=gateway,
         # The simulation owns the registry its skills are bound to; exposing
         # that one rather than a second, unbound registry.

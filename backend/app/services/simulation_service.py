@@ -31,6 +31,7 @@ from app.services.engine_factory import EngineBundle, build_engine_bundle
 from app.services.envelopes import Envelope
 from app.services.god_tools import TOOLS, GodContext, Intervention, Outcome
 from app.services.metrics_service import MetricsService
+from app.services.run_archive import RunArchive
 from app.services.serialisation import dump_world, load_world
 from app.services.world_queries import WorldQueries
 from app.sim.clock import SPEED_PRESETS
@@ -98,16 +99,22 @@ class SimulationService:
         bundle: EngineBundle | None = None,
         config: WorldConfig | None = None,
         metrics: MetricsService | None = None,
+        archive: RunArchive | None = None,
     ) -> None:
         self._settings = settings
         self._gateway = gateway
         self._bundle = bundle or build_engine_bundle(settings, config)
         self._engine = self._bundle.engine
         self._metrics = metrics
+        self._archive = archive
         self._last_sampled_tick = -1
         self._queries = WorldQueries(self._engine, self._bundle.minds, self._bundle.ledger)
 
-        self._pump = BroadcastPump(settings.sim_broadcast_hz, on_frame=self._on_frame)
+        self._pump = BroadcastPump(
+            settings.sim_broadcast_hz,
+            on_frame=self._on_frame,
+            on_events=None if archive is None else archive.record_events,
+        )
         self._thread: threading.Thread | None = None
 
         self._engine.install_callbacks(
@@ -149,6 +156,7 @@ class SimulationService:
             self._thread = threading.Thread(target=self._engine.run, name="sim-engine", daemon=True)
             self._thread.start()
         self._pump.start()
+        self._begin_run()
 
         await self._submit(Start())
         LOG.info(
@@ -159,14 +167,17 @@ class SimulationService:
         )
 
     async def shutdown(self) -> None:
-        """Stop the pump, then the engine thread."""
+        """Stop the pump, then the engine thread, then close the run off."""
         await self._pump.stop()
 
         thread, self._thread = self._thread, None
         if thread is not None and thread.is_alive():
             self._engine.submit(Shutdown())
             await asyncio.to_thread(thread.join, 3.0)
-        LOG.info("simulation.stopped", tick=self._engine.snapshot().tick)
+        tick = self._engine.snapshot().tick
+        if self._archive is not None:
+            self._archive.end(tick)
+        LOG.info("simulation.stopped", tick=tick)
 
     # --------------------------------------------------------------- pub/sub
 
@@ -308,6 +319,7 @@ class SimulationService:
         if self._metrics is not None:
             self._metrics.clear()
         state = await self._submit(Reset(seed=seed, config=config))
+        self._begin_run()
         LOG.info("simulation.reset", seed=state.seed, population=state.population)
         return state
 
@@ -371,6 +383,7 @@ class SimulationService:
         sequence = self._engine.submit(Restore(build))
         await self._await_sequence(sequence)
         state = self.state()
+        self._begin_run()
         LOG.info("simulation.restored", tick=state.tick, population=state.population)
         return state
 
@@ -393,6 +406,18 @@ class SimulationService:
                 break
             await asyncio.sleep(COMMAND_POLL_S)
         return self.state()
+
+    def _begin_run(self) -> None:
+        """Tell the archive a new world exists, so its rows are stamped with it.
+
+        Called wherever a world is born - startup, reset and restore - rather
+        than once at construction, because every one of those is a different
+        run of a different world and mixing their metrics would be nonsense.
+        """
+        if self._archive is None:
+            return
+        config = self.config
+        self._archive.begin(seed=config.seed, config_json=config.model_dump_json())
 
     # ----------------------------------------------------- per-frame policy
 
