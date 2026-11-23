@@ -7,7 +7,7 @@ theory in Phase 4; `JoinHunt` lands with it.
 from pydantic import BaseModel, ConfigDict
 
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import Consideration, Skill, SkillCategory, SkillRun, SkillStatus
 from app.ai.skills.helpers import nearest_resource, need_urgency, steer_towards, stop
 from app.core.result import OK_NONE, Err, Result
 from app.sim import balance
@@ -55,11 +55,17 @@ class HuntRabbit(Skill):
             return Err("no rabbit in sight")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Brave, hungry agents hunt; timid or well-fed ones gather instead."""
         hunger = need_urgency(agent.needs.hunger)
         stock = min(1.0, agent.inventory.food / balance.CARRY_TARGET)
-        return hunger * (0.35 + 0.65 * agent.traits.courage) * (1.0 - 0.6 * stock)
+        return [
+            Consideration(
+                "hungry with an empty larder",
+                hunger * (1.0 - 0.6 * stock),
+                0.35 + 0.65 * agent.traits.courage,
+            )
+        ]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Lock on to a rabbit."""

@@ -129,9 +129,13 @@ Three things worth recording about doing it:
    bonus the brain adds. The trace now names those bonuses too, and a test
    asserts the parts sum to the score.
 
-Converting the remaining ~23 skills is mechanical and the pattern is
-established; several are genuinely one product of factors and read better as
-a single named consideration than as a forced decomposition.
+All 31 skills are now converted, and nothing overrides `utility()` any
+more, so the inspector can explain every option it shows. Two thirds of them
+turned out to be a single product of factors, which reads better as one
+honestly named input ("greedy and dishonest 0.42") than as a forced
+decomposition; three expanded exactly into two real inputs, and those were
+worth splitting - `JoinTribe`'s standing wish to belong is a different thing
+from how unsafe the agent feels this second.
 
 ### ~~P1 - every decision scores all 31 skills~~ (partly fixed)
 
@@ -252,6 +256,25 @@ testing.
 
 `TOOLS`, `DESCRIPTIONS` and `DEFAULT_PAYOFFS` are now annotated `Mapping`, so
 "nothing mutates them" is a guarantee rather than a convention.
+
+### ~~P2 - `Raid` was a feature that never happened~~ (fixed)
+
+Found by finishing the considerations conversion and then asking a running
+world which skills its agents actually explain. In 6,000 ticks `Raid` never
+once entered a decision trace. Its three preconditions were not the problem -
+measuring them separately showed a war on, a stocked enemy and a raider 3.9
+units from the camp all coinciding on six sampled ticks. The problem was the
+score: a raid was wanted on temperament alone (`aggression * loyalty`, median
+0.056) and never outscored picking berries (~0.33), so the softmax never drew
+it. The one thing a raid is *for* - the enemy's full store - was not an input.
+
+It is now, as "their store is worth taking", and raids happen about once per
+1,500 ticks, which is rare without being dead. The food really moves: "Ada-ka
+raided Clifffolk and took 4.0 food".
+
+The general lesson, for the third time in this project: a skill can be
+registered, tested, reachable and still never fire. Only a running world
+tells you, and the decision trace is the instrument.
 
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 

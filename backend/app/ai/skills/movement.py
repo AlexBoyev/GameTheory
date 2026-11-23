@@ -109,9 +109,9 @@ class MoveTo(Skill):
             return Err("that position is water or out of bounds")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
-        """Zero: only a plan chooses this, never the utility brain."""
-        return 0.0
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
+        """None, ever: only a plan chooses this, never the utility brain."""
+        return []
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Record the destination."""

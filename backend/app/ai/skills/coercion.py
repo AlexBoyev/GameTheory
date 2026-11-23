@@ -8,7 +8,14 @@ from pydantic import BaseModel
 
 from app.ai import social
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import Requirement, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import (
+    Consideration,
+    Requirement,
+    Skill,
+    SkillCategory,
+    SkillRun,
+    SkillStatus,
+)
 from app.ai.skills.helpers import stop
 from app.ai.skills.manipulation import BRIBE_AMOUNT, GOSSIP_DURATION
 from app.ai.skills.targeting import TargetParams, nearby_agents, resolve_target
@@ -35,16 +42,16 @@ class Persuade(Skill):
             return Err("nobody nearby")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Charismatic agents lean on it, especially when disliked."""
         if ctx.observation is not None and not ctx.observation.has_company:
-            return 0.0
+            return []
         disliked = 0.0
         for other_id, relationship in ctx.memory.social.items():
             if ctx.observation is not None and other_id not in ctx.observation.visible_agents:
                 continue
             disliked = max(disliked, -relationship.trust)
-        return 0.3 * agent.traits.charisma * (0.3 + disliked)
+        return [Consideration("charismatic", agent.traits.charisma, 0.3 * (0.3 + disliked))]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Start talking."""
@@ -95,11 +102,12 @@ class Bribe(Skill):
             return Err("nobody nearby")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Cunning agents with spare food buy friends."""
         if agent.inventory.food < BRIBE_AMOUNT + 1.0:
-            return 0.0
-        return 0.25 * agent.traits.cunning * (1.0 - agent.traits.honesty)
+            return []
+        scheming = agent.traits.cunning * (1.0 - agent.traits.honesty)
+        return [Consideration("cunning and dishonest", scheming, 0.25)]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Offer the food."""
@@ -158,11 +166,11 @@ class Betray(Skill):
             return Err("nobody trusts me enough to betray")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Greed and dishonesty, scaled by hunger - desperation tempts."""
         appetite = agent.traits.greed * (1.0 - agent.traits.honesty) * agent.traits.cunning
         hunger = 1.0 - agent.needs.hunger / 100.0
-        return 0.55 * appetite * (0.4 + hunger)
+        return [Consideration("greedy and dishonest", appetite, 0.55 * (0.4 + hunger))]
 
     def _victim(self, agent: Agent, world: World, params: BaseModel) -> Agent | None:
         """Someone nearby who trusts us and is carrying something."""

@@ -4,7 +4,15 @@ from pydantic import BaseModel, ConfigDict
 
 from app.ai import social
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import NoParams, Requirement, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import (
+    Consideration,
+    NoParams,
+    Requirement,
+    Skill,
+    SkillCategory,
+    SkillRun,
+    SkillStatus,
+)
 from app.ai.skills.helpers import stop
 from app.ai.skills.tribe import COUP_MARGIN, legitimacy
 from app.core.result import OK_NONE, Err, Result
@@ -35,16 +43,17 @@ class ChallengeLeader(Skill):
             return Err("not a plausible leader")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Ambition: charisma, low loyalty, and dislike of the incumbent."""
         if agent.tribe_id is None:
-            return 0.0
+            return []
         tribe = ctx.world.tribes.get(agent.tribe_id)
         if tribe is None or tribe.leader_id in (None, agent.id):
-            return 0.0
+            return []
         view = ctx.memory.social.get(tribe.leader_id) if tribe.leader_id else None
         resentment = max(0.0, -(view.trust if view else 0.0))
-        return 0.4 * agent.traits.charisma * (1.0 - agent.traits.loyalty) * (0.4 + resentment)
+        ambition = agent.traits.charisma * (1.0 - agent.traits.loyalty)
+        return [Consideration("ambitious and disloyal", ambition, 0.4 * (0.4 + resentment))]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Make the challenge."""
@@ -134,11 +143,17 @@ class DeclareWar(Skill):
             return Err("no rival worth a war")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Aggressive leaders with a disliked neighbour."""
         if agent.role is not TribeRole.LEADER:
-            return 0.0
-        return 0.3 * agent.traits.aggression * (1.0 - agent.traits.honesty + 0.3)
+            return []
+        return [
+            Consideration(
+                "aggressive",
+                agent.traits.aggression,
+                0.3 * (1.0 - agent.traits.honesty + 0.3),
+            )
+        ]
 
     def _enemy(self, agent: Agent, world: World) -> int | None:
         """The nearest tribe we are not already fighting."""
@@ -221,15 +236,23 @@ class OfferPeace(Skill):
             return Err("not at war")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
-        """Peaceable leaders, and anyone whose tribe is losing people."""
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
+        """Peaceable leaders, and anyone whose tribe is losing people.
+
+        The original product expands exactly into these two, and the war
+        weariness deserves its own name in the trace.
+        """
         if agent.role is not TribeRole.LEADER or agent.tribe_id is None:
-            return 0.0
+            return []
         tribe = ctx.world.tribes.get(agent.tribe_id)
         if tribe is None or not tribe.at_war_with:
-            return 0.0
+            return []
         weakness = 1.0 - min(1.0, tribe.size / 8.0)
-        return 0.35 * (1.0 - agent.traits.aggression) * (0.4 + weakness)
+        peaceable = 1.0 - agent.traits.aggression
+        return [
+            Consideration("peaceable", peaceable, 0.35 * 0.4),
+            Consideration("the tribe is losing people", weakness, 0.35 * peaceable),
+        ]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Send the offer."""

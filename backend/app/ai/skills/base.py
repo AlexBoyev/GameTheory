@@ -153,18 +153,23 @@ class Skill(ABC):
     def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """The named inputs this skill's score is made of (SPEC 7.4).
 
-        Override this *or* `utility()`. Overriding this one is preferred: the
-        decision trace can then name the reasons rather than only the total,
-        and the default `utility()` sums them for you.
+        Override this, not `utility()`: the decision trace can then name the
+        reasons rather than only the total, and the default `utility()` sums
+        them for you. Every skill in the tree does, so the inspector can
+        always explain a choice. Return `[]` to score nothing at all.
+
+        Keep each value in [0, 1] and put the magnitude in the weight -
+        `Consideration.score` clamps the value, and three skills silently
+        lost real range to that before there was a test for it.
         """
         return []
 
     def utility(self, agent: Agent, ctx: DecisionContext) -> float:
         """Score this skill for the utility brain (higher wins).
 
-        Sums `considerations()` by default. A skill with arithmetic that does
-        not decompose into weighted inputs may override this instead and
-        return the number directly.
+        Sums `considerations()`, which is where a skill's arithmetic belongs.
+        Overriding this instead still works, and costs the skill its line in
+        the decision trace; nothing in the tree does.
         """
         return sum(consideration.score for consideration in self.considerations(agent, ctx))
 

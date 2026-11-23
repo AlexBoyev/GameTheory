@@ -9,7 +9,14 @@ import numpy as np
 from pydantic import BaseModel
 
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import Requirement, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import (
+    Consideration,
+    Requirement,
+    Skill,
+    SkillCategory,
+    SkillRun,
+    SkillStatus,
+)
 from app.ai.skills.helpers import stop
 from app.ai.skills.targeting import TargetParams, nearby_agents
 from app.core.result import OK_NONE, Err, Result
@@ -94,12 +101,12 @@ class Reproduce(Skill):
             return Err("no willing partner nearby")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Comfortable, sociable adults with a trusted partner nearby."""
         if agent.needs.hunger < 55.0 or not (self.MIN_AGE <= agent.age <= self.MAX_AGE):
-            return 0.0
+            return []
         comfort = min(agent.needs.hunger, agent.needs.thirst) / balance.NEED_MAX
-        return 0.3 * comfort * (0.3 + agent.traits.sociability)
+        return [Consideration("comfortable", comfort, 0.3 * (0.3 + agent.traits.sociability))]
 
     def _partner(self, agent: Agent, world: World, params: BaseModel) -> Agent | None:
         """A nearby adult who trusts us and whom we trust."""

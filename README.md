@@ -29,7 +29,7 @@ What works right now:
 | --- | --- |
 | **A real simulation**: seeded island, resources with regrowth, day/night, seasons | |
 | Agents with needs, traits, inventory, ageing and named death causes | |
-| **31 skills**: survival, building, social, manipulation, combat and tribe actions | Converting the remaining ~23 skills to declared considerations |
+| **31 skills**: survival, building, social, manipulation, combat and tribe actions - every one declaring the named inputs behind its score | |
 | Utility AI whose trace **names its reasons**: "Sleep 0.19 - tired +0.12, it is night +0.07" | |
 | **Deliberative minds**: goals, plans, spoken lines and beliefs, via local Ollama **or an offline mock** | |
 | LLM monitor: provider, reachability, call log with real prompts and replies | |

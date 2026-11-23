@@ -9,7 +9,15 @@ from pydantic import BaseModel
 
 from app.ai import social
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import NoParams, Requirement, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import (
+    Consideration,
+    NoParams,
+    Requirement,
+    Skill,
+    SkillCategory,
+    SkillRun,
+    SkillStatus,
+)
 from app.ai.skills.helpers import stop
 from app.ai.skills.targeting import TargetParams, nearby_agents, resolve_target
 from app.core.result import OK_NONE, Err, Result
@@ -47,10 +55,10 @@ class Attack(Skill):
             return Err("nobody nearby")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Aggression plus hunger, damped by how much they like the neighbours."""
         if agent.traits.aggression < self.MIN_AGGRESSION:
-            return 0.0
+            return []
         hunger = 1.0 - agent.needs.hunger / balance.NEED_MAX
         appetite = agent.traits.aggression * (0.3 + 0.7 * hunger)
 
@@ -59,7 +67,9 @@ class Attack(Skill):
             if ctx.observation is not None and other_id not in ctx.observation.visible_agents:
                 continue
             worst = max(worst, -relationship.trust)
-        return 0.5 * appetite * (0.3 + worst) * agent.traits.courage
+        return [
+            Consideration("angry and bold", appetite * agent.traits.courage, 0.5 * (0.3 + worst))
+        ]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Pick a victim - by preference, one we already dislike."""
@@ -143,12 +153,18 @@ class Defend(Skill):
             return Err("nothing to brace against")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """The brave hold; the timid run (that is `Flee`)."""
         if ctx.observation is not None and ctx.observation.threat_id is None:
-            return 0.0
+            return []
         fear = 1.0 - agent.needs.safety / balance.NEED_MAX
-        return 0.5 * fear * agent.traits.courage * (0.4 + agent.traits.aggression)
+        return [
+            Consideration(
+                "brave under threat",
+                fear * agent.traits.courage,
+                0.5 * (0.4 + agent.traits.aggression),
+            )
+        ]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Plant your feet."""
@@ -187,6 +203,9 @@ class Raid(Skill):
 
     RAID_RADIUS = 20.0
 
+    WORTHWHILE_SPOILS = 6.0
+    """Enemy storage at which a raid is as tempting as it ever gets."""
+
     def check(self, agent: Agent, world: World, params: BaseModel) -> Result[None, str]:
         """Require a tribe of your own, and an enemy camp within reach."""
         if agent.tribe_id is None:
@@ -195,12 +214,28 @@ class Raid(Skill):
             return Err("no enemy camp in reach")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
-        """Aggressive, loyal, hungry tribe members raid."""
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
+        """Aggressive, loyal, hungry tribe members raid - for the spoils.
+
+        The spoils term is why this skill is reachable at all. Without it a
+        raid scored on temperament alone (median 0.056 in a measured run)
+        and never once outscored gathering berries, so no raid ever happened
+        in 6,000 ticks even on the handful of samples where a war, a stocked
+        enemy and a raider in range all coincided.
+        """
         if agent.tribe_id is None:
-            return 0.0
+            return []
         hunger = 1.0 - agent.needs.hunger / balance.NEED_MAX
-        return 0.45 * agent.traits.aggression * agent.traits.loyalty * (0.3 + hunger)
+        fervour = agent.traits.aggression * agent.traits.loyalty
+        inputs = [Consideration("aggressive and loyal", fervour, 0.45 * (0.3 + hunger))]
+
+        target = self._target_tribe(agent, ctx.world)
+        if target is not None:
+            spoils = min(1.0, ctx.world.tribes[target].storage_food / self.WORTHWHILE_SPOILS)
+            inputs.append(
+                Consideration("their store is worth taking", spoils, 0.5 * (0.3 + fervour))
+            )
+        return inputs
 
     def _target_tribe(self, agent: Agent, world: World) -> int | None:
         """The nearest camp belonging to a tribe we are at war with."""

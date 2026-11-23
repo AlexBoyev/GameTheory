@@ -13,7 +13,14 @@ from pydantic import BaseModel, ConfigDict
 
 from app.ai import social
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import Requirement, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import (
+    Consideration,
+    Requirement,
+    Skill,
+    SkillCategory,
+    SkillRun,
+    SkillStatus,
+)
 from app.ai.skills.helpers import stop
 from app.ai.skills.manipulation import GOSSIP_DURATION, KNOWS_BETTER_TRUST
 from app.ai.skills.targeting import TargetParams, nearby_agents, resolve_target
@@ -53,14 +60,14 @@ class Gossip(Skill):
             return Err("nothing to say about anyone")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Sociable or cunning agents gossip; it costs nothing and moves worlds."""
         if ctx.observation is not None and not ctx.observation.has_company:
-            return 0.0
+            return []
         if len(ctx.memory.social) < 2:
-            return 0.0
+            return []
         appetite = 0.45 * agent.traits.sociability + 0.55 * agent.traits.cunning
-        return 0.3 * appetite
+        return [Consideration("likes talking about people", appetite, 0.3)]
 
     def _subject(
         self,
@@ -222,7 +229,7 @@ class Lie(Skill):
     MALICE_FLOOR = 0.3
     """Below this, an agent simply is not the sort of person who does this."""
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Cunning and dishonest, and worth more when food is contested.
 
         Squared and floored on purpose. A linear score made nearly everyone
@@ -231,12 +238,12 @@ class Lie(Skill):
         a mood.
         """
         if ctx.observation is not None and not ctx.observation.has_company:
-            return 0.0
+            return []
         malice = agent.traits.cunning * (1.0 - agent.traits.honesty)
         if malice < self.MALICE_FLOOR:
-            return 0.0
+            return []
         hunger = 1.0 - agent.needs.hunger / 100.0
-        return 0.3 * malice * malice * (0.4 + hunger)
+        return [Consideration("malicious", malice * malice, 0.3 * (0.4 + hunger))]
 
     def _victim(self, agent: Agent, world: World, params: BaseModel) -> Agent | None:
         """Someone nearby who does not already distrust us."""

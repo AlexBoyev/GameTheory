@@ -4,7 +4,14 @@ from pydantic import BaseModel
 
 from app.ai import social
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import Requirement, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import (
+    Consideration,
+    Requirement,
+    Skill,
+    SkillCategory,
+    SkillRun,
+    SkillStatus,
+)
 from app.ai.skills.helpers import need_urgency, stop
 from app.ai.skills.targeting import TargetParams, resolve_target
 from app.core.result import OK_NONE, Err, Result
@@ -48,11 +55,17 @@ class Talk(Skill):
             return Err("nobody nearby")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Sociable agents want company; everyone wants it eventually."""
         if ctx.observation is not None and not ctx.observation.has_company:
-            return 0.0
-        return need_urgency(agent.needs.social) * (0.25 + 0.6 * agent.traits.sociability)
+            return []
+        return [
+            Consideration(
+                "lonely",
+                need_urgency(agent.needs.social),
+                0.25 + 0.6 * agent.traits.sociability,
+            )
+        ]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Turn towards whoever we are talking to."""
@@ -106,13 +119,13 @@ class Share(Skill):
             return Err("they are better fed than I am")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Loyal, honest, well-fed agents give things away."""
         if agent.inventory.food < SHARE_AMOUNT + 0.5:
-            return 0.0
+            return []
         generosity = agent.traits.loyalty * 0.5 + (1.0 - agent.traits.greed) * 0.5
         comfort = agent.needs.hunger / balance.NEED_MAX
-        return 0.35 * generosity * comfort
+        return [Consideration("feeling generous", generosity * comfort, 0.35)]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Hand the food over immediately; the run is just the gesture."""
@@ -187,7 +200,7 @@ class ProposeAlliance(Skill):
             return Err("already allied")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Worth doing when someone nearby is already a firm friend."""
         best = 0.0
         for other_id, relationship in ctx.memory.social.items():
@@ -196,7 +209,7 @@ class ProposeAlliance(Skill):
             if ctx.observation is not None and other_id not in ctx.observation.visible_agents:
                 continue
             best = max(best, relationship.trust)
-        return best * 0.5 * (0.4 + agent.traits.sociability)
+        return [Consideration("a firm friend nearby", best, 0.5 * (0.4 + agent.traits.sociability))]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Make the offer."""
@@ -259,11 +272,17 @@ class Trade(Skill):
             return Err("nobody nearby")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
-        """Greedy agents like proposing splits; they get to choose the split."""
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
+        """Greedy agents like proposing splits; they get to choose the split.
+
+        A constant value with everything in the weight, because both factors
+        can exceed 1 and neither is the "reason" - the appetite for a bargain
+        simply is the product of the two traits.
+        """
         if agent.inventory.food < 2.0:
-            return 0.0
-        return 0.22 * (0.3 + agent.traits.greed) * (0.4 + agent.traits.sociability)
+            return []
+        weight = 0.22 * (0.3 + agent.traits.greed) * (0.4 + agent.traits.sociability)
+        return [Consideration("fancies a bargain", 1.0, weight)]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Decide the offer: greed sets how little the other side gets."""

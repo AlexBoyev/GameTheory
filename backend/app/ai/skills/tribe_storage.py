@@ -4,7 +4,15 @@ from pydantic import BaseModel
 
 from app.ai import social
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import NoParams, Requirement, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import (
+    Consideration,
+    NoParams,
+    Requirement,
+    Skill,
+    SkillCategory,
+    SkillRun,
+    SkillStatus,
+)
 from app.ai.skills.helpers import stop
 from app.ai.skills.tribe import STORE_AMOUNT, TAKE_AMOUNT
 from app.core.result import OK_NONE, Err, Result
@@ -32,12 +40,12 @@ class StoreFood(Skill):
             return Err("nothing to spare")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Loyalty against greed: this is the free-rider decision."""
         if agent.tribe_id is None or agent.inventory.food < STORE_AMOUNT + 1.0:
-            return 0.0
+            return []
         public_spirit = agent.traits.loyalty * (1.0 - agent.traits.greed)
-        return 0.4 * public_spirit
+        return [Consideration("public-spirited", public_spirit, 0.4)]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Walk it over."""
@@ -88,12 +96,12 @@ class TakeFromStorage(Skill):
             return Err("not hungry enough to need it")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Hunger drives it; greed makes an agent reach sooner."""
         if agent.tribe_id is None:
-            return 0.0
+            return []
         hunger = 1.0 - agent.needs.hunger / balance.NEED_MAX
-        return 0.5 * hunger * (0.6 + 0.4 * agent.traits.greed)
+        return [Consideration("hungry", hunger, 0.5 * (0.6 + 0.4 * agent.traits.greed))]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Go to the store."""

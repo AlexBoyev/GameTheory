@@ -3,7 +3,15 @@
 from pydantic import BaseModel
 
 from app.ai.brains.base import DecisionContext
-from app.ai.skills.base import NoParams, Requirement, Skill, SkillCategory, SkillRun, SkillStatus
+from app.ai.skills.base import (
+    Consideration,
+    NoParams,
+    Requirement,
+    Skill,
+    SkillCategory,
+    SkillRun,
+    SkillStatus,
+)
 from app.ai.skills.helpers import stop
 from app.ai.skills.targeting import TargetParams, nearby_agents
 from app.ai.skills.tribe import FOUND_ALLIES, FOUND_CHARISMA, JOIN_TRUST
@@ -38,10 +46,10 @@ class FoundTribe(Skill):
             return Err("no willing followers nearby")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Charismatic agents with friends around them start things."""
         if agent.tribe_id is not None or agent.traits.charisma < FOUND_CHARISMA:
-            return 0.0
+            return []
         friends = sum(
             1
             for other_id, relationship in ctx.memory.social.items()
@@ -49,8 +57,14 @@ class FoundTribe(Skill):
             and (ctx.observation is None or other_id in ctx.observation.visible_agents)
         )
         if friends < FOUND_ALLIES:
-            return 0.0
-        return 0.4 * agent.traits.charisma * min(1.0, friends / 3.0)
+            return []
+        return [
+            Consideration(
+                "friends willing to follow",
+                min(1.0, friends / 3.0),
+                0.4 * agent.traits.charisma,
+            )
+        ]
 
     def _followers(self, agent: Agent, world: World) -> list[Agent]:
         """Nearby tribeless agents who trust us enough to follow."""
@@ -134,12 +148,21 @@ class JoinTribe(Skill):
             return Err("no tribe worth joining nearby")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
-        """Loyal, sociable, unsafe agents want to belong."""
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
+        """Loyal, sociable, unsafe agents want to belong.
+
+        The original single product expands exactly into these two inputs,
+        which is the better reading: a standing wish to belong, plus however
+        unsafe the agent currently feels.
+        """
         if agent.tribe_id is not None:
-            return 0.0
+            return []
         safety_pull = 1.0 - agent.needs.safety / balance.NEED_MAX
-        return 0.35 * (0.4 + agent.traits.loyalty) * (0.3 + safety_pull)
+        sociable = 0.35 * (0.4 + agent.traits.loyalty)
+        return [
+            Consideration("wants to belong", 1.0, sociable * 0.3),
+            Consideration("feels unsafe alone", safety_pull, sociable),
+        ]
 
     def _host(self, agent: Agent, world: World) -> Agent | None:
         """A nearby tribe member we trust and who tolerates us."""
@@ -209,17 +232,23 @@ class LeaveTribe(Skill):
             return Err("not in a tribe")
         return OK_NONE
 
-    def utility(self, agent: Agent, ctx: DecisionContext) -> float:
+    def considerations(self, agent: Agent, ctx: DecisionContext) -> list[Consideration]:
         """Leaving is for the disillusioned: low trust in your own leader."""
         if agent.tribe_id is None:
-            return 0.0
+            return []
         tribe = ctx.world.tribes.get(agent.tribe_id)
         if tribe is None or tribe.leader_id is None or tribe.leader_id == agent.id:
-            return 0.0
+            return []
         relationship = ctx.memory.social.get(tribe.leader_id)
         if relationship is None or relationship.trust > -0.2:
-            return 0.0
-        return 0.4 * (-relationship.trust) * (1.0 - agent.traits.loyalty)
+            return []
+        return [
+            Consideration(
+                "lost faith in the leader",
+                -relationship.trust,
+                0.4 * (1.0 - agent.traits.loyalty),
+            )
+        ]
 
     def start(self, agent: Agent, world: World, params: BaseModel) -> SkillRun:
         """Pack up."""
