@@ -22,7 +22,7 @@ from app.ai.skills.tribe import (
 from app.core.result import is_ok
 from app.sim.entities import Agent, Traits, Tribe, TribeRole
 from app.sim.events import EventType
-from app.sim.tribe_identity import tribe_name
+from app.sim.tribe_identity import TRIBE_COLOURS, tribe_colour, tribe_name
 from app.sim.world import World
 
 
@@ -65,6 +65,39 @@ def test_every_tribe_id_gets_its_own_name() -> None:
     names = [tribe_name(tribe_id) for tribe_id in range(200)]
 
     assert len(set(names)) == len(names)
+
+
+def test_tribe_colours_are_unique_too() -> None:
+    """Names were deduplicated and colours were not, which is what shows.
+
+    Colour is what the scene actually draws - the bean, the territory ring -
+    so two tribes sharing one is worse than two sharing a name. The palette
+    holds eight, and sixteen tribes alive at once is ordinary.
+    """
+    colours = [tribe_colour(tribe_id) for tribe_id in range(32)]
+
+    assert len(set(colours)) == len(colours), "two tribes would be drawn the same"
+
+
+def test_a_tribe_keeps_the_hue_of_its_name_stem() -> None:
+    """Cliffkin is a deeper Clifffolk, not a stranger."""
+    assert tribe_colour(0) == TRIBE_COLOURS[0], "the first cycle is the palette as picked"
+    for stem in range(len(TRIBE_COLOURS)):
+        base = tribe_colour(stem)
+        deeper = tribe_colour(stem + len(TRIBE_COLOURS))
+        assert deeper != base
+        for index in (1, 3, 5):
+            channel = int(base[index : index + 2], 16)
+            shaded = int(deeper[index : index + 2], 16)
+            assert shaded <= channel, f"{deeper} should be no lighter than {base}"
+
+
+def test_no_tribe_is_drawn_almost_black() -> None:
+    """A dark enough bean stops reading as a bean at all."""
+    for tribe_id in range(32):
+        colour = tribe_colour(tribe_id)
+        brightest = max(int(colour[index : index + 2], 16) for index in (1, 3, 5))
+        assert brightest >= 60, f"{colour} is too dark to see"
 
 
 def test_names_are_readable_not_hashes() -> None:

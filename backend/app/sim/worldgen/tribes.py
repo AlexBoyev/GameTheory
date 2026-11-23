@@ -14,7 +14,7 @@ import numpy as np
 
 from app.core.world_config import WorldConfig
 from app.sim.entities import Tribe, TribeRole
-from app.sim.tribe_identity import TRIBE_COLOURS, tribe_name
+from app.sim.tribe_identity import tribe_colour, tribe_name
 from app.sim.world import World
 
 TERRITORY_RADIUS = 26.0
@@ -56,7 +56,7 @@ def form_initial_tribes(world: World, config: WorldConfig) -> None:
         tribe = Tribe(
             id=world.next_tribe_id,
             name=tribe_name(world.next_tribe_id),
-            colour=TRIBE_COLOURS[world.next_tribe_id % len(TRIBE_COLOURS)],
+            colour=tribe_colour(world.next_tribe_id),
             leader_id=leader.id,
             camp_position=(
                 float(np.mean([agent.position[0] for agent in members])),

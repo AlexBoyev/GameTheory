@@ -28,8 +28,8 @@ const RESOURCE_LEGEND: { colour: string; label: string; note: string }[] = [
     label: 'Rabbit',
     note: 'Small food, hunted alone - a dice roll on courage.',
   },
-  { colour: '#b98c62', label: 'Deer', note: 'Big food, needs two hunters: a Stag Hunt (Phase 4).' },
-  { colour: '#b3b0a8', label: 'Stone', note: 'For weapons and shelters later.' },
+  { colour: '#b98c62', label: 'Deer', note: 'Big food, needs two hunters: a Stag Hunt.' },
+  { colour: '#b3b0a8', label: 'Stone', note: 'Scenery - nothing is built from it yet.' },
   { colour: '#9c6a6a', label: 'Corpse', note: 'A body leaves food behind, briefly.' },
 ];
 
@@ -49,8 +49,9 @@ export function HelpOverlay({ onClose, backendOrigin }: HelpOverlayProps): React
                 picking from the top few. Click one to see the scores it used.
               </p>
               <p className="mt-2 text-[12px] leading-relaxed text-slate-400">
-                Right now they only survive. Trust, gossip, lying, tribes and war arrive in Phase 4;
-                a few agents get a local LLM for a mind in Phase 5.
+                Survival is only the floor. They also trust, gossip, lie, detect lies, trade,
+                bribe, betray, found tribes, depose leaders, go to war, sue for peace and sign
+                pacts - and a few of them think it through with a local LLM, out loud.
               </p>
             </section>
 
@@ -102,11 +103,22 @@ export function HelpOverlay({ onClose, backendOrigin }: HelpOverlayProps): React
               </p>
             </Group>
 
+            <Group title="Tribe rings (press G)">
+              <p className="text-[11px] leading-relaxed text-slate-300">
+                A ring around a camp is a tribe's territory, drawn from where its members actually
+                are, so it breathes as they forage. The ring turns{' '}
+                <span className="text-red-300">red</span> while that tribe is at war, and grows a
+                second thin <span className="text-emerald-300">green</span> ring inside it while it
+                holds a pact with another tribe. The post in the middle is the camp itself, where
+                the common food store lives.
+              </p>
+            </Group>
+
             <Group title="A bean's colour">
               <p className="text-[11px] leading-relaxed text-slate-300">
-                Beige means no tribe - which is everyone, until tribes emerge in Phase 4. A pale
-                gold glow marks an agent with an LLM mind. Size follows age, and the selected agent
-                wears a white ring.
+                Beige means no tribe; once one forms, its members take its colour. A pale gold glow
+                marks an agent with an LLM mind. Size follows age, and the selected agent wears a
+                white ring.
               </p>
             </Group>
 

@@ -19,7 +19,7 @@ from app.core.result import OK_NONE, Err, Result
 from app.sim import balance
 from app.sim.entities import Agent, AgentState, Tribe, TribeRole
 from app.sim.events import EventType, SimEvent
-from app.sim.tribe_identity import TRIBE_COLOURS, tribe_name
+from app.sim.tribe_identity import tribe_colour, tribe_name
 from app.sim.world import World
 
 
@@ -100,7 +100,7 @@ class FoundTribe(Skill):
         tribe = Tribe(
             id=world.next_tribe_id,
             name=tribe_name(world.next_tribe_id),
-            colour=TRIBE_COLOURS[world.next_tribe_id % len(TRIBE_COLOURS)],
+            colour=tribe_colour(world.next_tribe_id),
             leader_id=agent.id,
             camp_position=agent.position,
             territory_radius=18.0,
