@@ -71,10 +71,25 @@ def test_ping_is_answered_with_pong(client: TestClient) -> None:
     assert pong["type"] == "pong"
 
 
-def test_subscribe_agent_requires_an_integer(client: TestClient) -> None:
-    with client.websocket_connect("/ws/world") as websocket:
-        websocket.receive_json()
-        websocket.send_json({"type": "subscribe_agent", "agent": "nope"})
-        error = _receive_until(websocket, "error")
+def test_an_agent_subscription_is_refused_with_somewhere_to_go(client: TestClient) -> None:
+    """The socket used to accept this and then never send anything.
 
-    assert "integer" in error["data"]["message"]
+    It stored the id on the connection, answered `{pending: true}`, and
+    nothing read the field again - so a client following SPEC section 8
+    waited forever for a follow-up that could not arrive. Refusing and
+    naming the REST route is the honest reply.
+    """
+    for kind in ("subscribe_agent", "unsubscribe_agent"):
+        with client.websocket_connect("/ws/world") as websocket:
+            websocket.receive_json()
+            websocket.send_json({"type": kind, "agent": 1})
+            error = _receive_until(websocket, "error")
+
+        assert "/api/agents/" in error["data"]["message"], kind
+
+
+def test_the_socket_never_claims_to_push_agent_detail(client: TestClient) -> None:
+    """If the type exists, somebody will eventually wait for it."""
+    from app.services.envelopes import MessageType
+
+    assert not hasattr(MessageType, "AGENT_DETAIL")

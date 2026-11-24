@@ -373,6 +373,30 @@ Two near-misses worth recording so nobody re-reports them: `strategy_mix` is
 read through `normalised_strategy_mix`, and every `balance` constant and
 entity field is used.
 
+### ~~P2 - the socket advertised a channel it never served~~ (fixed)
+
+Found by sweeping the *protocol* rather than the code: every path in the
+OpenAPI schema against the frontend's calls, every websocket envelope type
+against its handlers. Every REST endpoint is called. The socket was not so
+clean.
+
+SPEC section 8 listed `agent_detail` (S->C, "for the subscribed agent only")
+and `subscribe_agent` (C->S). The server accepted the subscription, stored
+it on the connection as `subscribed_agent`, and replied `{pending: true}` -
+and **nothing ever read that field**. A client that implemented the
+documented protocol subscribed and then waited forever. The frontend never
+noticed because it polls `GET /api/agents/{id}` at 2 Hz instead.
+
+Retired rather than finished, which was the closer call of the two. The
+polling is justified on its own terms - one agent is inspected at a time, so
+a small request beats pushing detail to every connected client at 20 Hz -
+and finishing the channel would have meant adding a throttle and a second
+path to the same data for a latency improvement nobody asked for. Both
+messages are still recognised and answered with an error naming the REST
+route, because a client told "ok" by a server that will never follow up is
+worse off than one told where to look. `MessageType.AGENT_DETAIL` is gone:
+if the type exists, somebody will eventually wait for it.
+
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 
 Deliberate and documented (ADR 0004, `WorldConfig.llm_agents`): the

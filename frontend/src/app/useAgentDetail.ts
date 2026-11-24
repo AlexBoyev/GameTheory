@@ -3,8 +3,9 @@
  *
  * Polling rather than streaming on purpose: only one agent is inspected at a
  * time, so a 2 Hz request is cheaper than widening the broadcast for everyone.
- * (The socket's `subscribe_agent` channel fills in with the LLM minds in
- * Phase 5, where there is actually more to say.)
+ * That held even once the LLM minds gave an agent more to say, so the
+ * socket's half-built `subscribe_agent` channel was retired rather than
+ * finished - it accepted subscriptions and could never answer them.
  */
 
 import { useEffect, useState } from 'react';

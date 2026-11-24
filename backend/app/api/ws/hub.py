@@ -18,10 +18,9 @@ LOG = get_logger(__name__)
 
 @dataclass(slots=True)
 class Connection:
-    """One connected client and what it has subscribed to."""
+    """One connected client."""
 
     socket: WebSocket
-    subscribed_agent: int | None = None
 
     @property
     def is_open(self) -> bool:

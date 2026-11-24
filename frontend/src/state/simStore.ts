@@ -266,8 +266,10 @@ export const useSimStore = create<SimStoreState>((set) => ({
         break;
       }
       default:
-        // `metrics` is polled over REST by useSocietyPolling; `agent_detail`
-        // is handled by the subscription in useAgentDetail.
+        // `metrics` is polled over REST by useSocietyPolling, and so is agent
+        // detail (`useAgentDetail`). The socket carries neither: there is no
+        // `agent_detail` envelope any more, because the server could never
+        // send one.
         break;
     }
   },

@@ -303,8 +303,16 @@ WebSocket `/ws/world` (typed envelopes `{type, tick, data}`):
 | S→C | `events` | batched events (birth, death, betrayal, alliance, war, coup…) |
 | S→C | `metrics` | every N ticks |
 | S→C | `speech` | LLM `say` lines, emoji state changes |
-| S→C | `agent_detail` | for the subscribed agent only |
-| C→S | `subscribe_agent`, `unsubscribe_agent`, `ping` | |
+| C→S | `ping` | answered with `pong` |
+
+**As built.** There is no `agent_detail` envelope and no agent subscription.
+The socket accepted `subscribe_agent`, stored the id, replied
+`{pending: true}` and never sent a follow-up, so a client that believed the
+contract waited forever. Per-agent detail is `GET /api/agents/{id}`, polled
+at 2 Hz by the inspector: one agent is inspected at a time, so a small
+request is cheaper than widening the broadcast for every connected client.
+Both subscription messages are still recognised, and answered with an error
+naming the REST route. See `docs/REVIEW.md`.
 
 Serializer behind an interface (JSON now, msgpack later).
 

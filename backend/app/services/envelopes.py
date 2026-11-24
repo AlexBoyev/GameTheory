@@ -28,7 +28,6 @@ __all__ = [
     "RESOURCE_STRIDE",
     "Envelope",
     "MessageType",
-    "agent_detail",
     "error",
     "events",
     "frame",
@@ -46,14 +45,16 @@ class MessageType(StrEnum):
     EVENTS = "events"
     METRICS = "metrics"
     SPEECH = "speech"
-    AGENT_DETAIL = "agent_detail"
     STATE = "state"
     ERROR = "error"
     PONG = "pong"
 
+    C_PING = "ping"
+
+    # Recognised only so the server can say it does not serve them; see
+    # `api/ws/routes.py`.
     C_SUBSCRIBE_AGENT = "subscribe_agent"
     C_UNSUBSCRIBE_AGENT = "unsubscribe_agent"
-    C_PING = "ping"
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,11 +97,6 @@ def metrics(tick: int, payload: dict[str, Any]) -> Envelope:
 def speech(tick: int, agent_id: int, text: str, ttl_s: float = 6.0) -> Envelope:
     """Build a `speech` envelope for a bubble above an agent's head."""
     return Envelope(MessageType.SPEECH, tick, {"agent": agent_id, "text": text, "ttl": ttl_s})
-
-
-def agent_detail(tick: int, payload: dict[str, Any]) -> Envelope:
-    """Build an `agent_detail` envelope for the subscribed agent."""
-    return Envelope(MessageType.AGENT_DETAIL, tick, payload)
 
 
 def error(message: str, tick: int = 0) -> Envelope:
