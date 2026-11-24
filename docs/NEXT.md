@@ -7,7 +7,9 @@ finding; this is the queue. Everything here was checked against the code.
 **Start here:** the repo is `F:\Projects\GameTheory`. One command runs
 everything: `python driver.py` (app), `python driver.py --check` (all nine
 checks), `python driver.py --bench`. Green as of the last commit: 478 backend
-tests, 41 frontend, nine checks.
+tests, 49 frontend, nine checks. Every item SPEC sections 9.4 and 10 ask for
+is now built; what is below is a design question, a list of false leads, and
+two things only Alex can do.
 
 ---
 
@@ -20,12 +22,7 @@ where it should can be answered with numbers rather than impressions - but
 changing it is Alex's call, not a bug fix. Worth raising before building
 anything that assumes an interesting death rate.
 
-## 2. Traits radar (SPEC section 9.4) - cosmetic
-
-The Inspector draws traits as bars (`Inspector.tsx`, the `detail.traits`
-map). SPEC says radar. Small, self-contained, purely visual.
-
-## 3. Things that look like gaps and are not
+## 2. Things that look like gaps and are not
 
 Do not "fix" these; each was checked and is deliberate.
 
@@ -41,9 +38,9 @@ Do not "fix" these; each was checked and is deliberate.
 - `llm_agents` defaults to 4, so default runs are not bit-reproducible.
   Deliberate, documented in ADR 0004 and `docs/REVIEW.md`.
 
-## 4. Still needs Alex, not Claude
+## 3. Still needs Alex, not Claude
 
-- **The GitHub repo.** 24 commits are waiting with no remote.
+- **The GitHub repo.** 25 commits are waiting with no remote.
   `winget install GitHub.cli ; gh auth login ;
   gh repo create AlexBoyev/GameTheory --private --source=. --push`
 - **Delete `F:\Projects\TheoryGames`.** An empty husk left by the rename; a

@@ -10,6 +10,7 @@ import { useAgentDetail } from '@/app/useAgentDetail';
 import { tribeColor } from '@/lib/colors';
 import { STATE_EMOJI } from '@/lib/stateIcons';
 import { Empty, Meter, Panel, Row } from '@/ui/primitives';
+import { TraitRadar } from '@/ui/TraitRadar';
 import { useSelectionStore } from '@/state/selectionStore';
 
 const TRAIT_ORDER = [
@@ -125,16 +126,7 @@ export function Inspector(): React.ReactElement | null {
           )}
 
           <Section title="Personality">
-            <div className="space-y-1">
-              {TRAIT_ORDER.map((trait) => (
-                <Meter
-                  key={trait}
-                  label={trait.slice(0, 7)}
-                  value={detail.traits[trait] * 100}
-                  colour="bg-violet-400"
-                />
-              ))}
-            </div>
+            <TraitRadar traits={detail.traits} order={TRAIT_ORDER} />
           </Section>
 
           <Section title="Facts">

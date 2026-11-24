@@ -38,6 +38,7 @@ What works right now:
 | **God tools**: drop food, bounty, drought, plague, spawn, smite | |
 | **Snapshots**: save and reload a whole society, memories included | |
 | **A durable record of every run** in SQLite - its seed and config, its metrics, and a capped event log - so the charts keep the whole run instead of their last 2,000 samples | |
+| Inspector with needs, a **personality radar**, the decision trace, relationships and memories | |
 | Minimap with a camera marker, click-to-fly, and a screenshot button | |
 | Activity heatmap and name tags - every overlay toggle now does something | |
 | **Tournament mode**: round-robin iterated PD with replicator dynamics, in a ring arena | |
