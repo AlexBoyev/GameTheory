@@ -6,7 +6,10 @@ finding; this is the queue. Everything here was checked against the code.
 
 **Start here:** the repo is `F:\Projects\GameTheory`. One command runs
 everything: `python driver.py` (app), `python driver.py --check` (all nine
-checks), `python driver.py --bench`. Green as of the last commit: 483 backend tests, 49 frontend, nine checks.
+checks), `python driver.py --bench`. Green as of the last commit: 484 backend tests, 49 frontend, nine checks,
+16 e2e. Published at https://github.com/AlexBoyev/GameTheory - every commit
+authored as `102894008+AlexBoyev@users.noreply.github.com`, and the local
+`user.email` is set to match so it stays that way.
 
 **There is no outstanding implementation work.** Everything SPEC asks for is
 built, and the three open questions from the last pass are closed: the
@@ -41,15 +44,6 @@ Do not "fix" these; each was checked and is deliberate.
 
 ## 2. Still needs Alex, not Claude
 
-- **The GitHub repo.** 29 commits are waiting. The remote is already set to
-  `https://github.com/AlexBoyev/GameTheory.git`, but it answers "Repository not
-  found" - so either it has not been created yet, or it is private and git here
-  has never authenticated (GitHub returns 404 for both). The credential helper
-  is `manager`, whose sign-in is a GUI prompt, so this cannot be finished from
-  a non-interactive shell.
-  Either create it on github.com and then `git push -u origin main`, or
-  `winget install GitHub.cli ; gh auth login ;
-  gh repo create AlexBoyev/GameTheory --private --source=. --push`
 - **Deal with `F:\Projects\TheoryGames`.** Left by the rename, and *not* quite
   empty: it still holds a `.idea` folder, so deleting it throws away that
   PyCharm project's settings rather than nothing. Your call whether those
