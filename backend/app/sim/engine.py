@@ -29,10 +29,28 @@ CONTROL_SLICE_S = 0.02
 """How often the loop wakes to look at commands - a 50 Hz control rate."""
 
 MAX_BATCH_BUDGET_S = 0.012
-"""At MAX speed, how long one batch of ticks may run before yielding."""
+"""How long one batch of ticks may run before yielding, at any speed.
+
+Every speed, not just MAX. A fixed multiplier used to have only the tick cap
+below, which is not a limit on *time*: at 25x with 400 agents a single slice
+of 4,096 ticks took over a minute, and it holds the world lock throughout -
+so frames stopped, commands (including Pause) were never read, metrics never
+sampled, and the websocket idled out. The world looked like a crashed
+backend while the engine sat there at 100% of a core, working.
+"""
 
 MAX_TICKS_PER_SLICE = 4096
 """Hard cap so a huge speed multiplier cannot starve the command queue."""
+
+MAX_DEBT_TICKS = 256.0
+"""Ticks of catch-up the engine will carry before giving up on the rest.
+
+Debt accrues in real time whether or not the engine can keep up, so without
+a ceiling a world that cannot hit its requested speed accumulates work it
+will never clear: each slice runs longer, which accrues more debt, which
+makes the next slice longer. Falling behind should mean running slower than
+asked - which the tps readout shows honestly - not seizing up.
+"""
 
 TPS_WINDOW_S = 1.0
 
@@ -288,13 +306,21 @@ class SimulationEngine:
 
         ticks_per_sim_second = 1.0 / self._config.dt
         self._tick_debt += max(0.0, elapsed) * ticks_per_sim_second * self._speed
+        self._tick_debt = min(self._tick_debt, MAX_DEBT_TICKS)
         count = min(int(self._tick_debt), MAX_TICKS_PER_SLICE)
         if count <= 0:
             return
-        self._tick_debt -= count
+
+        # Bounded in time as well as in count. The lock is held for this whole
+        # batch, so every extra millisecond here is a millisecond in which no
+        # frame is published and no command is read.
+        deadline = now + MAX_BATCH_BUDGET_S
+        done = 0
         with self._lock:
-            for _ in range(count):
+            while done < count and self._pacer.monotonic() < deadline:
                 self._tick()
+                done += 1
+        self._tick_debt -= done
 
     def _tick(self) -> None:
         """Advance the world exactly one fixed timestep. Caller holds the lock."""

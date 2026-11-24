@@ -429,6 +429,36 @@ the whole social machinery still runs at the new default - the reachability
 suite still finds tribes founded, a war declared and settled, pacts signed
 and a coup won.
 
+### ~~P0 - high speeds froze the backend outright~~ (fixed)
+
+Reported from use, not found by a sweep: "speed it up to x25/x50, backend
+disconnected". It reproduced exactly, and it was worse than a disconnect -
+the engine wedged. Measured mid-failure: tick frozen at 93,298 for over a
+minute with 411 agents, `status: running`, the process burning a full core,
+the websocket resetting through the Vite proxy, the UI stuck, and metrics
+sampling stopped dead at 22 samples in 93,000 ticks.
+
+`_run_slice` bounded catch-up by tick *count* (`MAX_TICKS_PER_SLICE`, 4,096)
+and not by time, except at MAX speed which had a 12 ms budget. A count is
+not a bound on time: how long 4,096 ticks take depends on the population,
+and at 400 agents it is over a minute - all of it holding the world lock, so
+no frame is published, no command is read (Pause included) and no metrics
+are sampled. Worse, `_tick_debt` accrued in real time regardless of whether
+the engine could ever catch up, so falling behind guaranteed a spiral:
+longer slice, more debt, longer slice.
+
+Now every speed gets the same wall-clock budget, and the debt is capped at
+`MAX_DEBT_TICKS`. A world that cannot hit its requested speed simply runs
+slower, which the tps readout already shows honestly. Measured after, 400
+agents at 50x: a steady ~20 tps, `/api/sim/state` answering in 5-50 ms,
+metrics sampling every 100 ticks, and the browser at 134 fps with the event
+log open. Before: 0 tps and nothing answering.
+
+The old test for this asserted `<= MAX_TICKS_PER_SLICE` and passed
+throughout, which is the lesson worth keeping: a bound of 4,096 ticks was
+loose enough to be no bound at all. There is now a test that the batch stops
+when its *time* is up.
+
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 
 Deliberate and documented (ADR 0004, `WorldConfig.llm_agents`): the

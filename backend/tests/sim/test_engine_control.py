@@ -16,6 +16,7 @@ from app.services.engine_factory import build_pipeline
 from app.services.pacer import FrozenPacer, MonotonicPacer
 from app.sim.clock import MAX_SPEED
 from app.sim.engine import (
+    MAX_DEBT_TICKS,
     MAX_TICKS_PER_SLICE,
     EngineStatus,
     Pause,
@@ -265,7 +266,14 @@ def test_fractional_ticks_are_banked_rather_than_lost() -> None:
 
 
 def test_a_long_stall_cannot_run_an_unbounded_batch() -> None:
-    """A debugger pause must not then freeze the world catching up."""
+    """A debugger pause must not then freeze the world catching up.
+
+    This used to assert only `<= MAX_TICKS_PER_SLICE`, which is 4,096 - a
+    bound so loose it passed while the real bug was live. At 25x with 400
+    agents a 4,096-tick batch takes over a minute, and it holds the world
+    lock the whole time, so the backend looks dead. The debt ceiling is the
+    bound that means something.
+    """
     pacer = FrozenPacer()
     engine = paced_engine(pacer)
     engine.submit(SetSpeed(10.0))
@@ -274,7 +282,41 @@ def test_a_long_stall_cannot_run_an_unbounded_batch() -> None:
     engine._run_slice(60.0, pacer.monotonic())
     engine._publish()
 
-    assert 0 < engine.snapshot().tick <= MAX_TICKS_PER_SLICE
+    ticks = engine.snapshot().tick
+    assert 0 < ticks <= MAX_DEBT_TICKS
+    assert MAX_DEBT_TICKS < MAX_TICKS_PER_SLICE, "the count cap is the backstop, not the bound"
+
+
+def test_a_slice_stops_when_its_time_is_up_even_with_debt_owing() -> None:
+    """The bound that actually keeps the world answering.
+
+    A tick-count cap is not a limit on time: how long 4,096 ticks take
+    depends on the population, and at 400 agents it is over a minute of held
+    lock. MAX speed always had a wall-clock budget; every other speed had
+    only the count, which is how 25x came to freeze the backend outright.
+
+    Here each tick costs a millisecond of fake time, so a 12 ms budget must
+    buy about a dozen ticks and then stop, with the rest of the debt left
+    for the next slice.
+    """
+    pacer = FrozenPacer()
+    engine = paced_engine(pacer)
+    engine.submit(SetSpeed(50.0))
+    engine._drain_commands()
+
+    real_tick = engine._tick
+
+    def slow_tick() -> None:
+        pacer.now += 0.001  # a millisecond a tick
+        real_tick()
+
+    engine._tick = slow_tick  # type: ignore[method-assign]
+    engine._run_slice(10.0, pacer.monotonic())
+    engine._publish()
+
+    ticks = engine.snapshot().tick
+    assert 1 <= ticks <= 20, f"a 12 ms budget at 1 ms a tick ran {ticks} ticks"
+    assert engine._tick_debt > 0, "the unpaid debt stays owing rather than vanishing"
 
 
 def test_negative_elapsed_time_earns_nothing() -> None:
