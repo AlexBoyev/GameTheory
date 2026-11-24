@@ -48,7 +48,7 @@ What works right now:
 | **Tribes** that are founded and joined, with leaders, storage, territory, coups that succeed, wars, peace deals and pacts between tribes | |
 | Shelters that get built, reproduction with trait blending, deaths with causes | |
 | Engine on a worker thread: pause / play / 1x-50x / MAX / step / reset | |
-| Full UI: inspector, event feed with filters, charts, overlays, speech bubbles, URL state, help | |
+| Full UI: front screen with instructions, inspector, event feed with filters, charts, overlays, speech bubbles, URL state, help | |
 | 7 layering contracts, **419 backend tests**, 34 unit + **14 browser tests** | |
 
 `GET /api/sim/state` reports `"placeholder": false`. Determinism is

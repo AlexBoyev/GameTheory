@@ -17,7 +17,7 @@ export type ActionId =
   | 'speed50'
   | 'speedMax'
   | 'followSelected'
-  | 'stopFollow'
+  | 'escapeBack'
   | 'toggleTrustLines'
   | 'toggleTerritories'
   | 'toggleHeatmap'
@@ -50,7 +50,7 @@ export const KEYBINDINGS: readonly Keybinding[] = [
   { key: '6', action: 'speed50', label: 'Speed 50x', group: 'simulation' },
   { key: '7', action: 'speedMax', label: 'Speed MAX', group: 'simulation' },
   { key: 'f', action: 'followSelected', label: 'Follow selected agent', group: 'camera' },
-  { key: 'escape', action: 'stopFollow', label: 'Stop following', group: 'camera' },
+  { key: 'escape', action: 'escapeBack', label: 'Close · unfollow · menu', group: 'simulation' },
   { key: 't', action: 'toggleTrustLines', label: 'Trust lines', group: 'overlays' },
   { key: 'g', action: 'toggleTerritories', label: 'Tribe territories', group: 'overlays' },
   { key: 'h', action: 'toggleHeatmap', label: 'Activity heatmap', group: 'overlays' },

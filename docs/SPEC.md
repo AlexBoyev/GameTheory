@@ -348,7 +348,8 @@ frontend/src/
 | Right-drag / left-drag | orbit / pan |
 | W A S D / arrows | pan · Q/E rotate |
 | Click agent | select → Inspector · double-click = focus |
-| F / Esc | follow selected / stop follow |
+| F | follow selected |
+| Esc | close what is open · unfollow · back to the menu |
 | Space | play/pause |
 | 1–8 | speed presets (1× … MAX) |
 | `.` | step one tick |
@@ -362,6 +363,7 @@ frontend/src/
 - **Event feed:** filterable, click event → camera flies to location.
 - **LLM monitor:** provider, model, queue length, calls/min, latency, failures, last prompts/responses.
 - **New world dialog:** presets + sliders.
+- **Front screen:** what the simulation is, what to watch for, the key map, and Start. It is also where `Esc` goes, and it pauses while open - a world running behind a menu you are reading is a world you are not watching, and at 50x it is a different island by the time you press Resume. `?menu=0` skips it, which is what a copied link and the e2e specs use.
 - Quality setting (low/med/high), FPS counter, minimap, screenshot button.
 
 ### 9.5 Performance

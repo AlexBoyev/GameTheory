@@ -2,6 +2,18 @@
 
 import { create } from 'zustand';
 
+/**
+ * Whether to show the front screen, decided before the store exists.
+ *
+ * Read here rather than in a `useEffect` because the menu pauses the world
+ * when it opens: applying `?menu=0` a tick later would pause and immediately
+ * unpause, which a deep link or a screenshot run should never do.
+ */
+function menuWanted(): boolean {
+  if (typeof window === 'undefined') return true;
+  return new URLSearchParams(window.location.search).get('menu') !== '0';
+}
+
 export interface UiStoreState {
   chartsOpen: boolean;
   eventFeedOpen: boolean;
@@ -10,6 +22,10 @@ export interface UiStoreState {
   minimapOpen: boolean;
   helpOpen: boolean;
   resetOpen: boolean;
+  /** The front screen. Open on arrival; Escape brings it back. */
+  menuOpen: boolean;
+  /** False until the first Start, which is what makes the button say Resume. */
+  started: boolean;
 
   showTrustLines: boolean;
   showTerritories: boolean;
@@ -35,6 +51,8 @@ export const useUiStore = create<UiStoreState>((set) => ({
   minimapOpen: true,
   helpOpen: false,
   resetOpen: false,
+  menuOpen: menuWanted(),
+  started: !menuWanted(),
 
   showTrustLines: false,
   showTerritories: false,

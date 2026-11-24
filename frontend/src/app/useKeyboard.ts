@@ -79,14 +79,26 @@ export function useKeyboard(): void {
           event.preventDefault();
           useSelectionStore.getState().toggleFollow();
           break;
-        case 'stopFollow':
+        case 'escapeBack': {
+          // One key, walking outwards: close what is on top, then let go of
+          // the agent, then stop the world. Pressing it twice from anywhere
+          // should always end up at the menu.
           event.preventDefault();
-          if (useUiStore.getState().helpOpen) useUiStore.getState().set('helpOpen', false);
-          else if (useUiStore.getState().resetOpen) useUiStore.getState().set('resetOpen', false);
-          else if (useSelectionStore.getState().following)
-            useSelectionStore.getState().setFollowing(false);
-          else useSelectionStore.getState().clear();
+          const ui = useUiStore.getState();
+          const selection = useSelectionStore.getState();
+          if (ui.helpOpen) ui.set('helpOpen', false);
+          else if (ui.resetOpen) ui.set('resetOpen', false);
+          else if (ui.menuOpen) {
+            ui.set('menuOpen', false);
+            void controls.play();
+          } else if (selection.following) selection.setFollowing(false);
+          else if (selection.selectedAgentId !== null) selection.clear();
+          else {
+            ui.set('menuOpen', true);
+            void controls.pause();
+          }
           break;
+        }
         case 'toggleCharts':
           event.preventDefault();
           useUiStore.getState().toggle('chartsOpen');

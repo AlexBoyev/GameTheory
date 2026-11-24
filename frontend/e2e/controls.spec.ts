@@ -50,7 +50,9 @@ async function plainWorld(request: Api): Promise<void> {
 test.describe('control bar', () => {
   test.beforeEach(async ({ page, request }) => {
     await pauseAt1x(request);
-    await page.goto('/');
+    // `menu=0` skips the front screen: it covers the control bar and pauses
+    // the world, which is right for a visitor and wrong for these tests.
+    await page.goto('/?menu=0');
     await expect(page.locator('canvas').first()).toBeVisible();
   });
 
@@ -126,7 +128,9 @@ test.describe('control bar', () => {
 test.describe('panels and overlays', () => {
   test.beforeEach(async ({ page, request }) => {
     await pauseAt1x(request);
-    await page.goto('/');
+    // `menu=0` skips the front screen: it covers the control bar and pauses
+    // the world, which is right for a visitor and wrong for these tests.
+    await page.goto('/?menu=0');
     await expect(page.locator('canvas').first()).toBeVisible();
   });
 
@@ -168,7 +172,9 @@ test.describe('panels and overlays', () => {
 test.describe('tournament mode', () => {
   test('the report appears only for a tournament world', async ({ page, request }) => {
     await pauseAt1x(request);
-    await page.goto('/');
+    // `menu=0` skips the front screen: it covers the control bar and pauses
+    // the world, which is right for a visitor and wrong for these tests.
+    await page.goto('/?menu=0');
     await expect(page.locator('canvas').first()).toBeVisible();
 
     // An island has no standings to show, so the panel must not be there.

@@ -5,6 +5,9 @@
  * themselves, so the island stays draggable everywhere they are not.
  */
 
+import { useEffect, useRef } from 'react';
+
+import { useSimControls } from '@/app/useSimControls';
 import { ChartsPanel } from '@/ui/ChartsPanel';
 import { ControlBar } from '@/ui/ControlBar';
 import { EventFeed } from '@/ui/EventFeed';
@@ -14,6 +17,7 @@ import { HoverTooltip } from '@/ui/HoverTooltip';
 import { Inspector } from '@/ui/Inspector';
 import { Minimap } from '@/ui/Minimap';
 import { LlmPanel } from '@/ui/LlmPanel';
+import { MainMenu } from '@/ui/MainMenu';
 import { OverlayBar } from '@/ui/OverlayBar';
 import { TopBar } from '@/ui/TopBar';
 import { TournamentPanel } from '@/ui/TournamentPanel';
@@ -86,12 +90,37 @@ function ConnectionNotice(): React.ReactElement | null {
 
 export function Hud(): React.ReactElement {
   const helpOpen = useUiStore((state) => state.helpOpen);
+  const menuOpen = useUiStore((state) => state.menuOpen);
+  const started = useUiStore((state) => state.started);
   const feedOpen = useUiStore((state) => state.eventFeedOpen);
   const chartsOpen = useUiStore((state) => state.chartsOpen);
   const llmOpen = useUiStore((state) => state.llmPanelOpen);
   const godOpen = useUiStore((state) => state.godPanelOpen);
   const minimapOpen = useUiStore((state) => state.minimapOpen);
   const setHelp = useUiStore((state) => state.set);
+  const controls = useSimControls();
+
+  // The world keeps running on the server whether or not anyone is looking,
+  // so arriving at the menu stops it rather than merely covering it -
+  // otherwise at 50x you come back to a different island than you left.
+  //
+  // Once, on arrival, and never again from an effect: `useSimControls`
+  // returns a fresh object each render, so an effect that depended on it
+  // re-fired with a stale `menuOpen` and paused the world immediately after
+  // Start had begun it. Every later open goes through the Escape handler,
+  // which pauses for itself.
+  const settled = useRef(false);
+  useEffect(() => {
+    if (settled.current) return;
+    settled.current = true;
+    if (useUiStore.getState().menuOpen) void controls.pause();
+  }, [controls]);
+
+  const start = (): void => {
+    setHelp('menuOpen', false);
+    setHelp('started', true);
+    void controls.play();
+  };
 
   return (
     <div className="pointer-events-none absolute inset-0">
@@ -122,6 +151,15 @@ export function Hud(): React.ReactElement {
 
       {helpOpen && (
         <HelpOverlay onClose={() => setHelp('helpOpen', false)} backendOrigin={backendOrigin()} />
+      )}
+
+      {menuOpen && (
+        <MainMenu
+          started={started}
+          onStart={start}
+          onNewWorld={() => setHelp('resetOpen', true)}
+          onHelp={() => setHelp('helpOpen', true)}
+        />
       )}
     </div>
   );

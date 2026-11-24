@@ -21,6 +21,8 @@ export function useUrlState(): void {
   const selectedAgentId = useSelectionStore((state) => state.selectedAgentId);
   const eventFeedOpen = useUiStore((state) => state.eventFeedOpen);
   const helpOpen = useUiStore((state) => state.helpOpen);
+  const menuOpen = useUiStore((state) => state.menuOpen);
+  const started = useUiStore((state) => state.started);
   const speed = useSimStore((state) => state.speed);
   const status = useSimStore((state) => state.status);
 
@@ -57,10 +59,14 @@ export function useUrlState(): void {
     const panels = eventFeedOpen ? ['log'] : [];
     if (panels.length > 0) params.set('panels', panels.join(','));
     if (helpOpen) params.set('help', '1');
-    if (status === 'paused') params.set('paused', '1');
+    // A link copied from a running world should land in that world, not on
+    // the front screen - the menu pauses, and a shared link that stops the
+    // simulation is a worse link.
+    if (started) params.set('menu', '0');
+    if (status === 'paused' && !menuOpen) params.set('paused', '1');
     else params.set('speed', String(speed));
 
     const query = params.toString();
     window.history.replaceState(null, '', query ? `?${query}` : window.location.pathname);
-  }, [selectedAgentId, eventFeedOpen, helpOpen, speed, status]);
+  }, [selectedAgentId, eventFeedOpen, helpOpen, speed, status, started, menuOpen]);
 }
