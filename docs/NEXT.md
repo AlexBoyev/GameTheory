@@ -41,12 +41,21 @@ Do not "fix" these; each was checked and is deliberate.
 
 ## 2. Still needs Alex, not Claude
 
-- **The GitHub repo.** 30 commits are waiting with no remote.
+- **The GitHub repo.** 29 commits are waiting. The remote is already set to
+  `https://github.com/AlexBoyev/GameTheory.git`, but it answers "Repository not
+  found" - so either it has not been created yet, or it is private and git here
+  has never authenticated (GitHub returns 404 for both). The credential helper
+  is `manager`, whose sign-in is a GUI prompt, so this cannot be finished from
+  a non-interactive shell.
+  Either create it on github.com and then `git push -u origin main`, or
   `winget install GitHub.cli ; gh auth login ;
   gh repo create AlexBoyev/GameTheory --private --source=. --push`
-- **Delete `F:\Projects\TheoryGames`.** An empty husk left by the rename; a
-  session's working directory was pinned inside it, which is why git reported
-  "not a repository" from there. Start Claude Code in `F:\Projects\GameTheory`.
+- **Deal with `F:\Projects\TheoryGames`.** Left by the rename, and *not* quite
+  empty: it still holds a `.idea` folder, so deleting it throws away that
+  PyCharm project's settings rather than nothing. Your call whether those
+  matter. A session's working directory was pinned inside it, which is why git
+  reported "not a repository" from there; start Claude Code in
+  `F:\Projects\GameTheory`.
 
 ---
 
