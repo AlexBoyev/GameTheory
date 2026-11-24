@@ -351,6 +351,28 @@ the unit tests for a correct, unreferenced collaborator would all have
 passed on the day nothing called it - which is precisely what happened here
 for six phases.
 
+### ~~P2 - two settings that did nothing and one that lied~~ (fixed)
+
+Sweeping every declared name for readers - the sixth and seventh instances
+of the pattern, found mechanically rather than by luck.
+
+- `llm_circuit_failures` and `llm_circuit_cooldown_s` were read by nothing.
+  `LLMScheduler` defaulted its breaker to `CircuitBreaker(threshold=3,
+  cooldown_s=60.0)`, which is *exactly* the settings defaults, so editing
+  either in `.env` changed nothing and the behaviour still looked right.
+  Duplicating a default is how a missing wire hides. The gateway now builds
+  the breaker from settings, and the scheduler's fallback no longer repeats
+  the numbers.
+- `sim_tick_rate` described itself as "Ticks per second at 1x speed" and was
+  read nowhere. The engine derives the pace from `1.0 / config.dt`, which is
+  the better design - it makes 1x mean "one sim-second per wall-second" by
+  construction - but it left a setting in `.env.example` that silently did
+  nothing. Removed, and `sim_dt` now documents that it sets the pace.
+
+Two near-misses worth recording so nobody re-reports them: `strategy_mix` is
+read through `normalised_strategy_mix`, and every `balance` constant and
+entity field is used.
+
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 
 Deliberate and documented (ADR 0004, `WorldConfig.llm_agents`): the

@@ -11,7 +11,6 @@ def test_defaults_are_local_and_free() -> None:
     assert settings.llm_provider == "mock"
     assert settings.ollama_url.startswith("http://localhost")
     assert settings.sim_dt == pytest.approx(0.1)
-    assert settings.sim_tick_rate == pytest.approx(10.0)
 
 
 def test_environment_overrides_fields(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -34,8 +33,8 @@ def test_database_url_lives_under_data_dir(tmp_path: object) -> None:
 
 
 def test_invalid_values_are_rejected() -> None:
-    with pytest.raises(ValueError, match="sim_tick_rate"):
-        Settings(_env_file=None, sim_tick_rate=0)
+    with pytest.raises(ValueError, match="sim_dt"):
+        Settings(_env_file=None, sim_dt=0)
 
 
 def test_get_settings_is_cached() -> None:

@@ -1,99 +1,94 @@
 # What is left, in the order I would do it
 
-Written 2026-11-23 so a fresh session can pick up without re-deriving the
-state. `docs/REVIEW.md` has the reasoning behind each finding; this is just
-the queue. Everything below was checked against the code, not guessed.
+Written 2026-11-23, updated 2026-11-24, so a fresh session can pick up
+without re-deriving the state. `docs/REVIEW.md` has the reasoning behind each
+finding; this is the queue. Everything here was checked against the code.
 
 **Start here:** the repo is `F:\Projects\GameTheory`. One command runs
 everything: `python driver.py` (app), `python driver.py --check` (all nine
-checks), `python driver.py --bench`. The suite is green as of commit
-`f41a6d4`: 475 backend tests, 41 frontend, nine checks passing.
+checks), `python driver.py --bench`. Green as of the last commit: 478 backend
+tests, 41 frontend, nine checks.
 
 ---
 
-## 1. The two charts SPEC 9.4 asks for and the UI does not have
+## 1. Show deaths by cause in the UI
 
-`frontend/src/ui/ChartsPanel.tsx` draws Population, Strategy shares,
-Cooperation by game, and Food inequality & trust. SPEC section 9.4 also lists:
+The metric now exists end to end - counted on the world where the cause is
+known, carried through the archive and the snapshot, and served as
+`MetricPointDTO.deaths_by_cause`. Nothing renders it.
 
-- **Average payoff per strategy.** `payoff_by_strategy` is computed on every
-  sample from `ledger.average_payoffs()`, served in `MetricPointDTO`, and
-  present in `frontend/src/api/generated.ts`. Nothing renders it. This is a
-  frontend-only change: another `<Chart>` with one series per strategy,
-  coloured the same way Strategy shares already colours them.
-- **Betrayals and alliances over time.** Both counts are in `point.extra`
-  (`betrayals`, `alliances`, and `lies_told` / `lies_caught` are there too).
-  They are cumulative counters, so either plot them cumulatively or difference
-  consecutive samples - decide which reads better and say why in a comment.
+The charts panel already prints `extra` as a label/value grid at the bottom;
+the causes want the same treatment rather than a chart, because on most runs
+the numbers are tiny (see below). `ChartsPanel.tsx`, next to the existing
+`<dl>`.
 
-Watch for: `extra` is `dict[str, float]` over the wire. The existing charts
-show the pattern for pulling a series out of `points`.
+## 2. Mortality is close to zero - a design question, not a bug
 
-## 2. Deaths by cause (SPEC section 10)
-
-SPEC lists "deaths by cause" among the metrics. `MetricPoint.deaths` is a
-bare count. The cause exists - `EventType.DEATH` carries it in `event.data`,
-and the README advertises "deaths with causes" - but nothing aggregates it
-into the metrics.
-
-Approach: count causes on the world (a `Counter` beside `world.deaths`, reset
-with the world) rather than by scanning events, which the metrics sampler
-cannot see. Then surface it in `extra` as `deaths_starvation` and so on, or
-as its own dict field on `MetricPoint` if it deserves one.
-
-Worth knowing before you tune anything: **almost nobody dies.** A 10,000-tick
-run on the default seed produced 29 births against 4 deaths, population
-climbing from 120 to 145 toward the cap. A deaths-by-cause chart of a world
-where nothing dies is honest but dull, so this may be worth pairing with a
-look at whether the survival pressure is where it should be. That is a design
-question for Alex, not a bug.
+**Almost nobody dies.** A 10,000-tick run on the default seed produced 29
+births against 4 deaths, with population climbing from 120 to 145 toward the
+cap. Deaths by cause is now measured, so whether the survival pressure sits
+where it should can be answered with numbers rather than impressions - but
+changing it is Alex's call, not a bug fix. Worth raising before building
+anything that assumes an interesting death rate.
 
 ## 3. Traits radar (SPEC section 9.4) - cosmetic
 
-The Inspector draws traits as bars (`Inspector.tsx`, the `detail.traits` map).
-SPEC says radar. Small, self-contained, and purely visual; do it when the
-more substantial items are done.
+The Inspector draws traits as bars (`Inspector.tsx`, the `detail.traits`
+map). SPEC says radar. Small, self-contained, purely visual.
 
 ## 4. Things that look like gaps and are not
 
-Do not "fix" these; each was checked.
+Do not "fix" these; each was checked and is deliberate.
 
-- `ResourceKind.STONE` spawns and is consumed by nothing. Deliberate scenery;
-  the help overlay says so rather than promising a use.
+- `ResourceKind.STONE` spawns and is consumed by nothing. Scenery; the help
+  overlay says so rather than promising a use.
 - `EventType.ENCOUNTER` never reaches the feed. It is the *memory* entry for
-  an encounter; the feed always gets `BETRAYAL`/`COOPERATION`/`COMBAT`/
-  `DEFECTION` instead.
+  an encounter; the feed gets `BETRAYAL`/`COOPERATION`/`COMBAT`/`DEFECTION`.
 - `EventType.LEADER_CHANGED` fires only when a leader dies. A won coup emits
-  `COUP` with `succeeded: true`, which is reasonable.
-- `AgentState.MOVE` is plan-only; `AgentState.TRADE` does appear, it is just
+  `COUP` with `succeeded: true`.
+- `AgentState.MOVE` is plan-only. `AgentState.TRADE` does happen; it is just
   too brief to catch with coarse sampling.
-- `llm_agents` defaults to 4, so default runs are not bit-reproducible. This
-  is deliberate and documented in ADR 0004 and `docs/REVIEW.md`.
+- `WorldConfig.strategy_mix` is read through `normalised_strategy_mix`.
+- `llm_agents` defaults to 4, so default runs are not bit-reproducible.
+  Deliberate, documented in ADR 0004 and `docs/REVIEW.md`.
 
 ## 5. Still needs Alex, not Claude
 
-- **The GitHub repo.** 21 commits are waiting with no remote.
+- **The GitHub repo.** 23 commits are waiting with no remote.
   `winget install GitHub.cli ; gh auth login ;
   gh repo create AlexBoyev/GameTheory --private --source=. --push`
-- **Delete `F:\Projects\TheoryGames`.** It is an empty husk left by the
-  rename; the previous session's working directory was pinned inside it,
-  which is why git reported "not a repository" from there. Start Claude Code
-  in `F:\Projects\GameTheory`.
+- **Delete `F:\Projects\TheoryGames`.** An empty husk left by the rename; a
+  session's working directory was pinned inside it, which is why git reported
+  "not a repository" from there. Start Claude Code in `F:\Projects\GameTheory`.
 
 ---
 
 ## How to look for the next real bug
 
-Four features in this project were registered, typed, unit-tested, and
-connected to nothing: `Raid`, a winnable coup, tribe pacts, and three of the
-four database tables. None of them were found by reading code or by running
-the suite. All four were found by running a world and asking what actually
-happened.
+Seven things in this project have been declared, typed, unit-tested, and
+connected to nothing: `Raid`, a winnable coup, tribe pacts, three of the four
+database tables, two circuit-breaker settings, and a tick-rate setting that
+described behaviour it did not control. None were found by reading code or by
+running the suite. They were found two ways, both worth repeating.
 
-`tests/ai/test_reachability.py` now keeps that instrument pointed at the
-skills. The same question is worth asking of anything else that is declared
-once and used elsewhere: every enum member, every settings field, every
-repository method, every DTO field the frontend never reads. The sweep in
-that file's `Run` class is the template - and read its docstring first, since
-both of its sharp edges (read scores not the trace; sample every tick) cost
-me a wrong answer before they were written down.
+**Run a world and ask what happened.** `tests/ai/test_reachability.py` keeps
+that instrument pointed at the skills. Read its docstring before changing it:
+both of its sharp edges (read each skill's score, not the decision trace,
+which keeps only the top three; and sample every tick, because every 25th
+missed `OfferPeace` in a seed that demonstrably made peace) cost a wrong
+answer before they were written down.
+
+**Sweep declarations for readers.** For every field, constant and enum
+member, count references outside its own file. Three of the seven fell out of
+one pass over `Settings`, `WorldConfig`, `balance` and the DTOs. Two traps:
+a name read through a property (`strategy_mix` via `normalised_strategy_mix`)
+is a false positive, and a default duplicated at the use site
+(`CircuitBreaker(threshold=3)` matching `llm_circuit_failures: int = 3`) is
+how a missing wire hides from exactly this kind of search - the behaviour
+looks right because the numbers agree by coincidence.
+
+A guard test for the `Settings` half of that sweep is worth having and is not
+written: an attempt behaved inconsistently between pytest and a plain
+interpreter on identical inputs, and chasing it was not a good use of the
+time. Whoever picks it up should reproduce the discrepancy first rather than
+trusting either result.

@@ -10,7 +10,7 @@ from app.ai.llm.mock_provider import MockProvider
 from app.ai.llm.ollama_provider import OllamaProvider
 from app.ai.llm.provider import LLMProvider
 from app.ai.llm.scheduler import LLMScheduler, SchedulerLimits
-from app.ai.llm.telemetry import LLMStats, Telemetry
+from app.ai.llm.telemetry import CircuitBreaker, LLMStats, Telemetry
 from app.core.settings import LlmProviderName, Settings
 
 
@@ -61,7 +61,18 @@ class LLMGateway:
         self._enabled = settings.llm_enabled
         self._fallback = provider is None and settings.llm_provider != "mock"
         resolved = provider or MockProvider()
-        self._scheduler = LLMScheduler(resolved, SchedulerLimits.from_settings(settings))
+        self._scheduler = LLMScheduler(
+            resolved,
+            SchedulerLimits.from_settings(settings),
+            # Built here rather than defaulted inside the scheduler: the
+            # scheduler's fallback repeated these two numbers, so setting
+            # `LLM_CIRCUIT_FAILURES` or `LLM_CIRCUIT_COOLDOWN_S` changed
+            # nothing and looked like it had.
+            breaker=CircuitBreaker(
+                threshold=settings.llm_circuit_failures,
+                cooldown_s=settings.llm_circuit_cooldown_s,
+            ),
+        )
         self._reachable: bool | None = None if self._fallback else True
 
     @property

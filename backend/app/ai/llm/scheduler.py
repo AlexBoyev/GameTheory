@@ -92,7 +92,7 @@ class LLMScheduler:
         self._provider = provider
         self.limits = limits
         self.telemetry = telemetry or Telemetry()
-        self.breaker = breaker or CircuitBreaker(threshold=3, cooldown_s=60.0)
+        self.breaker = breaker or CircuitBreaker()
         self._cache: OrderedDict[str, str] = OrderedDict()
         self._calls: deque[float] = deque()
         self._inflight = 0

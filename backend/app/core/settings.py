@@ -39,8 +39,14 @@ class Settings(BaseSettings):
 
     # --- simulation
     sim_seed: int = 1337
-    sim_tick_rate: float = Field(default=10.0, gt=0, description="Ticks per second at 1x speed.")
-    sim_dt: float = Field(default=0.1, gt=0, description="Sim-seconds advanced per tick.")
+    sim_dt: float = Field(
+        default=0.1,
+        gt=0,
+        description=(
+            "Sim-seconds advanced per tick. This also sets the pace: 1x speed runs "
+            "1/dt ticks per second, so sim time tracks the wall clock at 1x."
+        ),
+    )
     sim_max_agents: int = Field(default=1000, gt=0)
     sim_broadcast_hz: float = Field(default=20.0, gt=0, le=60)
     sim_day_seconds: float = Field(default=240.0, gt=0, description="Sim-seconds per day.")

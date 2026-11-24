@@ -426,3 +426,18 @@ async def test_a_refusal_appears_in_the_call_log_with_its_reason() -> None:
     assert latest.ok is False
     assert latest.error == "rate limited"
     assert latest.latency_s == 0.0
+
+
+def test_the_circuit_breaker_uses_its_settings(settings: Settings) -> None:
+    """These two were declared, documented in `.env.example`, and ignored.
+
+    `LLMScheduler` defaulted its breaker to `CircuitBreaker(threshold=3,
+    cooldown_s=60.0)` - the same numbers as the settings defaults - so
+    editing `LLM_CIRCUIT_FAILURES` changed nothing and nothing looked wrong.
+    """
+    tuned = settings.model_copy(update={"llm_circuit_failures": 7, "llm_circuit_cooldown_s": 12.5})
+
+    gateway = LLMGateway(tuned, MockProvider())
+
+    assert gateway.scheduler.breaker.threshold == 7
+    assert gateway.scheduler.breaker.cooldown_s == pytest.approx(12.5)
