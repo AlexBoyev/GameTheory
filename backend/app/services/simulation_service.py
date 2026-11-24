@@ -150,13 +150,29 @@ class SimulationService:
 
     # ------------------------------------------------------------- lifecycle
 
-    async def start(self) -> None:
-        """Start the engine thread and the broadcast pump, then run."""
+    async def boot(self) -> None:
+        """Bring the engine thread and the broadcast up, world still paused.
+
+        Separate from `start` because a world that is *ready* and a world
+        that is *running* are different things, and the app used to conflate
+        them: the engine began ticking the moment the process did, so by the
+        time the front screen had loaded and pressed pause the island was
+        already a few hundred ticks old. You should get the world you pressed
+        Start on, not the one that was running while you read the menu.
+
+        The engine thread starts paused (`EngineStatus.PAUSED`), so this
+        serves frames of a still world until something asks it to run.
+        """
         if self._thread is None or not self._thread.is_alive():
             self._thread = threading.Thread(target=self._engine.run, name="sim-engine", daemon=True)
             self._thread.start()
         self._pump.start()
         self._begin_run()
+        LOG.info("simulation.ready", seed=self.config.seed, population=self.state().population)
+
+    async def start(self) -> None:
+        """Run the world, booting it first if nobody has yet."""
+        await self.boot()
 
         await self._submit(Start())
         LOG.info(

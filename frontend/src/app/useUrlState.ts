@@ -45,7 +45,11 @@ export function useUrlState(): void {
 
     const requested = params.get('speed');
     if (requested !== null && Number.isFinite(Number(requested))) {
-      void controls.setSpeed(Number(requested));
+      // A link copied from a running world carries its speed and no
+      // `paused`, so it should land running: the backend now boots paused
+      // and waits to be asked, which would otherwise make every shared link
+      // open on a frozen island.
+      void controls.setSpeed(Number(requested)).then(() => controls.play());
     }
     if (params.get('paused') === '1') void controls.pause();
   }, [controls]);

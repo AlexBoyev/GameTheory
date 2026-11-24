@@ -8,6 +8,7 @@ the step actually produced, not the one before it.
 from pathlib import Path
 
 from fastapi import APIRouter
+from pydantic import ValidationError
 
 from app.api.deps import SettingsDep, SimulationDep
 from app.api.dto.sim import (
@@ -19,7 +20,7 @@ from app.api.dto.sim import (
     TournamentDTO,
     TournamentStandingDTO,
 )
-from app.api.errors import bad_request, not_found
+from app.api.errors import bad_request, not_found, unprocessable
 from app.core.presets import load_preset, load_presets
 from app.core.world_config import WorldConfig
 from app.services.engine_factory import world_config_from_settings
@@ -86,10 +87,14 @@ async def reset(
 ) -> SimStateDTO:
     """Rebuild the world; it stays paused at tick 0 so you can inspect it first.
 
-    A `preset` names a file in `config/presets/`; an explicit `config` is the
-    base it applies to, so "Tribal Wars, but 400 agents" is one request. The
-    seed is never overridden by a preset - picking one must not throw away a
-    seed typed in beside it.
+    Three layers, applied in that order: `config` (or the defaults), then a
+    `preset` named from `config/presets/`, then `overrides`. That last layer
+    is what makes "Tribal Wars, but 400 agents" a single request - the
+    docstring claimed it before the layer existed, and the preset's own
+    population quietly won instead.
+
+    The seed is never overridden by a preset: picking one must not throw
+    away a seed typed in beside it.
     """
     config = request.config
     if request.preset is not None:
@@ -97,6 +102,15 @@ async def reset(
         if preset is None:
             raise not_found(f"No preset named {request.preset!r}")
         config = preset.apply_to(config or WorldConfig())
+    if request.overrides:
+        merged = (config or WorldConfig()).model_copy(update=request.overrides)
+        # Round-trip so an override is validated like any other config field
+        # rather than trusted into the world: `model_copy` does not validate,
+        # so a negative population would otherwise reach world generation.
+        try:
+            config = WorldConfig.model_validate(merged.model_dump(mode="json"))
+        except ValidationError as error:
+            raise unprocessable(f"invalid override: {error.errors()[0]['msg']}") from error
 
     return _to_dto(await simulation.reset(seed=request.seed, config=config))
 

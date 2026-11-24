@@ -37,7 +37,7 @@ export function HelpOverlay({ onClose, backendOrigin }: HelpOverlayProps): React
   const groups = ['simulation', 'camera', 'overlays'] as const;
 
   return (
-    <div className="pointer-events-auto absolute inset-0 z-30 overflow-y-auto bg-slate-950/70 p-4 backdrop-blur-sm">
+    <div className="pointer-events-auto absolute inset-0 z-50 overflow-y-auto bg-slate-950/70 p-4 backdrop-blur-sm">
       <div className="mx-auto max-w-4xl">
         <Panel title="Game Theory - what you are watching" onClose={onClose}>
           <div className="grid gap-4 p-4 md:grid-cols-2">

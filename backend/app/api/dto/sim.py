@@ -1,5 +1,7 @@
 """Simulation state and control DTOs (SPEC section 8)."""
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.world_config import WorldConfig
@@ -50,6 +52,18 @@ class ResetRequest(BaseModel):
     seed: int | None = None
     preset: str | None = None
     config: WorldConfig | None = None
+    overrides: dict[str, Any] | None = Field(
+        default=None,
+        description="Fields applied last, after any preset. What the dials send.",
+    )
+    """The user's own choices, kept apart from the base they sit on.
+
+    A preset is overrides on top of `config`, so anything the preset names
+    wins - which made the documented "Tribal Wars, but 400 agents" request
+    impossible: the preset's own population overwrote the one you asked for,
+    silently. The server cannot tell a field you *chose* from a field that
+    merely carries a default, so the client says so here instead.
+    """
 
 
 class PresetDTO(BaseModel):

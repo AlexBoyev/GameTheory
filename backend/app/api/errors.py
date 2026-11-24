@@ -11,3 +11,8 @@ def not_found(what: str) -> HTTPException:
 def bad_request(detail: str) -> HTTPException:
     """Return a 400 with `detail`."""
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+
+def unprocessable(detail: str) -> HTTPException:
+    """Return a 422: the request was understood and its values were not."""
+    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)

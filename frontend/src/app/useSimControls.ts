@@ -8,8 +8,8 @@
 
 import { useCallback } from 'react';
 
-import { api } from '@/api/rest';
-import type { SimState, WorldConfig } from '@/api/types';
+import { api, type ResetOptions } from '@/api/rest';
+import type { SimState } from '@/api/types';
 import { useSimStore } from '@/state/simStore';
 
 export const SPEED_PRESETS = [1, 2, 5, 10, 25, 50, -1] as const;
@@ -24,7 +24,7 @@ export interface SimControls {
   toggle: () => Promise<void>;
   step: (n?: number) => Promise<void>;
   setSpeed: (multiplier: number) => Promise<void>;
-  reset: (options: { seed?: number; config?: WorldConfig; preset?: string }) => Promise<void>;
+  reset: (options: ResetOptions) => Promise<void>;
 }
 
 export function useSimControls(): SimControls {
@@ -57,7 +57,7 @@ export function useSimControls(): SimControls {
       [apply],
     ),
     reset: useCallback(
-      async (options: { seed?: number; config?: WorldConfig; preset?: string }) =>
+      async (options: ResetOptions) =>
         apply(await api.reset(options)),
       [apply],
     ),

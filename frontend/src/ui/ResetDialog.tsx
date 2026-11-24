@@ -127,15 +127,21 @@ export function ResetDialog({ onClose }: ResetDialogProps): React.ReactElement {
   const submit = async (): Promise<void> => {
     setBusy(true);
     try {
-      // Always from defaults, never from the running world: a preset is
-      // overrides on top of defaults, and inheriting the current config would
-      // carry a previous preset's settings into the new world.
+      // Three layers, and the dials are the last one. They used to be baked
+      // into `config`, which a preset then overwrote - so choosing Tribal
+      // Wars and dragging population to 300 built a 200-agent world and said
+      // nothing. `overrides` is applied after the preset, so what the sliders
+      // show is what you get.
+      //
+      // The base is the defaults, never the running world: a bare reset
+      // rebuilds from the current config, which would carry a previous
+      // preset's settings into a world that did not ask for them.
       const base = defaults ?? currentConfig;
-      const config: WorldConfig | undefined = base ? { ...base, ...dials } : undefined;
       await controls.reset({
         seed: Number(seed) || 0,
-        ...(config ? { config } : {}),
+        ...(base ? { config: base } : {}),
         ...(preset ? { preset } : {}),
+        overrides: dials,
       });
       if (autostart) await controls.play();
       onClose();
@@ -145,7 +151,7 @@ export function ResetDialog({ onClose }: ResetDialogProps): React.ReactElement {
   };
 
   return (
-    <div className="pointer-events-auto absolute inset-0 z-30 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div className="pointer-events-auto absolute inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
       <Panel
         title="New world"
         onClose={onClose}

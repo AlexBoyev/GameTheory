@@ -57,7 +57,7 @@ class Container:
     llm_pump: LLMPump
 
     async def startup(self) -> None:
-        """Create tables, probe the LLM provider and start broadcasting."""
+        """Create tables, probe the LLM provider and bring the world up paused."""
         self.repository.initialise()
         # Before the simulation starts: the first thing it does is open a run.
         self.archive.start()
@@ -69,7 +69,8 @@ class Container:
                 provider=self.gateway.status().provider,
                 detail="falling back to deterministic mock plans",
             )
-        await self.simulation.start()
+        # Ready, not running: nothing ticks until someone presses Start.
+        await self.simulation.boot()
         self.llm_pump.start()
         LOG.info("container.started", skills=skill_count, llm_reachable=reachable)
 

@@ -2,6 +2,7 @@
 
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -167,3 +168,44 @@ def test_a_preset_is_not_a_one_way_door(client: TestClient) -> None:
 
     client.post("/api/sim/reset", json={"config": defaults})
     assert client.get("/api/sim/config").json()["tournament_mode"] is False
+
+
+def test_a_preset_can_be_asked_for_with_changes(client: TestClient) -> None:
+    """Tribal Wars, but 300 agents - which the docstring promised all along.
+
+    A preset is overrides on top of the config, so anything it names beat
+    whatever was sent: dragging the population slider to 300 and picking a
+    preset built the preset's own 200 and said nothing about it. The server
+    cannot tell a field somebody chose from a field carrying a default, so
+    the client now says which are its own, and those land last.
+    """
+    defaults = client.get("/api/sim/defaults").json()
+
+    response = client.post(
+        "/api/sim/reset",
+        json={
+            "seed": 1337,
+            "config": defaults,
+            "preset": "tribal_wars",
+            "overrides": {"population": 300},
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["population"] == 300, "the slider has to win"
+
+    # ...and the rest of the preset still applies.
+    config = client.get("/api/sim/config").json()
+    assert config["initial_tribes"] == 4, "the preset's own settings survive"
+    assert config["scarcity"] == pytest.approx(1.6)
+    assert config["trait_bias"]["loyalty"] == pytest.approx(0.75)
+
+
+def test_overrides_are_validated_like_any_other_config(client: TestClient) -> None:
+    """An override is not a back door into the world."""
+    response = client.post(
+        "/api/sim/reset",
+        json={"seed": 1, "overrides": {"population": -5}},
+    )
+
+    assert response.status_code == 422, response.text

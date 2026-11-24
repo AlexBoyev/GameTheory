@@ -7,6 +7,10 @@
  * first time finds out what the thing is, and where someone mid-run goes to
  * stop and think.
  *
+ * Layering: this sits at z-40, above the HUD. Help and the new-world dialog
+ * are opened *from* here, so they sit at z-50 - at z-30 they rendered behind
+ * this panel and the buttons looked dead.
+ *
  * It pauses while it is open. A simulation running behind a menu you are
  * reading is a simulation you are not watching, and at 50x it would be a
  * different world by the time you pressed Start.

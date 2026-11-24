@@ -65,6 +65,15 @@ function post<T>(path: string, payload?: unknown): Promise<T> {
   });
 }
 
+/** What `POST /sim/reset` takes: a base, an optional preset, then your dials. */
+export interface ResetOptions {
+  seed?: number;
+  preset?: string;
+  config?: WorldConfig;
+  /** Applied last, so a slider always beats the preset it sits beside. */
+  overrides?: Record<string, number | string | boolean>;
+}
+
 export const api = {
   health: (): Promise<Health> => request<Health>('/health'),
 
@@ -73,8 +82,7 @@ export const api = {
   pause: (): Promise<SimState> => post<SimState>('/sim/pause'),
   step: (n = 1): Promise<SimState> => post<SimState>('/sim/step', { n }),
   setSpeed: (multiplier: number): Promise<SimState> => post<SimState>('/sim/speed', { multiplier }),
-  reset: (payload: { seed?: number; preset?: string; config?: WorldConfig }): Promise<SimState> =>
-    post<SimState>('/sim/reset', payload),
+  reset: (payload: ResetOptions): Promise<SimState> => post<SimState>('/sim/reset', payload),
 
   getConfig: (): Promise<WorldConfig> => request<WorldConfig>('/sim/config'),
   getDefaults: (): Promise<WorldConfig> => request<WorldConfig>('/sim/defaults'),
