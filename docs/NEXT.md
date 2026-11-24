@@ -6,14 +6,42 @@ finding; this is the queue. Everything here was checked against the code.
 
 **Start here:** the repo is `F:\Projects\GameTheory`. One command runs
 everything: `python driver.py` (app), `python driver.py --check` (all nine
-checks), `python driver.py --bench`. Green as of the last commit: 478 backend
+checks), `python driver.py --bench`. Green as of the last commit: 481 backend
 tests, 49 frontend, nine checks. Every item SPEC sections 9.4 and 10 ask for
 is now built; what is below is a design question, a list of false leads, and
 two things only Alex can do.
 
 ---
 
-## 1. Mortality is close to zero - a design question, not a bug
+## 1. The `subscribe_agent` websocket channel is half-built
+
+SPEC section 8 lists `agent_detail` (S->C, "for the subscribed agent only")
+and `subscribe_agent` (C->S). The server accepts the subscription, stores it
+on the connection as `subscribed_agent`, and replies `{pending: true}` -
+and **nothing ever reads that field**, so no follow-up is ever sent. A
+client that implements the documented protocol subscribes and then waits
+forever.
+
+The frontend sidesteps it: `useAgentDetail` polls `GET /api/agents/{id}` at
+2 Hz, and its docstring argues the case - only one agent is inspected at a
+time, so a small poll beats widening the broadcast. That reasoning is sound,
+which is why this is a decision rather than a bug to fix blindly.
+
+Two honest ways out, and it is Alex's call which:
+
+- **Service the subscription.** On each frame, for every connection with a
+  `subscribed_agent`, push `agent_detail`. Matches SPEC, drops a REST poll,
+  and makes the inspector update at frame rate. Needs a throttle: frames are
+  20 Hz against the current 2 Hz poll, and the payload (traits, memory,
+  trace) is not small.
+- **Retire the channel.** Have `subscribe_agent` answer with an error that
+  names the REST endpoint, drop `subscribed_agent`, and amend SPEC section
+  8. Nothing user-visible changes; a trap for any future client goes away.
+
+Either is better than the present state, where the protocol advertises
+something it does not do.
+
+## 2. Mortality is close to zero - a design question, not a bug
 
 **Almost nobody dies.** A 10,000-tick run on the default seed produced 29
 births against 4 deaths, with population climbing from 120 to 145 toward the
@@ -22,7 +50,7 @@ where it should can be answered with numbers rather than impressions - but
 changing it is Alex's call, not a bug fix. Worth raising before building
 anything that assumes an interesting death rate.
 
-## 2. Things that look like gaps and are not
+## 3. Things that look like gaps and are not
 
 Do not "fix" these; each was checked and is deliberate.
 
@@ -35,12 +63,17 @@ Do not "fix" these; each was checked and is deliberate.
 - `AgentState.MOVE` is plan-only. `AgentState.TRADE` does happen; it is just
   too brief to catch with coarse sampling.
 - `WorldConfig.strategy_mix` is read through `normalised_strategy_mix`.
+- Every REST endpoint in the OpenAPI schema is called by the frontend; the
+  `metrics` websocket envelope is not, deliberately - the charts poll REST
+  instead, which `simStore` says in a comment.
+- `ui/primitives.tsx` is a module of shared pieces (Panel, Meter, Row), not
+  a component, so "never rendered" searches flag it wrongly.
 - `llm_agents` defaults to 4, so default runs are not bit-reproducible.
   Deliberate, documented in ADR 0004 and `docs/REVIEW.md`.
 
-## 3. Still needs Alex, not Claude
+## 4. Still needs Alex, not Claude
 
-- **The GitHub repo.** 25 commits are waiting with no remote.
+- **The GitHub repo.** 27 commits are waiting with no remote.
   `winget install GitHub.cli ; gh auth login ;
   gh repo create AlexBoyev/GameTheory --private --source=. --push`
 - **Delete `F:\Projects\TheoryGames`.** An empty husk left by the rename; a
@@ -63,6 +96,12 @@ both of its sharp edges (read each skill's score, not the decision trace,
 which keeps only the top three; and sample every tick, because every 25th
 missed `OfferPeace` in a seed that demonstrably made peace) cost a wrong
 answer before they were written down.
+
+The third pass to run, when the first two go quiet, is over the **protocol**
+rather than the code: every endpoint in `frontend/openapi.json` against the
+frontend's calls, every websocket envelope type against its handlers, and
+every field a message sets against whatever reads it. That is what turned up
+`subscribed_agent` above.
 
 **Sweep declarations for readers.** For every field, constant and enum
 member, count references outside its own file. Three of the seven fell out of
