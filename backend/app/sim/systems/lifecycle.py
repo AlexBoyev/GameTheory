@@ -15,7 +15,7 @@ class LifecycleSystem:
 
     def step(self, world: World, dt: float) -> None:
         """Advance ages by `dt` and resolve any deaths."""
-        years_per_sim_s = balance.AGE_YEARS_PER_DAY / world.clock.day_seconds
+        years_per_sim_s = world.config.age_years_per_day / world.clock.day_seconds
         aged = years_per_sim_s * dt
         dying: list[Agent] = []
 

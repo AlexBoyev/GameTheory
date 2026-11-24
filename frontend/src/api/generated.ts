@@ -1596,6 +1596,12 @@ export interface components {
              */
             scarcity: number;
             /**
+             * Age Years Per Day
+             * @description Years an agent ages per sim-day; sets how fast generations turn over.
+             * @default 3
+             */
+            age_years_per_day: number;
+            /**
              * Season Start
              * @default spring
              * @enum {string}

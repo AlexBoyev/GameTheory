@@ -153,10 +153,35 @@ def test_ageing_advances_the_life_stage(world: World) -> None:
     agent = world.living_agents()[0]
     agent.age = balance.ELDER_FROM - 0.001
 
-    LifecycleSystem().step(world, world.clock.day_seconds / balance.AGE_YEARS_PER_DAY)
+    LifecycleSystem().step(world, world.clock.day_seconds / world.config.age_years_per_day)
 
     assert agent.age > balance.ELDER_FROM
     assert agent.life_stage is LifeStage.ELDER
+
+
+def test_ageing_speed_is_a_dial_on_the_world(world: World) -> None:
+    """How fast a life runs is per-world, not a constant.
+
+    It used to be `balance.AGE_YEARS_PER_DAY = 1.0`, annotated "a lifetime
+    should be watchable in minutes", which it was not: the oldest agent the
+    world spawns needed 52,800 ticks to reach `MAX_AGE`, and across 27,000
+    measured ticks nobody died of old age at all. Selection on inherited
+    strategies needs generations to turn over, so the pace belongs to the
+    world and to the new-world dialog.
+    """
+    slow, quick = world.living_agents()[:2]
+    slow.age = quick.age = 20.0
+    one_day = world.clock.day_seconds
+
+    world.config.age_years_per_day = 1.0
+    LifecycleSystem().step(world, one_day)
+    after_slow = slow.age
+
+    world.config.age_years_per_day = 4.0
+    LifecycleSystem().step(world, one_day)
+
+    assert after_slow == pytest.approx(21.0), "one year a day"
+    assert slow.age == pytest.approx(25.0), "four more years the second day"
 
 
 def test_life_stage_thresholds() -> None:

@@ -397,6 +397,38 @@ route, because a client told "ok" by a server that will never follow up is
 worse off than one told where to look. `MessageType.AGENT_DETAIL` is gone:
 if the type exists, somebody will eventually wait for it.
 
+### ~~P2 - evolution had nothing to select on~~ (fixed)
+
+The simulation's premise is inherited, mutating strategies under selection.
+Selection needs agents to die of something other than bad luck, and they
+did not: `balance.AGE_YEARS_PER_DAY = 1.0` was annotated "ages fast on
+purpose: a lifetime should be watchable in minutes", and the arithmetic says
+otherwise - 2,400 ticks a year, so the *oldest* agent the world spawns needs
+52,800 ticks to reach `MAX_AGE` and a typical one about 91,000. At 1x that
+is hours. Across 27,000 measured ticks nobody died of old age once; the
+population simply grew.
+
+The pace is now `WorldConfig.age_years_per_day`, defaulting to 3.0, with a
+slider in the new-world dialog - Alex asked for it to be configurable at the
+start, which is right: it is the dial that decides what kind of place the
+island is.
+
+Three was chosen by sweeping 30,000-tick runs rather than by taste:
+
+| years/day | alive | births | deaths | of old age | mean age |
+| --- | --- | --- | --- | --- | --- |
+| 1.0 | 195 | 83 | 8 | 0 | 28 |
+| 2.0 | 192 | 81 | 9 | 3 | 38 |
+| **3.0** | **118** | 40 | 42 | **40** | 50 |
+| 4.0 | 57 | 28 | 91 | 89 | 49 |
+| 6.0 | 17 | 17 | 120 | 120 | 52 |
+
+Three is the knee: births and deaths balance, and most deaths are finally
+old age. The curve is sharp just above it, which the slider's hint says, and
+the whole social machinery still runs at the new default - the reachability
+suite still finds tribes founded, a war declared and settled, pacts signed
+and a coup won.
+
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 
 Deliberate and documented (ADR 0004, `WorldConfig.llm_agents`): the

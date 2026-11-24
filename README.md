@@ -69,15 +69,21 @@ reproducible - the same quantities the UI reads from `/api/metrics` and
 
 | | |
 | --- | --- |
-| Population | 120 spawned -> 145 alive, 29 births against 4 deaths |
+| Population | 120 spawned -> 129 alive, 16 births against 7 deaths (4 starved, 3 killed) |
 | Tribes | 16, named, each with a leader, a store and territory |
-| Shelters built | 71 |
-| Cooperation rate | 88% in the Prisoner's Dilemma, 80% Hawk-Dove, 70% Stag Hunt |
-| Food Gini | 0.81 - the island has developed a rich and a poor |
-| Trust density | 0.19 of all possible trust edges actually exist |
-| Gifts / betrayals | 733 / 82 |
-| Lies told / caught | 862 / 296 |
-| Diplomacy | 4 wars, 3 peace deals, 33 pacts, 3 coups won of 85 attempted |
+| Shelters built | 70 |
+| Cooperation rate | 59% in the Prisoner's Dilemma, 79% Hawk-Dove, 58% Stag Hunt |
+| Food Gini | 0.76 - the island has developed a rich and a poor |
+| Trust density | 0.18 of all possible trust edges actually exist |
+| Gifts / betrayals | 757 / 82 |
+| Lies told / caught | 842 / 293 |
+| Diplomacy | 10 wars, 10 peace deals, 20 pacts, 4 coups won of 88 attempted |
+
+Nobody has died of old age by tick 10,000 - that is 12.5 years at the default
+three years a day, and they start between 18 and 50. Leave it running: by
+30,000 ticks the island settles into a replacement equilibrium, 40 births
+against 42 deaths with 40 of those old age, which is the churn inherited
+strategies are selected by.
 
 ### Measured on this machine
 

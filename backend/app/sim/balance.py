@@ -89,8 +89,9 @@ default world starved itself down to 14 survivors by tick 9000.
 """
 
 # ------------------------------------------------------------------ lifecycle
-AGE_YEARS_PER_DAY: Final = 1.0
-"""Ages fast on purpose: a lifetime should be watchable in minutes."""
+# How fast a life runs is `WorldConfig.age_years_per_day`, not a constant
+# here: it is the dial that decides whether generations turn over inside a
+# session, so a preset and the new-world dialog both need to set it.
 CHILD_UNTIL: Final = 16.0
 ELDER_FROM: Final = 55.0
 MAX_AGE: Final = 72.0

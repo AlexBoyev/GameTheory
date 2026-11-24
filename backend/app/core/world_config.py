@@ -80,6 +80,23 @@ class WorldConfig(BaseModel):
     initial_tribes: int = Field(default=0, ge=0, le=16)
 
     scarcity: float = Field(default=1.0, gt=0, le=4.0, description="Scales all resource yields.")
+
+    age_years_per_day: float = Field(
+        default=3.0,
+        gt=0,
+        le=12.0,
+        description="Years an agent ages per sim-day; sets how fast generations turn over.",
+    )
+    """How fast a life runs, which is really how fast evolution runs.
+
+    Strategies are inherited and mutated, so selection only bites if agents
+    die of something other than bad luck. The old value of 1.0 was annotated
+    "a lifetime should be watchable in minutes" and did not deliver it: in
+    27,000 measured ticks nobody died of old age at all, and the oldest
+    agent the world spawns would have needed 52,800. Three years a day puts
+    a full life inside a session someone would actually sit through, without
+    touching the food economy or the payoff matrices.
+    """
     season_start: Season = "spring"
 
     strategy_mix: dict[StrategyName, float] = Field(

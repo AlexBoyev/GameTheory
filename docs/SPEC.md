@@ -391,9 +391,18 @@ the whole run. The event table is capped at 20,000 rows per run, pruned back
 to 15,000 in one statement rather than a row per insert. See ADR 0006.
 
 ## 12. Configuration
-`backend/config/default.yaml` + `payoffs.yaml` + `presets/*.yaml`; env overrides via pydantic-settings (`.env`). Keys: `SIM_SEED`, `SIM_TICK_RATE`, `SIM_MAX_AGENTS`, `LLM_*` (see §7.5), `OLLAMA_URL` (default `http://localhost:11434`; backend in Docker + native Ollama → `http://host.docker.internal:11434`; compose `llm` profile → `http://ollama:11434`), `OLLAMA_MODEL` (default `qwen3:8b`; smaller GPU: `qwen3:4b`).
+`backend/config/default.yaml` + `payoffs.yaml` + `presets/*.yaml`; env overrides via pydantic-settings (`.env`). Keys: `SIM_SEED`, `SIM_DT` (sim-seconds per tick, which also sets the pace: 1x runs `1/dt` ticks a second), `SIM_MAX_AGENTS`, `LLM_*` (see §7.5), `OLLAMA_URL` (default `http://localhost:11434`; backend in Docker + native Ollama → `http://host.docker.internal:11434`; compose `llm` profile → `http://ollama:11434`), `OLLAMA_MODEL` (default `qwen3:8b`; smaller GPU: `qwen3:4b`).
 
 Presets: Peaceful Eden · Harsh Winter · Liars' Island · Tribal Wars · Axelrod Tournament · LLM Schemers.
+
+`WorldConfig.age_years_per_day` (default 3.0, also a slider in the new-world
+dialog) sets how fast a life runs, and therefore how fast evolution runs:
+strategies are inherited and mutated, so selection only bites once
+generations turn over. Measured over 30,000 ticks on the default seed, at
+1.0 the population grows 120 → 195 with no old-age deaths at all; at 3.0 it
+holds at 118, 40 births against 42 deaths with 40 of those old age; at 4.0
+it falls to 57 and at 6.0 to 17, because agents pass through the fertile
+window faster than they can replace themselves.
 
 ## 13. Quality
 - Backend: ruff (lint+format), mypy, pytest + pytest-asyncio + respx (fake Ollama HTTP), hypothesis for payoff/strategy properties, import-linter for layering. ≥ 80% coverage on `sim/` and `ai/` (excluding providers).

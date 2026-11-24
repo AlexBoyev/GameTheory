@@ -25,7 +25,13 @@ export interface ResetDialogProps {
 }
 
 interface Dial {
-  key: 'population' | 'scarcity' | 'initial_tribes' | 'llm_agents' | 'mutation_rate';
+  key:
+    | 'population'
+    | 'scarcity'
+    | 'age_years_per_day'
+    | 'initial_tribes'
+    | 'llm_agents'
+    | 'mutation_rate';
   label: string;
   hint: string;
   min: number;
@@ -49,6 +55,14 @@ const DIALS: Dial[] = [
     min: 0.4,
     max: 3,
     step: 0.1,
+  },
+  {
+    key: 'age_years_per_day',
+    label: 'Ageing speed',
+    hint: 'Years lived per day. 3 holds the population steady; 4 and above thins it.',
+    min: 0.5,
+    max: 8,
+    step: 0.5,
   },
   {
     key: 'initial_tribes',
@@ -90,6 +104,7 @@ export function ResetDialog({ onClose }: ResetDialogProps): React.ReactElement {
   const [dials, setDials] = useState<Record<Dial['key'], number>>({
     population: currentConfig?.population ?? 120,
     scarcity: currentConfig?.scarcity ?? 1,
+    age_years_per_day: currentConfig?.age_years_per_day ?? 3,
     initial_tribes: currentConfig?.initial_tribes ?? 0,
     llm_agents: currentConfig?.llm_agents ?? 4,
     mutation_rate: currentConfig?.mutation_rate ?? 0.05,

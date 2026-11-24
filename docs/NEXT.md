@@ -6,23 +6,18 @@ finding; this is the queue. Everything here was checked against the code.
 
 **Start here:** the repo is `F:\Projects\GameTheory`. One command runs
 everything: `python driver.py` (app), `python driver.py --check` (all nine
-checks), `python driver.py --bench`. Green as of the last commit: 482 backend
-tests, 49 frontend, nine checks. Every item SPEC sections 9.4 and 10 ask for
-is now built; what is below is a design question, a list of false leads, and
-two things only Alex can do.
+checks), `python driver.py --bench`. Green as of the last commit: 483 backend tests, 49 frontend, nine checks.
+
+**There is no outstanding implementation work.** Everything SPEC asks for is
+built, and the three open questions from the last pass are closed: the
+half-built `subscribe_agent` channel was retired, deaths by cause is
+measured and shown, and ageing speed is a dial in the new-world dialog
+defaulting to a measured 3.0. What follows is a list of false leads, so
+nobody re-reports them, and two things only Alex can do.
 
 ---
 
-## 1. Mortality is close to zero - a design question, not a bug
-
-**Almost nobody dies.** A 10,000-tick run on the default seed produced 29
-births against 4 deaths, with population climbing from 120 to 145 toward the
-cap. Deaths by cause is now measured, so whether the survival pressure sits
-where it should can be answered with numbers rather than impressions - but
-changing it is Alex's call, not a bug fix. Worth raising before building
-anything that assumes an interesting death rate.
-
-## 2. Things that look like gaps and are not
+## 1. Things that look like gaps and are not
 
 Do not "fix" these; each was checked and is deliberate.
 
@@ -44,9 +39,9 @@ Do not "fix" these; each was checked and is deliberate.
 - `llm_agents` defaults to 4, so default runs are not bit-reproducible.
   Deliberate, documented in ADR 0004 and `docs/REVIEW.md`.
 
-## 3. Still needs Alex, not Claude
+## 2. Still needs Alex, not Claude
 
-- **The GitHub repo.** 29 commits are waiting with no remote.
+- **The GitHub repo.** 30 commits are waiting with no remote.
   `winget install GitHub.cli ; gh auth login ;
   gh repo create AlexBoyev/GameTheory --private --source=. --push`
 - **Delete `F:\Projects\TheoryGames`.** An empty husk left by the rename; a

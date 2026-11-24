@@ -20,6 +20,8 @@
 # initial_tribes: 0               # int   - 0 => tribes must emerge on their own
 #
 # scarcity: 1.0                   # float - scales all resource yields (>1 = harsher)
+# age_years_per_day: 3.0          # float - years lived per sim-day; higher means
+#                                 #         shorter lives and faster evolution
 # season_start: spring            # spring | summer | autumn | winter
 #
 # strategy_mix:                   # relative weights, normalised at spawn
