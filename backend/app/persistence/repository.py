@@ -85,6 +85,26 @@ class Repository:
             rows = session.execute(statement).scalars().all()
             return list(cast("Sequence[MetricSample]", rows))
 
+    def metrics_window(
+        self, run_id: int, from_tick: int, before_tick: int | None, limit: int
+    ) -> list[MetricSample]:
+        """The newest `limit` rows in `[from_tick, before_tick)`, oldest first.
+
+        Bounded on purpose. The charts panel re-requests the whole series
+        every few seconds, and an unbounded read meant every poll of a long
+        run re-read and re-parsed the entire table - work that grows without
+        limit while the chart it feeds is still a few hundred pixels wide.
+        """
+        statement = select(MetricSample).where(
+            MetricSample.run_id == run_id, MetricSample.tick >= from_tick
+        )
+        if before_tick is not None:
+            statement = statement.where(MetricSample.tick < before_tick)
+        statement = statement.order_by(col(MetricSample.tick).desc()).limit(limit)
+        with session_scope(self._engine) as session:
+            rows = session.execute(statement).scalars().all()
+            return list(reversed(list(cast("Sequence[MetricSample]", rows))))
+
     # ---------------------------------------------------------------- events
 
     def add_events(self, records: list[EventRecord]) -> None:

@@ -289,3 +289,25 @@ def repository_path(repository: Repository) -> Path:
     """The data directory behind `repository` (its engine knows the URL)."""
     url = str(repository._engine.url)
     return Path(url.removeprefix("sqlite:///")).parent
+
+
+def test_history_is_bounded(archive: RunArchive) -> None:
+    """An unbounded read turns a three-second poll into a full-table scan.
+
+    The charts panel asks for the whole series every few seconds, so the
+    cost of one read has to stop growing with the length of the run.
+    """
+    from app.services.run_archive import HISTORY_LIMIT
+
+    archive.begin(seed=1, config_json="{}")
+    for tick in range(0, (HISTORY_LIMIT + 50) * 10, 10):
+        archive.record_metrics(point(tick=tick))
+        if tick % 1000 == 0:
+            assert archive.flush(timeout_s=10.0)
+    assert archive.flush(timeout_s=10.0)
+
+    stored = archive.history()
+
+    assert len(stored) == HISTORY_LIMIT
+    assert stored[-1].tick == (HISTORY_LIMIT + 49) * 10, "a bounded read keeps the newest"
+    assert stored == sorted(stored, key=lambda sample: sample.tick), "still oldest first"

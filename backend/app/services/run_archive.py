@@ -52,6 +52,15 @@ EVENT_CAP = 20_000
 PRUNE_TO = 15_000
 """How far down a prune cuts, so pruning is occasional rather than constant."""
 
+HISTORY_LIMIT = 2_000
+"""Archived samples a single read will return.
+
+With the in-memory window on top of it that is up to 4,000 points behind a
+chart a few hundred pixels wide, which is already far more than can be
+drawn. The cap is what stops a poll every three seconds from growing into a
+full-table scan as a run gets long.
+"""
+
 PRUNE_EVERY = 2_000
 """Rows written between checks, so the count query is not run per batch."""
 
@@ -209,13 +218,13 @@ class RunArchive:
         if self._run_id is None:
             return []
         try:
-            rows = self._repository.metrics_since(self._run_id, from_tick)
+            rows = self._repository.metrics_window(
+                self._run_id, from_tick, before_tick, HISTORY_LIMIT
+            )
         except Exception as error:  # pragma: no cover - database trouble
             LOG.warning("archive.history_failed", error=str(error))
             return []
-        return [
-            _point_from_row(row) for row in rows if before_tick is None or row.tick < before_tick
-        ]
+        return [_point_from_row(row) for row in rows]
 
     def past_events(self, limit: int, event_type: str | None = None) -> list[dict[str, Any]]:
         """Persisted events for this run, newest first."""
