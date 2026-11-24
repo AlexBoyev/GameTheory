@@ -101,6 +101,11 @@ export function ResetDialog({ onClose }: ResetDialogProps): React.ReactElement {
   const [presets, setPresets] = useState<Preset[]>([]);
   const [defaults, setDefaults] = useState<WorldConfig | null>(null);
   const [busy, setBusy] = useState(false);
+  // Which dials the user actually moved. Only those are sent as overrides:
+  // a slider sitting at its default is not a choice, and sending it anyway
+  // would overwrite the preset it sits beside - picking Tribal Wars and
+  // touching nothing has to build Tribal Wars, population and all.
+  const [touched, setTouched] = useState<Set<Dial['key']>>(new Set());
   const [dials, setDials] = useState<Record<Dial['key'], number>>({
     population: currentConfig?.population ?? 120,
     scarcity: currentConfig?.scarcity ?? 1,
@@ -141,7 +146,9 @@ export function ResetDialog({ onClose }: ResetDialogProps): React.ReactElement {
         seed: Number(seed) || 0,
         ...(base ? { config: base } : {}),
         ...(preset ? { preset } : {}),
-        overrides: dials,
+        overrides: Object.fromEntries(
+          [...touched].map((key) => [key, dials[key]]),
+        ),
       });
       if (autostart) await controls.play();
       onClose();
@@ -218,9 +225,10 @@ export function ResetDialog({ onClose }: ResetDialogProps): React.ReactElement {
                 step={dial.step}
                 value={dials[dial.key]}
                 aria-label={dial.label}
-                onChange={(event) =>
-                  setDials((current) => ({ ...current, [dial.key]: Number(event.target.value) }))
-                }
+                onChange={(event) => {
+                  setTouched((current) => new Set(current).add(dial.key));
+                  setDials((current) => ({ ...current, [dial.key]: Number(event.target.value) }));
+                }}
                 className="w-full accent-emerald-400"
               />
               <p className="text-[10px] text-slate-500">{dial.hint}</p>

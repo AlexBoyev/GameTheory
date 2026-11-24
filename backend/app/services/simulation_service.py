@@ -163,9 +163,11 @@ class SimulationService:
         The engine thread starts paused (`EngineStatus.PAUSED`), so this
         serves frames of a still world until something asks it to run.
         """
-        if self._thread is None or not self._thread.is_alive():
-            self._thread = threading.Thread(target=self._engine.run, name="sim-engine", daemon=True)
-            self._thread.start()
+        if self._thread is not None and self._thread.is_alive():
+            return  # already up; `start` calls this and must not re-open the run
+
+        self._thread = threading.Thread(target=self._engine.run, name="sim-engine", daemon=True)
+        self._thread.start()
         self._pump.start()
         self._begin_run()
         LOG.info("simulation.ready", seed=self.config.seed, population=self.state().population)

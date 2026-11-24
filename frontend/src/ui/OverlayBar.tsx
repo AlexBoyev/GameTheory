@@ -6,6 +6,7 @@
  * the roadmap invisible) or live but inert (which makes the UI feel broken).
  */
 
+import { useSocietyStore } from '@/state/societyStore';
 import { useUiStore, type ToggleKey } from '@/state/uiStore';
 
 interface OverlayToggle {
@@ -15,11 +16,13 @@ interface OverlayToggle {
   shortcut: string;
   /** Set when the overlay has nothing to draw yet. */
   needsPhase?: number;
+  /** Overlays drawn from polled data, which can legitimately be empty. */
+  counts?: 'trust' | 'tribes';
 }
 
 const TOGGLES: OverlayToggle[] = [
-  { key: 'showTrustLines', label: 'Trust lines', icon: '🔗', shortcut: 't' },
-  { key: 'showTerritories', label: 'Territories', icon: '🏕️', shortcut: 'g' },
+  { key: 'showTrustLines', label: 'Trust lines', icon: '🔗', shortcut: 't', counts: 'trust' },
+  { key: 'showTerritories', label: 'Territories', icon: '🏕️', shortcut: 'g', counts: 'tribes' },
   { key: 'chartsOpen', label: 'Charts', icon: '📈', shortcut: 'c' },
   { key: 'showHeatmap', label: 'Heatmap', icon: '🔥', shortcut: 'h' },
   { key: 'showNames', label: 'Names', icon: '🏷️', shortcut: 'n' },
@@ -32,6 +35,12 @@ const TOGGLES: OverlayToggle[] = [
 export function OverlayBar(): React.ReactElement {
   const state = useUiStore();
   const toggle = useUiStore((store) => store.toggle);
+  // What these two overlays would draw. An overlay switched on with nothing
+  // to show is indistinguishable from a broken one: trust lines appear only
+  // once agents have met, and on a world still at tick 0 that is never, so
+  // the honest thing is to say "none yet" rather than draw nothing quietly.
+  const trustEdges = useSocietyStore((store) => store.trustEdges.length);
+  const tribeCount = useSocietyStore((store) => store.tribes.length);
 
   return (
     <div className="pointer-events-auto flex flex-col gap-1 rounded-2xl bg-slate-900/85 p-1.5 shadow-lg ring-1 ring-white/10 backdrop-blur">
@@ -44,6 +53,8 @@ export function OverlayBar(): React.ReactElement {
         const title = pending
           ? `${entry.label} (${entry.shortcut}) - needs Phase ${entry.needsPhase} data`
           : `${entry.label} (${entry.shortcut})`;
+        const drawn =
+          entry.counts === 'trust' ? trustEdges : entry.counts === 'tribes' ? tribeCount : null;
 
         return (
           <button
@@ -60,6 +71,15 @@ export function OverlayBar(): React.ReactElement {
           >
             <span className="w-4 text-center">{entry.icon}</span>
             <span className="flex-1">{entry.label}</span>
+            {active && drawn !== null && (
+              <span
+                className={`font-mono text-[9px] ${
+                  drawn === 0 ? 'text-slate-900/70' : 'text-slate-900/60'
+                }`}
+              >
+                {drawn === 0 ? 'none yet' : drawn}
+              </span>
+            )}
             <kbd className="rounded bg-white/10 px-1 font-mono text-[9px] text-slate-400">
               {entry.shortcut}
             </kbd>
