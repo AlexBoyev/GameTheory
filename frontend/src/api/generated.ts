@@ -149,6 +149,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sim/defaults": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Default world config
+         * @description The config a world is built from when nothing overrides it.
+         *
+         *     The New World dialog needs this to mean "a default island": a bare reset
+         *     rebuilds from the *current* config, so without it, choosing the Axelrod
+         *     preset once left `tournament_mode` on with no way back - an island with
+         *     no decision system, which looks exactly like a broken simulation.
+         */
+        get: operations["defaults_api_sim_defaults_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sim/config": {
         parameters: {
             query?: never;
@@ -399,8 +424,10 @@ export interface paths {
          * Recent events
          * @description Return the newest events, newest first, optionally filtered by type.
          *
-         *     Backed by an in-memory ring buffer: the SQLite event log arrives with the
-         *     metrics in Phase 4.
+         *     The ring buffer holds the recent past per type; anything older comes from
+         *     SQLite. Rows already in memory are not fetched twice - the archive is
+         *     only asked for the shortfall, and only for ticks the ring no longer
+         *     reaches.
          */
         get: operations["list_events_api_events_get"];
         put?: never;
@@ -1040,6 +1067,10 @@ export interface components {
              * @default 0
              */
             trust_density: number;
+            /** Deaths By Cause */
+            deaths_by_cause?: {
+                [key: string]: number;
+            };
             /** By Tribe */
             by_tribe?: {
                 [key: string]: number;
@@ -1792,6 +1823,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    defaults_api_sim_defaults_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldConfig"];
                 };
             };
         };

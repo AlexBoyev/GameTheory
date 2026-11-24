@@ -7,6 +7,7 @@ and `Repository.add_events` sat unused for six phases with a passing suite.
 """
 
 import time
+from collections.abc import Callable
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -15,18 +16,27 @@ from app.container import Container
 
 
 def settle(
-    client: TestClient, container: Container, ticks: int = 60, seconds: float = 1.0
-) -> Container:
-    """Advance the world, let the broadcast pump drain, and flush the archive."""
+    client: TestClient,
+    container: Container,
+    ticks: int = 60,
+    until: Callable[[], bool] | None = None,
+    seconds: float = 5.0,
+) -> None:
+    """Advance the world, let the broadcast pump drain, and flush the archive.
+
+    `until` says what this particular test is waiting for. It matters: events
+    reach the archive within a frame or two, but a metrics sample waits for
+    the sampling interval to elapse *and* for a frame to land on it, so
+    waiting on events and then asking for a sample is a race - which is
+    exactly how this file first went flaky.
+    """
     client.post("/api/sim/step", json={"n": ticks})
+    ready = until or (lambda: bool(container.archive.rows_written))
     deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
+    while time.monotonic() < deadline and not ready():
         client.get("/api/sim/state")  # yields to the loop so the pump can run
-        if container.archive.rows_written:
-            break
         time.sleep(0.05)
     container.archive.flush(timeout_s=5.0)
-    return container
 
 
 def test_a_run_row_exists_as_soon_as_the_app_is_up(
@@ -52,7 +62,7 @@ def test_events_reach_the_database(client: TestClient, container: Container) -> 
 
 def test_a_sample_reaches_the_database(client: TestClient, container: Container) -> None:
     """Metrics sample on an elapsed-tick interval, so step past one."""
-    settle(client, container, ticks=250, seconds=2.0)
+    settle(client, container, ticks=250, until=lambda: container.metrics.latest is not None)
     assert container.archive.run_id is not None
 
     stored = container.archive.history()
@@ -96,7 +106,7 @@ def test_deaths_are_counted_by_cause(client: TestClient, container: Container) -
     victim = agents["agents"][0]["id"] if isinstance(agents, dict) else agents[0]["id"]
 
     assert client.post("/api/god/smite", json={"agent_id": victim}).status_code == 200
-    settle(client, container, ticks=250, seconds=2.0)
+    settle(client, container, ticks=250, until=lambda: container.metrics.latest is not None)
 
     point = container.metrics.latest
     assert point is not None, "no sample was taken"

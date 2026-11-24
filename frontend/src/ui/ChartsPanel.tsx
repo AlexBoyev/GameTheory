@@ -4,7 +4,8 @@
  * Six questions, in order of how much they tell you: is the population
  * surviving, which strategies are winning, which ones are actually *paying*,
  * is anyone cooperating, is the food piling up with a few agents, and is the
- * place getting more treacherous.
+ * place getting more treacherous. Below them, the running totals - including
+ * what people are dying of, which is usually a very short list.
  *
  * Strategy share and average payoff are deliberately next to each other and
  * share a colour scale: a strategy spreading while its payoff falls is the
@@ -182,7 +183,7 @@ export function ChartsPanel(): React.ReactElement {
           <Chart title="Betrayals & alliances" ticks={ticks} series={treachery} />
 
           {latest && (
-            <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 px-3 pb-3 pt-1 text-[11px]">
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 px-3 pb-1 pt-1 text-[11px]">
               {Object.entries(latest.extra ?? {}).map(([key, value]) => (
                 <div key={key} className="flex justify-between gap-2">
                   <dt className="text-slate-400">{key.replace(/_/g, ' ')}</dt>
@@ -190,6 +191,26 @@ export function ChartsPanel(): React.ReactElement {
                 </div>
               ))}
             </dl>
+          )}
+
+          {/* A list, not a chart: on most runs these are single digits, and a
+              line chart of "1" says less than the word next to the number. */}
+          {latest && Object.keys(latest.deaths_by_cause ?? {}).length > 0 && (
+            <section className="px-3 pb-3 pt-1">
+              <h4 className="pb-0.5 text-[10px] uppercase tracking-wide text-slate-500">
+                Deaths by cause
+              </h4>
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px]">
+                {Object.entries(latest.deaths_by_cause ?? {})
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([cause, count]) => (
+                    <div key={cause} className="flex justify-between gap-2">
+                      <dt className="text-slate-400">{cause.replace(/_/g, ' ')}</dt>
+                      <dd className="font-mono tabular-nums text-slate-200">{count}</dd>
+                    </div>
+                  ))}
+              </dl>
+            </section>
           )}
         </div>
       )}

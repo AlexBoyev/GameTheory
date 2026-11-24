@@ -11,18 +11,7 @@ tests, 41 frontend, nine checks.
 
 ---
 
-## 1. Show deaths by cause in the UI
-
-The metric now exists end to end - counted on the world where the cause is
-known, carried through the archive and the snapshot, and served as
-`MetricPointDTO.deaths_by_cause`. Nothing renders it.
-
-The charts panel already prints `extra` as a label/value grid at the bottom;
-the causes want the same treatment rather than a chart, because on most runs
-the numbers are tiny (see below). `ChartsPanel.tsx`, next to the existing
-`<dl>`.
-
-## 2. Mortality is close to zero - a design question, not a bug
+## 1. Mortality is close to zero - a design question, not a bug
 
 **Almost nobody dies.** A 10,000-tick run on the default seed produced 29
 births against 4 deaths, with population climbing from 120 to 145 toward the
@@ -31,12 +20,12 @@ where it should can be answered with numbers rather than impressions - but
 changing it is Alex's call, not a bug fix. Worth raising before building
 anything that assumes an interesting death rate.
 
-## 3. Traits radar (SPEC section 9.4) - cosmetic
+## 2. Traits radar (SPEC section 9.4) - cosmetic
 
 The Inspector draws traits as bars (`Inspector.tsx`, the `detail.traits`
 map). SPEC says radar. Small, self-contained, purely visual.
 
-## 4. Things that look like gaps and are not
+## 3. Things that look like gaps and are not
 
 Do not "fix" these; each was checked and is deliberate.
 
@@ -52,9 +41,9 @@ Do not "fix" these; each was checked and is deliberate.
 - `llm_agents` defaults to 4, so default runs are not bit-reproducible.
   Deliberate, documented in ADR 0004 and `docs/REVIEW.md`.
 
-## 5. Still needs Alex, not Claude
+## 4. Still needs Alex, not Claude
 
-- **The GitHub repo.** 23 commits are waiting with no remote.
+- **The GitHub repo.** 24 commits are waiting with no remote.
   `winget install GitHub.cli ; gh auth login ;
   gh repo create AlexBoyev/GameTheory --private --source=. --push`
 - **Delete `F:\Projects\TheoryGames`.** An empty husk left by the rename; a
