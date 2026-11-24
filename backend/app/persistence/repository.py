@@ -45,14 +45,34 @@ class Repository:
         with session_scope(self._engine) as session:
             return cast("Run | None", session.execute(statement).scalars().first())
 
+    def touch_run(self, run_id: int, last_tick: int) -> None:
+        """Advance a run's `last_tick`, never moving it backwards.
+
+        Called as the run goes rather than at the end, because the end is not
+        reliable: the driver stops the backend with `taskkill /F` on Windows,
+        so the lifespan shutdown that would close the run off never runs. A
+        `last_tick` written only on a clean exit would read 0 for every run
+        anybody actually watched.
+        """
+        with session_scope(self._engine) as session:
+            run = session.get(Run, run_id)
+            if run is None or run.last_tick >= last_tick:
+                return
+            run.last_tick = last_tick
+            session.add(run)
+
     def end_run(self, run_id: int, last_tick: int) -> None:
-        """Stamp a run as finished at `last_tick`."""
+        """Stamp a run as finished at `last_tick`.
+
+        `ended_at` therefore means "stopped cleanly"; NULL means the process
+        was killed or is still going, which on Windows is the usual case.
+        """
         with session_scope(self._engine) as session:
             run = session.get(Run, run_id)
             if run is None:
                 return
             run.ended_at = utc_now()
-            run.last_tick = last_tick
+            run.last_tick = max(run.last_tick, last_tick)
             session.add(run)
 
     # --------------------------------------------------------------- metrics

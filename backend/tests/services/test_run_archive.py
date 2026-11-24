@@ -311,3 +311,42 @@ def test_history_is_bounded(archive: RunArchive) -> None:
     assert len(stored) == HISTORY_LIMIT
     assert stored[-1].tick == (HISTORY_LIMIT + 49) * 10, "a bounded read keeps the newest"
     assert stored == sorted(stored, key=lambda sample: sample.tick), "still oldest first"
+
+
+def test_the_run_row_tracks_how_far_it_got(archive: RunArchive, repository: Repository) -> None:
+    """`last_tick` is stamped as the run goes, not when it ends.
+
+    A soak showed every run row reading `last_tick = 0`, including runs that
+    had plainly finished: the driver stops the backend with `taskkill /F` on
+    Windows, so the lifespan shutdown that calls `end` never runs. A value
+    written only on a clean exit would be 0 for every run anybody watched.
+    """
+    archive.begin(seed=1, config_json="{}")
+    archive.record_metrics(point(tick=500))
+    assert archive.flush()
+
+    run = repository.latest_run()
+    assert run is not None
+    assert run.last_tick == 500
+    assert run.ended_at is None, "still going"
+
+    archive.record_metrics(point(tick=900))
+    assert archive.flush()
+    assert repository.latest_run() is not None
+    refreshed = repository.latest_run()
+    assert refreshed is not None
+    assert refreshed.last_tick == 900
+
+
+def test_a_late_sample_cannot_wind_the_run_backwards(
+    archive: RunArchive, repository: Repository
+) -> None:
+    archive.begin(seed=1, config_json="{}")
+    archive.record_metrics(point(tick=900))
+    assert archive.flush()
+    archive.record_metrics(point(tick=100))
+    assert archive.flush()
+
+    run = repository.latest_run()
+    assert run is not None
+    assert run.last_tick == 900

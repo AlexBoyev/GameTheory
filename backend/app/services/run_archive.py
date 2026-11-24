@@ -288,10 +288,18 @@ class RunArchive:
             LOG.warning("archive.write_failed", job="metrics", error=str(error))
 
     def _flush_pending(self, pending: list[MetricSample]) -> None:
-        """Write and clear whatever samples have accumulated."""
-        if pending:
-            self._repository.add_metrics_many(pending)
-            pending.clear()
+        """Write and clear whatever samples have accumulated.
+
+        The run's `last_tick` rides along with the write, so the row says how
+        far the run actually got even when the process is killed rather than
+        shut down - which, with the driver's `taskkill /F`, is every time.
+        """
+        if not pending:
+            return
+        self._repository.add_metrics_many(pending)
+        if self._run_id is not None:
+            self._repository.touch_run(self._run_id, pending[-1].tick)
+        pending.clear()
 
     def _apply(self, job: _Job) -> None:
         """Perform one job's write."""

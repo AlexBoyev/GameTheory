@@ -66,7 +66,7 @@ jobs at a time and batches the samples among them, preserving order: samples
 accumulate only until a job of another kind arrives, so a `begin` or an `end`
 never overtakes the rows it bounds.
 
-### 4. Memory and the archive are stitched, not chosen between
+### 4. Memory and the archive are stitched, and the read is bounded
 
 `MetricsService.series` returns the in-memory window and asks the archive only
 for what the window no longer holds (`before_tick`), so the two concatenate
@@ -75,6 +75,12 @@ only when the ring buffer cannot fill the request, and de-duplicating on the
 boundary. The caller sees one series and one feed; where each row came from is
 not its problem.
 
+The archived half is capped at 2,000 rows, ordered and limited by SQL rather
+than fetched whole and filtered in Python. Without that cap the stitch was a
+slow leak: the charts panel re-requests the entire series every three
+seconds, so each poll of a long run re-read and re-parsed the whole metrics
+table, growing without limit behind a chart a few hundred pixels wide.
+
 ### 5. The event table is capped by pruning in jumps
 
 SPEC says capped. Deleting a row per insert would mean a `DELETE` on every
@@ -82,6 +88,19 @@ batch at MAX speed, so the archive counts rows every 2,000 writes and, when
 the table passes 20,000, cuts it back to 15,000 in a single statement. Pruning
 is therefore occasional rather than constant, and `prune_events` rejects a
 `keep` at or above its `cap` - which would never settle.
+
+### 6. A run's progress is stamped as it goes, not when it ends
+
+A soak run showed every row in `runs` reading `last_tick = 0` with
+`ended_at` NULL - including runs that had plainly finished. The driver stops
+the backend with `taskkill /F /T` on Windows, because uvicorn and vite both
+spawn children, so the FastAPI lifespan shutdown never runs and neither does
+`RunArchive.end`. A `last_tick` written only on a clean exit reads 0 for
+every run anybody actually watched.
+
+So `last_tick` rides along with each metrics write, and never moves
+backwards. `ended_at` keeps its narrower meaning: the process stopped
+cleanly. NULL means killed, or still going.
 
 ## Consequences
 
@@ -95,6 +114,13 @@ is therefore occasional rather than constant, and `prune_events` rejects a
   actually land, because that is the only kind of test that would have caught
   the original bug. The unit tests for `RunArchive` would all have passed on
   the day nothing called it.
+- Soaked for 27,000 ticks at MAX speed before being believed. It kept up:
+  roughly 1,800 events a minute, not one dropped job, the feed and the table
+  agreeing exactly on the newest thirty rows, and the event log pruning from
+  just past 20,000 back to 15,000 in one jump with the newest kept. The
+  backend held at ~134 MB. That run is also what turned up the `last_tick`
+  problem above - no test would have, because every test shuts down
+  politely.
 
 ## Alternatives considered
 
