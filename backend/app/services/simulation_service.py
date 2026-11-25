@@ -520,6 +520,7 @@ class SimulationService:
                 population=world.population,
                 tribes=len(tribes),
                 tribes_at_war=sum(1 for tribe in tribes if tribe.at_war_with),
+                deaths_by_cause=dict(world.deaths_by_cause),
             )
 
         report = self._chronicle.turn(facts)

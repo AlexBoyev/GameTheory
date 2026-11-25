@@ -4,13 +4,19 @@ from app.services.day_digest import DayChronicle, DayFacts
 
 
 def facts(day: int, **overrides: object) -> DayFacts:
-    """A day's worth of state, with sensible defaults."""
+    """A day's worth of state, with sensible defaults.
+
+    `deaths_by_cause` is cumulative, as the world reports it: the chronicle
+    takes the difference between turns, so a test that wants three deaths
+    "today" passes a total three higher than the day before.
+    """
     base: dict[str, object] = {
         "day": day,
         "season": "spring",
         "population": 100,
         "tribes": 0,
         "tribes_at_war": 0,
+        "deaths_by_cause": {},
     }
     base.update(overrides)
     return DayFacts(**base)  # type: ignore[arg-type]
@@ -95,22 +101,59 @@ def test_a_quiet_day_still_says_what_happened() -> None:
 def test_the_population_line_reads_as_a_change() -> None:
     chronicle = DayChronicle()
     chronicle.turn(facts(0, population=100))
-    chronicle.record(events(death=4))
 
-    report = chronicle.turn(facts(1, population=96))
+    report = chronicle.turn(facts(1, population=96, deaths_by_cause={"combat": 2, "starvation": 2}))
 
     assert report is not None
     assert "4 deaths" in report.headline
     assert "96 alive (-4 overnight)" in report.lines[1]
+    assert "Died: 2 of combat, 2 of starvation" in report.lines
+
+
+def test_deaths_are_counted_from_the_world_not_the_feed() -> None:
+    """The feed is a bounded queue that drops batches when a client is slow.
+
+    It drops them hardest when the island is busiest, which is exactly when
+    the number matters, so the chronicle takes the difference between the
+    world's own cumulative tallies instead.
+    """
+    chronicle = DayChronicle()
+    chronicle.turn(facts(0, deaths_by_cause={"old_age": 5}))
+    chronicle.record(events(death=99))  # nonsense from the feed, ignored
+
+    report = chronicle.turn(facts(1, population=97, deaths_by_cause={"old_age": 8}))
+
+    assert report is not None
+    assert "3 deaths of old age" in report.headline
+    assert "Died: 3 of old age" in report.lines
+
+
+def test_the_founding_generation_dying_is_its_own_story() -> None:
+    """The island starts with nobody old, so they age and die together.
+
+    Measured on the default world: first old-age death on day 8, then ten
+    days of decline before the children refill it. That turn used to be
+    reported as "9 deaths on the island".
+    """
+    chronicle = DayChronicle()
+    chronicle.turn(facts(7, population=140, deaths_by_cause={"combat": 4}))
+
+    report = chronicle.turn(
+        facts(8, population=131, tribes=12, deaths_by_cause={"combat": 4, "old_age": 9})
+    )
+
+    assert report is not None
+    assert "founding generation" in report.headline
+    assert "9 deaths of old age" in report.headline
 
 
 def test_a_collapse_outranks_whatever_else_happened() -> None:
     """Reporting 3 deaths is true and useless when four people are left."""
     chronicle = DayChronicle()
     chronicle.turn(facts(4, population=60))
-    chronicle.record(events(war_declared=2, death=3))
+    chronicle.record(events(war_declared=2))
 
-    report = chronicle.turn(facts(5, population=4))
+    report = chronicle.turn(facts(5, population=4, deaths_by_cause={"starvation": 56}))
 
     assert report is not None
     assert "nearly empty" in report.headline
@@ -120,9 +163,8 @@ def test_a_collapse_outranks_whatever_else_happened() -> None:
 def test_an_empty_island_says_so_plainly() -> None:
     chronicle = DayChronicle()
     chronicle.turn(facts(4, population=2))
-    chronicle.record(events(death=2))
 
-    report = chronicle.turn(facts(5, population=0))
+    report = chronicle.turn(facts(5, population=0, deaths_by_cause={"starvation": 2}))
 
     assert report is not None
     assert report.headline == "The island is empty"

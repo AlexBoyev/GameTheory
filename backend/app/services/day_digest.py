@@ -13,8 +13,19 @@ yet is what the calendar guarantees (a season, and what the season does).
 """
 
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
+
+COHORT_DEATHS = 3
+"""Old-age deaths in one day that mean the founding generation is going.
+
+The island starts with everybody adult and nobody old, so they age together
+and die together: measured on the default world, the first old-age death is
+on day 8 and the population falls for the next ten days before the
+survivors' children refill it. That turn is the most interesting thing that
+happens in a run and it used to be reported as "9 deaths on the island".
+"""
 
 COLLAPSE_SURVIVORS = 10
 """At or below this, the story of the day is the collapse, whatever else
@@ -36,6 +47,14 @@ class DayFacts:
     population: int
     tribes: int
     tribes_at_war: int
+    deaths_by_cause: Mapping[str, int] = field(default_factory=dict)
+    """Cumulative totals from the world, not a count of events.
+
+    The feed is a bounded queue that drops batches when a client is slow, so
+    counting `death` events undercounts exactly when the island is busiest -
+    which is when the number matters. The world's own tally cannot drop one,
+    and it carries the cause, which the wire form of an event does not.
+    """
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,25 +89,32 @@ def _plural(count: int, singular: str, plural: str | None = None) -> str:
     return f"{count} {word}"
 
 
-def _headline(counts: Counter[str], facts: DayFacts, deaths: int) -> str:
+def _headline(counts: Counter[str], facts: DayFacts, deaths: Counter[str]) -> str:
     """The one line worth leading with, in descending order of drama.
 
     Ordered rather than scored on purpose: a war is the story of its day even
     on a day with four hundred rumours, and a scoring function that can be
     out-shouted by volume would bury it.
     """
+    total = sum(deaths.values())
     if facts.population == 0:
         return "The island is empty"
     if facts.population <= COLLAPSE_SURVIVORS:
         return f"The island is nearly empty: {_plural(facts.population, 'survivor')} left"
+    if deaths["old_age"] >= COHORT_DEATHS:
+        return f"The founding generation is going: {_plural(deaths['old_age'], 'death')} of old age"
     if counts["war_declared"]:
         return f"War: {_plural(counts['war_declared'], 'declaration')} between tribes"
     if counts["coup"]:
         return f"{_plural(counts['coup'], 'chief')} overthrown"
     if counts["raid"] >= 3:
         return f"Raiding season: {_plural(counts['raid'], 'raid')}"
-    if deaths >= 3:
-        return f"{_plural(deaths, 'death')} on the island"
+    if deaths["combat"] >= COHORT_DEATHS:
+        return f"{_plural(deaths['combat'], 'killing')} on the island"
+    if deaths["starvation"] >= COHORT_DEATHS:
+        return f"Hunger: {_plural(deaths['starvation'], 'death')}"
+    if total >= 3:
+        return f"{_plural(total, 'death')} on the island"
     if counts["tribe_founded"]:
         return f"{_plural(counts['tribe_founded'], 'new tribe')} founded"
     if counts["peace_made"]:
@@ -97,8 +123,8 @@ def _headline(counts: Counter[str], facts: DayFacts, deaths: int) -> str:
         return f"{_plural(counts['birth'], 'child')} born"
     if counts["shelter_built"] >= 3:
         return f"Building: {_plural(counts['shelter_built'], 'hut')} went up"
-    if deaths:
-        return f"{_plural(deaths, 'death')} on the island"
+    if total:
+        return f"{_plural(total, 'death')} on the island"
     return "A day of trading, gossip and small cruelties"
 
 
@@ -110,10 +136,11 @@ class DayChronicle:
     only: the archive is what remembers history.
     """
 
-    __slots__ = ("_counts", "_day", "_population", "_season")
+    __slots__ = ("_counts", "_day", "_deaths", "_population", "_season")
 
     def __init__(self) -> None:
         self._counts: Counter[str] = Counter()
+        self._deaths: Counter[str] = Counter()
         self._day: int | None = None
         self._season: str | None = None
         self._population = 0
@@ -128,6 +155,7 @@ class DayChronicle:
     def reset(self) -> None:
         """Forget everything: a new world is a new chronicle."""
         self._counts.clear()
+        self._deaths.clear()
         self._day = None
         self._season = None
         self._population = 0
@@ -154,6 +182,11 @@ class DayChronicle:
         previous_season = self._season
         previous_population = self._population
         counts = Counter(self._counts)
+        # Deaths come from the world's cumulative tally, so the day's figure
+        # is the difference since the last turn (see `DayFacts`).
+        cumulative = Counter(facts.deaths_by_cause)
+        deaths = cumulative - self._deaths
+        self._deaths = cumulative
         self._day, self._season, self._population = facts.day, facts.season, facts.population
         self._counts.clear()
 
@@ -170,7 +203,6 @@ class DayChronicle:
                 counts=dict(counts),
             )
 
-        deaths = counts["death"]
         lines = [
             f"{_plural(counts['combat'], 'fight')}, "
             f"{_plural(counts['gossip'], 'rumour')}, "
@@ -178,6 +210,9 @@ class DayChronicle:
             f"{facts.population} alive ({facts.population - previous_population:+d} overnight)",
             f"{_plural(facts.tribes, 'tribe')}, {self._war_state(counts, facts)}",
         ]
+        toll = self._toll(deaths)
+        if toll:
+            lines.append(toll)
         season_line = self._season_line(facts, changed=previous_season != facts.season)
         if season_line:
             lines.append(season_line)
@@ -189,6 +224,17 @@ class DayChronicle:
             lines=tuple(lines),
             counts=dict(counts),
         )
+
+    @staticmethod
+    def _toll(deaths: Counter[str]) -> str:
+        """The day's deaths, by cause, or nothing on a day nobody died."""
+        if not deaths:
+            return ""
+        parts = [
+            f"{count} of {cause.replace('_', ' ')}"
+            for cause, count in sorted(deaths.items(), key=lambda item: (-item[1], item[0]))
+        ]
+        return f"Died: {', '.join(parts)}"
 
     @staticmethod
     def _war_state(counts: Counter[str], facts: DayFacts) -> str:
