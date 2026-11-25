@@ -1,6 +1,7 @@
 """The day card: what it leads with, and what it refuses to invent."""
 
-from app.services.day_digest import DayChronicle, DayFacts
+from app.services.day_digest import DayChronicle
+from app.services.day_facts import DayFacts
 
 
 def facts(day: int, **overrides: object) -> DayFacts:

@@ -40,6 +40,25 @@ adults, so the island is below replacement, and whether one is still
 inhabited at day 30 is chance - three seeds ended at 215, 16 and 5 with
 identical settings.
 
+Thirty days, three seeds, two ageing rates, counting the flows rather than
+guessing at them:
+
+| years/day | seed | day 30 | peak | low | births | old-age deaths |
+| --- | --- | --- | --- | --- | --- | --- |
+| 3.0 (default) | 1337 | 215 | 215 | 108 | 264 | 134 |
+| 3.0 | 7 | 16 | 129 | 16 | 28 | 122 |
+| 3.0 | 99 | 5 | 123 | 5 | 18 | 105 |
+| 1.5 | 1337 | 388 | 388 | 121 | 394 | 58 |
+| 1.5 | 7 | 55 | 128 | 55 | 36 | 70 |
+| 1.5 | 99 | 60 | 129 | 59 | 61 | 53 |
+
+Births are the whole story, and they are *bimodal*: 264 or 28, 394 or 36.
+The loop is positive - more children means more agents who have met each
+other, which means more pairs that trust each other enough to have one - so
+an island either catches and booms or never catches and empties. Halving
+the ageing rate helps every seed (5 -> 60, 16 -> 55) without removing the
+bistability, and costs the thing 3.0 was chosen for: a watchable lifetime.
+
 The funnel, measured on well-fed adults of breeding age: 39% have somebody
 of breeding age within reach, 26% have met them before, 4.4% trust each
 other at 0.20, 2.1% at the default 0.35. Half of all `Reproduce` refusals
