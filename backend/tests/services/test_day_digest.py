@@ -86,6 +86,62 @@ def test_a_war_that_simply_stopped_says_so() -> None:
     assert "the war is already over" in " ".join(report.lines)
 
 
+def test_a_headline_reports_the_unusual_not_the_dramatic() -> None:
+    """The lesson of a live run: coups run at about 32 a day on this island.
+
+    Ordered-by-drama put coups second, so every card led with one and every
+    day looked like a crisis. A day is worth announcing for what it had
+    unusually many of, measured against its own history.
+    """
+    chronicle = DayChronicle()
+    chronicle.turn(facts(0))
+    for day in (1, 2, 3):
+        chronicle.record(events(coup=30, gossip=500))
+        chronicle.turn(facts(day))
+
+    chronicle.record(events(coup=31, gossip=505))
+    ordinary = chronicle.turn(facts(4))
+    assert ordinary is not None
+    assert "overthrown" not in ordinary.headline, "32 coups is a Tuesday here"
+
+    chronicle.record(events(coup=96, gossip=500))
+    spike = chronicle.turn(facts(5))
+    assert spike is not None
+    assert "96 chiefs overthrown" in spike.headline
+    assert "triple the usual" in spike.headline
+
+
+def test_the_first_thing_a_world_has_ever_done_is_news() -> None:
+    """No history to compare against means it has never happened before."""
+    chronicle = DayChronicle()
+    chronicle.turn(facts(0))
+    for day in (1, 2):
+        chronicle.record(events(gossip=500))
+        chronicle.turn(facts(day))
+
+    chronicle.record(events(gossip=500, war_declared=2))
+    report = chronicle.turn(facts(3, tribes=6, tribes_at_war=2))
+
+    assert report is not None
+    assert "2 wars declared" in report.headline
+    assert "usual" not in report.headline, "nothing to compare it against"
+
+
+def test_a_spike_below_its_floor_is_noise() -> None:
+    """One raid where the average is a third of one is not a raiding season."""
+    chronicle = DayChronicle()
+    chronicle.turn(facts(0))
+    for day in (1, 2, 3):
+        chronicle.record(events(gossip=500))
+        chronicle.turn(facts(day))
+
+    chronicle.record(events(gossip=500, raid=1))
+    report = chronicle.turn(facts(4))
+
+    assert report is not None
+    assert "raid" not in report.headline
+
+
 def test_a_quiet_day_still_says_what_happened() -> None:
     chronicle = DayChronicle()
     chronicle.turn(facts(0))

@@ -17,6 +17,52 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+
+@dataclass(frozen=True, slots=True)
+class Notable:
+    """An event type worth leading with, and how to say it."""
+
+    kind: str
+    singular: str
+    plural: str | None = None
+    floor: int = 3
+    """Below this many in a day, a ratio is noise rather than news."""
+
+
+NOTABLE: tuple[Notable, ...] = (
+    Notable("war_declared", "war declared", "wars declared", floor=2),
+    Notable("raid", "raid", floor=2),
+    Notable("coup", "chief overthrown", "chiefs overthrown", floor=5),
+    Notable("tribe_founded", "new tribe", floor=2),
+    Notable("tribe_split", "tribe split apart", "tribes split apart", floor=1),
+    Notable("tribe_left", "walked out of their tribe", floor=5),
+    Notable("peace_made", "truce", floor=2),
+    Notable("alliance", "alliance", floor=3),
+    Notable("betrayal", "betrayal", floor=3),
+    Notable("birth", "child born", "children born", floor=3),
+    Notable("shelter_built", "hut went up", "huts went up", floor=3),
+    Notable("combat", "fight", floor=20),
+    Notable("gossip", "rumour", floor=100),
+    Notable("lie_caught", "liar caught", "liars caught", floor=20),
+    Notable("trade", "trade", floor=20),
+    Notable("gift", "gift", floor=20),
+)
+"""What a day can be *about*, with the floor below which a spike is noise.
+
+Ordered drama does not work on this island, which is the lesson of a live
+run: coups looked like the second most dramatic thing that could happen, so
+every card led with one - and coups turn out to run at 32 a day. Nearly
+everything here happens every day. What makes a day worth announcing is
+therefore not which events it contained but which of them it had *unusually
+many of*, which is what `_spike` measures.
+"""
+
+SPIKE = 1.6
+"""How far above its own running average a count has to be to lead."""
+
+MIN_DAYS_FOR_AVERAGE = 2
+"""Days of history before ratios mean anything. Until then, fixed rules."""
+
 COHORT_DEATHS = 3
 """Old-age deaths in one day that mean the founding generation is going.
 
@@ -89,12 +135,48 @@ def _plural(count: int, singular: str, plural: str | None = None) -> str:
     return f"{count} {word}"
 
 
-def _headline(counts: Counter[str], facts: DayFacts, deaths: Counter[str]) -> str:
-    """The one line worth leading with, in descending order of drama.
+def _multiple(ratio: float) -> str:
+    """How a person would say "2.9 times as many"."""
+    if ratio >= 4.0:
+        return f"{ratio:.0f}x the usual"
+    if ratio >= 2.6:
+        return "triple the usual"
+    if ratio >= 1.9:
+        return "double the usual"
+    return "well above the usual"
 
-    Ordered rather than scored on purpose: a war is the story of its day even
-    on a day with four hundred rumours, and a scoring function that can be
-    out-shouted by volume would bury it.
+
+def _spike(counts: Counter[str], averages: Mapping[str, float]) -> str | None:
+    """The day's biggest outlier against its own history, if it has one."""
+    best: tuple[float, str] | None = None
+    for notable in NOTABLE:
+        count = counts[notable.kind]
+        if count < notable.floor:
+            continue
+        average = averages.get(notable.kind, 0.0)
+        ratio = count / average if average >= 1.0 else float("inf")
+        if ratio < SPIKE:
+            continue
+        said = f"{_plural(count, notable.singular, notable.plural)}"
+        phrase = said if ratio == float("inf") else f"{said} - {_multiple(ratio)}"
+        score = 99.0 if ratio == float("inf") else ratio
+        if best is None or score > best[0]:
+            best = (score, phrase[0].upper() + phrase[1:])
+    return None if best is None else best[1]
+
+
+def _headline(
+    counts: Counter[str],
+    facts: DayFacts,
+    deaths: Counter[str],
+    averages: Mapping[str, float] | None = None,
+) -> str:
+    """The one line worth leading with.
+
+    Deaths and collapse are absolute - a generation dying is the story of
+    its day whatever else happened - and everything below that is relative,
+    because on this island nearly everything happens every day. See
+    `NOTABLE`.
     """
     total = sum(deaths.values())
     if facts.population == 0:
@@ -103,12 +185,15 @@ def _headline(counts: Counter[str], facts: DayFacts, deaths: Counter[str]) -> st
         return f"The island is nearly empty: {_plural(facts.population, 'survivor')} left"
     if deaths["old_age"] >= COHORT_DEATHS:
         return f"The founding generation is going: {_plural(deaths['old_age'], 'death')} of old age"
+    if averages is not None:
+        # With history, the question is only what was unusual. Falling
+        # through to the fixed rules here is what made every card lead with
+        # a coup: they fire on *any* count, and this island has coups daily.
+        return _spike(counts, averages) or _ordinary_day(counts)
     if counts["war_declared"]:
         return f"War: {_plural(counts['war_declared'], 'declaration')} between tribes"
     if counts["coup"]:
         return f"{_plural(counts['coup'], 'chief')} overthrown"
-    if counts["raid"] >= 3:
-        return f"Raiding season: {_plural(counts['raid'], 'raid')}"
     if deaths["combat"] >= COHORT_DEATHS:
         return f"{_plural(deaths['combat'], 'killing')} on the island"
     if deaths["starvation"] >= COHORT_DEATHS:
@@ -125,7 +210,21 @@ def _headline(counts: Counter[str], facts: DayFacts, deaths: Counter[str]) -> st
         return f"Building: {_plural(counts['shelter_built'], 'hut')} went up"
     if total:
         return f"{_plural(total, 'death')} on the island"
-    return "A day of trading, gossip and small cruelties"
+    return _ordinary_day(counts)
+
+
+def _ordinary_day(counts: Counter[str]) -> str:
+    """What to say when nothing stood out - which is most days, and fine.
+
+    Named after what it is: the island is busy every day, so "nothing
+    unusual" still means several hundred encounters.
+    """
+    exchanges = counts["trade"] + counts["gift"] + counts["cooperation"]
+    if exchanges and counts["combat"]:
+        return "A day of trading, gossip and small cruelties"
+    if exchanges:
+        return "A quiet day of trading and gossip"
+    return "A quiet day"
 
 
 class DayChronicle:
@@ -136,10 +235,12 @@ class DayChronicle:
     only: the archive is what remembers history.
     """
 
-    __slots__ = ("_counts", "_day", "_deaths", "_population", "_season")
+    __slots__ = ("_counts", "_day", "_days", "_deaths", "_population", "_season", "_totals")
 
     def __init__(self) -> None:
         self._counts: Counter[str] = Counter()
+        self._totals: Counter[str] = Counter()
+        self._days = 0
         self._deaths: Counter[str] = Counter()
         self._day: int | None = None
         self._season: str | None = None
@@ -155,6 +256,8 @@ class DayChronicle:
     def reset(self) -> None:
         """Forget everything: a new world is a new chronicle."""
         self._counts.clear()
+        self._totals.clear()
+        self._days = 0
         self._deaths.clear()
         self._day = None
         self._season = None
@@ -187,6 +290,13 @@ class DayChronicle:
         cumulative = Counter(facts.deaths_by_cause)
         deaths = cumulative - self._deaths
         self._deaths = cumulative
+        averages = (
+            {kind: total / self._days for kind, total in self._totals.items()}
+            if self._days >= MIN_DAYS_FOR_AVERAGE
+            else None
+        )
+        self._totals.update(counts)
+        self._days += 1
         self._day, self._season, self._population = facts.day, facts.season, facts.population
         self._counts.clear()
 
@@ -220,7 +330,7 @@ class DayChronicle:
         return DayReport(
             day=facts.day,
             season=facts.season,
-            headline=_headline(counts, facts, deaths),
+            headline=_headline(counts, facts, deaths, averages),
             lines=tuple(lines),
             counts=dict(counts),
         )

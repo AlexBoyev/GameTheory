@@ -597,13 +597,34 @@ less starvation in five of six, but *fewer* agents alive at day ten in four
 of six, by six to sixteen. Feeding them better earlier means more births
 earlier, and a bigger population competes harder for the same island.
 
-The long window is where it tells. Thirty days on seed 1337: without
-re-targeting the island peaks at 133 on day 6 and withers to 33 by day 30;
-with it, it dips to 109 by day 18 and recovers to 215. The dip is the
-founding cohort dying of old age together, which is the same event the
-front screen now tells people to watch for around day 8 - and whether a
-society survives its first generation turns out to depend on whether its
-gatherers give up when they find an empty bush.
+The long window does not settle it either, and the way it fails to is the
+most useful thing measured all day. Thirty days, three seeds, same change:
+
+| day 30, alive | give up | walk on |
+| --- | --- | --- |
+| seed 1337 | 33 | 215 |
+| seed 7 | 251 | 16 |
+| seed 99 | 17 | 5 |
+
+An order of magnitude either way, in both directions, from a change to
+what an agent does when it finds an empty bush. Every one of those worlds
+crashes between day 12 and day 24 and then either recovers or does not,
+and which it does is not predictable from the change.
+
+The mechanism is demographic and it is not subtle. Everybody starts adult
+(ages uniform on 18-50) and ages three years a sim-day, so the oldest
+starter reaches 72 on day 7.3 and the youngest on day 18: **the entire
+founding cast is gone by day 18**, and everything alive after that was born
+in-world. Births run at about 4.8 a day, so roughly 86 children arrive
+before 120 adults die. The default island is therefore marginal by
+construction - near enough to replacement that chaos decides - and any
+claim about its day-30 state from one seed is worth nothing.
+
+Two things follow. The first is a rule: *for anything past about day 10,
+three seeds is the minimum and the spread is the result.* The second is a
+real question about the defaults, which is being measured separately -
+whether a world that usually dies by day 30 is the right default for a
+project whose pitch is watching strategies be inherited.
 
 Three further things the sweep exposed, all worth keeping in mind:
 
