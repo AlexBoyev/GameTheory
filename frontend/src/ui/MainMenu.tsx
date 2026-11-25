@@ -16,6 +16,7 @@
  * different world by the time you pressed Start.
  */
 
+import { keyFor } from '@/lib/keybindings';
 import { Button } from '@/ui/primitives';
 
 export interface MainMenuProps {
@@ -45,17 +46,33 @@ const WATCH_FOR: readonly { title: string; body: string }[] = [
   },
 ];
 
-const KEYS: readonly { key: string; what: string }[] = [
-  { key: 'Space', what: 'play / pause' },
-  { key: '1 – 7', what: 'speed, 1x to MAX' },
-  { key: '.', what: 'one tick' },
-  { key: 'Click', what: 'inspect an agent' },
-  { key: 'F', what: 'follow it' },
-  { key: 'C / L', what: 'charts / event log' },
-  { key: 'G / T / H', what: 'territories / trust / heatmap' },
-  { key: 'R', what: 'new world' },
-  { key: 'Esc', what: 'back to this menu' },
-  { key: '?', what: 'full help' },
+/**
+ * A short summary, named by action rather than by key.
+ *
+ * The keys themselves come from `KEYBINDINGS`, which is the same table the
+ * handlers and the help overlay read - this screen spelling them out again
+ * would be a third copy free to disagree with the other two, which is
+ * exactly what that module exists to prevent.
+ */
+const SUMMARY: readonly { keys: string; what: string }[] = [
+  { keys: keyFor('togglePlay'), what: 'play / pause' },
+  { keys: `${keyFor('speed1')} – ${keyFor('speedMax')}`, what: 'speed, 1x to MAX' },
+  { keys: keyFor('step'), what: 'one tick' },
+  { keys: 'Click', what: 'inspect an agent' },
+  { keys: keyFor('followSelected'), what: 'follow it' },
+  {
+    keys: `${keyFor('toggleCharts')} / ${keyFor('toggleLog')}`,
+    what: 'charts / event log',
+  },
+  {
+    keys: [keyFor('toggleTerritories'), keyFor('toggleTrustLines'), keyFor('toggleHeatmap')].join(
+      ' / ',
+    ),
+    what: 'territories / trust / heatmap',
+  },
+  { keys: keyFor('reset'), what: 'new world' },
+  { keys: keyFor('escapeBack'), what: 'back to this menu' },
+  { keys: keyFor('toggleHelp'), what: 'full help' },
 ];
 
 export function MainMenu({ started, onStart, onNewWorld, onHelp }: MainMenuProps): React.ReactElement {
@@ -88,11 +105,11 @@ export function MainMenu({ started, onStart, onNewWorld, onHelp }: MainMenuProps
             Controls
           </h2>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
-            {KEYS.map((binding) => (
-              <div key={binding.key} className="flex items-baseline justify-between gap-2">
+            {SUMMARY.map((binding) => (
+              <div key={binding.what} className="flex items-baseline justify-between gap-2">
                 <dt>
                   <kbd className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-slate-200">
-                    {binding.key}
+                    {binding.keys}
                   </kbd>
                 </dt>
                 <dd className="flex-1 text-right text-[11px] text-slate-400">{binding.what}</dd>

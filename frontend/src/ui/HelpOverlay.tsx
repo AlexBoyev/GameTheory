@@ -7,7 +7,7 @@
  */
 
 import { BIOME_COLORS } from '@/lib/colors';
-import { KEYBINDINGS } from '@/lib/keybindings';
+import { KEYBINDINGS, keyLabel } from '@/lib/keybindings';
 import { STATE_EMOJI } from '@/lib/stateIcons';
 import { Panel } from '@/ui/primitives';
 
@@ -132,7 +132,7 @@ export function HelpOverlay({ onClose, backendOrigin }: HelpOverlayProps): React
                     >
                       <span className="text-slate-400">{binding.label}</span>
                       <kbd className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-slate-200">
-                        {binding.key === ' ' ? 'Space' : binding.key}
+                        {keyLabel(binding.key)}
                       </kbd>
                     </li>
                   ))}

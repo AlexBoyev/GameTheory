@@ -69,3 +69,29 @@ export function actionForKey(key: string): ActionId | null {
   const normalised = key.length === 1 ? key.toLowerCase() : key.toLowerCase();
   return KEYBINDINGS.find((binding) => binding.key === normalised)?.action ?? null;
 }
+
+/** Shown when an action has no key. Deliberately not a pressable character. */
+export const UNBOUND = '—';
+
+/** How a key is written for a reader: `Space`, `Esc`, `T`. */
+export function keyLabel(key: string): string {
+  if (key === ' ') return 'Space';
+  if (key === 'escape') return 'Esc';
+  return key.length === 1 ? key.toUpperCase() : key;
+}
+
+/**
+ * The key bound to `action`, written for a reader.
+ *
+ * Exists so nothing has to keep its own copy of the map. The front screen
+ * summarises a handful of these and the help overlay lists them all; both
+ * used to be able to drift from the handlers, which is the one thing this
+ * module is for.
+ */
+export function keyFor(action: ActionId): string {
+  const binding = KEYBINDINGS.find((entry) => entry.action === action);
+  // Not '?': that is a real key here (the help overlay), so a missing
+  // binding would render as a plausible one. An em dash cannot be mistaken
+  // for something to press.
+  return binding === undefined ? UNBOUND : keyLabel(binding.key);
+}
