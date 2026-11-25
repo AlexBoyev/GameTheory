@@ -184,7 +184,16 @@ def _headline(
     if facts.population <= COLLAPSE_SURVIVORS:
         return f"The island is nearly empty: {_plural(facts.population, 'survivor')} left"
     if deaths["old_age"] >= COHORT_DEATHS:
-        return f"The founding generation is going: {_plural(deaths['old_age'], 'death')} of old age"
+        # The die-off lasts about ten days, and saying the same sentence ten
+        # times is the monotony these rules exist to avoid. The first day is
+        # the news; after that the running total is.
+        so_far = facts.deaths_by_cause.get("old_age", deaths["old_age"])
+        if so_far == deaths["old_age"]:
+            return (
+                "The founding generation is going: "
+                f"{_plural(deaths['old_age'], 'death')} of old age"
+            )
+        return f"{deaths['old_age']} more founders gone - {so_far} of old age so far"
     if averages is not None:
         # With history, the question is only what was unusual. Falling
         # through to the fixed rules here is what made every card lead with

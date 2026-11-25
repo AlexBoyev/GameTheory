@@ -180,7 +180,8 @@ def test_deaths_are_counted_from_the_world_not_the_feed() -> None:
     report = chronicle.turn(facts(1, population=97, deaths_by_cause={"old_age": 8}))
 
     assert report is not None
-    assert "3 deaths of old age" in report.headline
+    # Three today, not ninety-nine; and the world knew five had already gone.
+    assert report.headline == "3 more founders gone - 8 of old age so far"
     assert "Died: 3 of old age" in report.lines
 
 
@@ -201,6 +202,12 @@ def test_the_founding_generation_dying_is_its_own_story() -> None:
     assert report is not None
     assert "founding generation" in report.headline
     assert "9 deaths of old age" in report.headline
+
+    # It lasts about ten days, and ten identical cards is the monotony the
+    # headline rules exist to avoid.
+    second = chronicle.turn(facts(9, population=124, deaths_by_cause={"combat": 4, "old_age": 16}))
+    assert second is not None
+    assert second.headline == "7 more founders gone - 16 of old age so far"
 
 
 def test_a_collapse_outranks_whatever_else_happened() -> None:
