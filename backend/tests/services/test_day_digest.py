@@ -258,3 +258,24 @@ def test_a_new_world_forgets_the_old_one() -> None:
     assert report is not None
     assert "strangers" in report.headline, "a reset world opens, it does not continue"
     assert report.counts == {}
+
+
+def test_a_bloody_day_leads_even_once_the_world_has_a_history() -> None:
+    """Deaths were absolute rules once, and that was wrong both ways.
+
+    Left absolute they headline every day, because deaths run at about
+    three a day. Left out of the relative rule they could not headline at
+    all, so a day with nine killings was announced by its alliances.
+    """
+    chronicle = DayChronicle()
+    chronicle.turn(facts(0))
+    for day in (1, 2, 3):
+        chronicle.record(events(gossip=500, alliance=20))
+        chronicle.turn(facts(day, deaths_by_cause={"combat": 2 * day}))
+
+    chronicle.record(events(gossip=500, alliance=20))
+    report = chronicle.turn(facts(4, population=91, deaths_by_cause={"combat": 15}))
+
+    assert report is not None
+    assert "9 killings" in report.headline
+    assert "the usual" in report.headline

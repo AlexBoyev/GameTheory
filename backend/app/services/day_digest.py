@@ -30,6 +30,8 @@ class Notable:
 
 
 NOTABLE: tuple[Notable, ...] = (
+    Notable("killed", "killing", floor=3),
+    Notable("starved", "death by hunger", "deaths by hunger", floor=3),
     Notable("war_declared", "war declared", "wars declared", floor=2),
     Notable("raid", "raid", floor=2),
     Notable("coup", "chief overthrown", "chiefs overthrown", floor=5),
@@ -48,6 +50,13 @@ NOTABLE: tuple[Notable, ...] = (
     Notable("gift", "gift", floor=20),
 )
 """What a day can be *about*, with the floor below which a spike is noise.
+
+`killed` and `starved` are the day's deaths by cause, counted from the
+world rather than from the feed and folded in here so they compete on the
+same terms. They were absolute rules once and that was wrong in both
+directions: deaths run at about three a day, so leading with them every day
+is the monotony this rule exists to avoid, while leaving them out meant a
+day with nine killings could be headlined by its alliances.
 
 Ordered drama does not work on this island, which is the lesson of a live
 run: coups looked like the second most dramatic thing that could happen, so
@@ -199,16 +208,19 @@ def _headline(
         # through to the fixed rules here is what made every card lead with
         # a coup: they fire on *any* count, and this island has coups daily.
         return _spike(counts, averages) or _ordinary_day(counts)
+
+    # No history yet - the first two days of a world. Fixed order, and the
+    # only place it is still right, because nothing has a usual yet.
+    if counts["killed"] >= COHORT_DEATHS:
+        return f"{_plural(counts['killed'], 'killing')} on the island"
+    if counts["starved"] >= COHORT_DEATHS:
+        return f"Hunger: {_plural(counts['starved'], 'death')}"
+    if total >= 3:
+        return f"{_plural(total, 'death')} on the island"
     if counts["war_declared"]:
         return f"War: {_plural(counts['war_declared'], 'declaration')} between tribes"
     if counts["coup"]:
         return f"{_plural(counts['coup'], 'chief')} overthrown"
-    if deaths["combat"] >= COHORT_DEATHS:
-        return f"{_plural(deaths['combat'], 'killing')} on the island"
-    if deaths["starvation"] >= COHORT_DEATHS:
-        return f"Hunger: {_plural(deaths['starvation'], 'death')}"
-    if total >= 3:
-        return f"{_plural(total, 'death')} on the island"
     if counts["tribe_founded"]:
         return f"{_plural(counts['tribe_founded'], 'new tribe')} founded"
     if counts["peace_made"]:
@@ -299,6 +311,12 @@ class DayChronicle:
         cumulative = Counter(facts.deaths_by_cause)
         deaths = cumulative - self._deaths
         self._deaths = cumulative
+        # Deaths compete for the headline on the same terms as everything
+        # else, so they go into the same tally the averages are kept over.
+        if deaths["combat"]:
+            counts["killed"] = deaths["combat"]
+        if deaths["starvation"]:
+            counts["starved"] = deaths["starvation"]
         averages = (
             {kind: total / self._days for kind, total in self._totals.items()}
             if self._days >= MIN_DAYS_FOR_AVERAGE
