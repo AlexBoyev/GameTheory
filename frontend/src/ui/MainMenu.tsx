@@ -102,6 +102,23 @@ export function MainMenu({ started, onStart, onNewWorld, onHelp }: MainMenuProps
 
         <section className="rounded-xl bg-white/5 p-3 ring-1 ring-white/10">
           <h2 className="pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            What happens, and when
+          </h2>
+          <p className="text-[12px] leading-relaxed text-slate-300">
+            A day is 2,400 ticks. Measured on the default island: they are trading and fighting
+            within the first minute, the first hut goes up around tick 200, the first tribe is
+            founded by tick 600, and somebody is challenged for its leadership shortly after.
+            Wars and raids start around day 1.5. Old age takes the first of them near day 8 — that
+            is when strategies start being inherited rather than just played.
+          </p>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
+            Most of it is small and constant: hundreds of encounters a day, each one a game being
+            played. Open the charts (C) to see the shape of it, or the log (L) to read it.
+          </p>
+        </section>
+
+        <section className="rounded-xl bg-white/5 p-3 ring-1 ring-white/10">
+          <h2 className="pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
             Controls
           </h2>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">

@@ -14,6 +14,12 @@ const QUALITIES: Quality[] = ['low', 'med', 'high'];
 /** Ticks a second at 1x: the engine runs 1/dt of them, and dt is 0.1. */
 const TICKS_PER_SECOND_AT_1X = 10;
 
+/** A day is 240 sim-seconds at dt 0.1. */
+const TICKS_PER_DAY = 2400;
+
+/** Jumps worth offering: a glance, a scene, and a decent chunk of a day. */
+const STEPS = [50, 100, 500] as const;
+
 export function ControlBar(): React.ReactElement {
   const controls = useSimControls();
   const status = useSimStore((state) => state.status);
@@ -51,9 +57,17 @@ export function ControlBar(): React.ReactElement {
           <Button onClick={() => void controls.step(1)} title="Step one tick (.)">
             ⏭ Step
           </Button>
-          <Button onClick={() => void controls.step(50)} title="Step 50 ticks">
-            +50
-          </Button>
+          {/* A day is 2,400 ticks, so +500 is about a fifth of one - enough to
+              see a tribe form or a war start without sitting through it. */}
+          {STEPS.map((count) => (
+            <Button
+              key={count}
+              onClick={() => void controls.step(count)}
+              title={`Step ${count} ticks (${(count / TICKS_PER_DAY).toFixed(2)} of a day)`}
+            >
+              +{count}
+            </Button>
+          ))}
 
           <span className="mx-1 h-6 w-px bg-white/10" />
 

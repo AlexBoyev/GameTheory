@@ -36,6 +36,18 @@ export function Chart({
   const hostRef = useRef<HTMLDivElement>(null);
   const plotRef = useRef<uPlot | null>(null);
 
+  // The *shape* of the chart: how many lines and what they are called. Only
+  // a change here needs a new plot; new samples do not.
+  const shape = series.map((entry) => `${entry.label}:${entry.colour}`).join('|');
+
+  // The newest series, readable from the creation effect without making it
+  // depend on an array that is rebuilt on every poll. Synced in an effect
+  // rather than during render, which the React compiler rules forbid.
+  const seriesRef = useRef(series);
+  useEffect(() => {
+    seriesRef.current = series;
+  }, [series]);
+
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
@@ -68,7 +80,7 @@ export function Chart({
       ],
       series: [
         {},
-        ...series.map((entry) => ({
+        ...seriesRef.current.map((entry) => ({
           label: entry.label,
           stroke: entry.colour,
           width: 1.6,
@@ -77,8 +89,7 @@ export function Chart({
       ],
     };
 
-    const data: uPlot.AlignedData = [ticks, ...series.map((entry) => entry.values)];
-    const plot = new uPlot(options, data, host);
+    const plot = new uPlot(options, [[]] as unknown as uPlot.AlignedData, host);
     plotRef.current = plot;
 
     const resize = (): void => plot.setSize({ width: host.clientWidth || 280, height });
@@ -89,9 +100,18 @@ export function Chart({
       plot.destroy();
       plotRef.current = null;
     };
-    // Rebuilt wholesale when the shape of the data changes; uPlot is cheap
-    // enough to recreate at this cadence and it keeps the code honest.
-  }, [ticks, series, height, range]);
+    // Rebuilt only when the shape changes. It used to depend on `ticks` and
+    // `series` too, which are fresh arrays on every poll, so the whole plot
+    // was destroyed and recreated every three seconds - the canvas flashed
+    // and the axes re-laid themselves out, which is the "jumping" you see
+    // when you watch the charts. Samples go in through `setData` below.
+  }, [shape, height, range, series.length]);
+
+  useEffect(() => {
+    const plot = plotRef.current;
+    if (!plot) return;
+    plot.setData([ticks, ...series.map((entry) => entry.values)] as uPlot.AlignedData);
+  }, [ticks, series]);
 
   return (
     <div className="px-2 pb-2">
