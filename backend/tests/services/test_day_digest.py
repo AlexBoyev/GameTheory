@@ -104,6 +104,30 @@ def test_the_population_line_reads_as_a_change() -> None:
     assert "96 alive (-4 overnight)" in report.lines[1]
 
 
+def test_a_collapse_outranks_whatever_else_happened() -> None:
+    """"3 deaths" is technically true and useless when four people are left."""
+    chronicle = DayChronicle()
+    chronicle.turn(facts(4, population=60))
+    chronicle.record(events(war_declared=2, death=3))
+
+    report = chronicle.turn(facts(5, population=4))
+
+    assert report is not None
+    assert "nearly empty" in report.headline
+    assert "4 survivors" in report.headline
+
+
+def test_an_empty_island_says_so_plainly() -> None:
+    chronicle = DayChronicle()
+    chronicle.turn(facts(4, population=2))
+    chronicle.record(events(death=2))
+
+    report = chronicle.turn(facts(5, population=0))
+
+    assert report is not None
+    assert report.headline == "The island is empty"
+
+
 def test_winter_is_announced_because_the_calendar_guarantees_it() -> None:
     """The one honest thing to say about a day that has not happened yet."""
     chronicle = DayChronicle()

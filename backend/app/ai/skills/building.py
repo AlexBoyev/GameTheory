@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from app.ai.brains.base import DecisionContext
 from app.ai.skills.base import Consideration, NoParams, Skill, SkillCategory, SkillRun, SkillStatus
-from app.ai.skills.helpers import nearest_resource, steer_towards, stop
+from app.ai.skills.helpers import nearest_resource, retarget, steer_towards, stop
 from app.core.result import OK_NONE, Err, Result
 from app.sim import balance
 from app.sim.entities import Agent, AgentState, ResourceKind, Shelter
@@ -99,6 +99,11 @@ class GatherWood(Skill):
         run.elapsed += dt
         tree = world.resources.get(int(run.state["node"]))
         if tree is None or tree.depleted:
+            # Chopped out from under it: try the next tree before giving up
+            # (see `MAX_RETARGETS`). Two thirds of wood trips used to end
+            # here, which is why so few huts ever went up.
+            if retarget(run, world, agent, TREES, balance.LANDMARK_RADIUS):
+                return SkillStatus.RUNNING
             stop(agent)
             return SkillStatus.FAILED
 

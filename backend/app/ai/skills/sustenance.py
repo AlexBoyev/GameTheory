@@ -5,7 +5,13 @@ from pydantic import BaseModel, ConfigDict
 from app.ai import social
 from app.ai.brains.base import DecisionContext
 from app.ai.skills.base import Consideration, NoParams, Skill, SkillCategory, SkillRun, SkillStatus
-from app.ai.skills.helpers import nearest_resource, need_urgency, steer_towards, stop
+from app.ai.skills.helpers import (
+    nearest_resource,
+    need_urgency,
+    retarget,
+    steer_towards,
+    stop,
+)
 from app.core.result import OK_NONE, Err, Result
 from app.sim import balance
 from app.sim.entities import Agent, AgentState, ResourceKind, Shelter
@@ -120,8 +126,16 @@ class Gather(Skill):
         node = world.resources.get(int(run.state["node"]))
 
         if node is None or node.depleted:
+            if run.state["taken"]:
+                stop(agent)
+                return SkillStatus.DONE
+            # Somebody got here first. Walk to the next bush rather than
+            # standing still and asking the brain the same question again;
+            # see `MAX_RETARGETS`.
+            if retarget(run, world, agent, EDIBLE):
+                return SkillStatus.RUNNING
             stop(agent)
-            return SkillStatus.DONE if run.state["taken"] else SkillStatus.FAILED
+            return SkillStatus.FAILED
 
         if not run.state["arrived"]:
             if not steer_towards(agent, node.position):

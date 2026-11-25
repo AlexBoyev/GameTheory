@@ -6,6 +6,7 @@ with the same seed always pick the same bush.
 
 import math
 
+from app.ai.skills.base import SkillRun
 from app.sim import balance
 from app.sim.entities import Agent, LifeStage, ResourceKind, ResourceNode
 from app.sim.world import World
@@ -88,6 +89,49 @@ def nearest_resource(
         if distance < best_distance:
             best_distance, best = distance, node
     return best
+
+
+MAX_RETARGETS = 3
+"""How many times a gathering trip will walk on to the next node.
+
+Measured at 300 agents: 65% of wood trips and 51% of food trips ended in
+failure, after about ten ticks of walking, because somebody emptied the node
+while the agent was on its way. That is the commons working as intended - but
+*giving up* is not what it means. The agent stood still, the brain scored
+thirty-odd skills again (0.32 ms, and those re-decisions were 75% of all
+decisions and 45% of a tick at that size), and it almost always chose the
+same skill and the next-nearest node. Walking straight there is the same
+outcome without the deliberation.
+
+Three covers ordinary contention and is small enough that an agent in a
+picked-clean region gives up and does something else rather than touring the
+island. The trip is still interruptible, so real hunger or a threat still
+takes it off the errand.
+"""
+
+
+def retarget(
+    run: SkillRun,
+    world: World,
+    agent: Agent,
+    kinds: frozenset[ResourceKind],
+    radius: float = balance.VISION_RADIUS,
+) -> bool:
+    """Point a gathering run at the next node, or report that there is none.
+
+    Shared by the two gatherers because the state they keep is the same
+    (`node`, `arrived`, `retargets`) and so is the reason for keeping it.
+    """
+    used = int(run.state.get("retargets", 0))
+    if used >= MAX_RETARGETS:
+        return False
+    node = nearest_resource(world, agent, kinds, radius)
+    if node is None:
+        return False
+    run.state["node"] = node.id
+    run.state["arrived"] = False
+    run.state["retargets"] = used + 1
+    return True
 
 
 def nearest_threat(world: World, agent: Agent) -> Agent | None:

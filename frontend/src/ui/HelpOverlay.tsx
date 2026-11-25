@@ -55,6 +55,24 @@ export function HelpOverlay({ onClose, backendOrigin }: HelpOverlayProps): React
               </p>
             </section>
 
+            <Group title="Watching it at a sensible pace">
+              <p className="text-[11px] leading-relaxed text-slate-400">
+                A day is 2,400 ticks, and days are the unit this world changes in. The first
+                fight happens within seconds, huts go up in the first day, tribes form by the
+                end of it and wars start around day two - but the part most people come for is
+                days 8 to 20, when agents start dying of old age and strategies are inherited
+                rather than merely played.
+              </p>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">
+                <span className="text-slate-300">{'½ day'}</span> and{' '}
+                <span className="text-slate-300">1 day</span> on the control bar fast-forward
+                there, showing progress and cancellable with Pause. Hover the tick-rate readout
+                to see how long the next landmark day will take at the rate you are getting. At
+                every day boundary a card says what the day that ended was about; the log keeps
+                those headlines, and clicking one brings the card back.
+              </p>
+            </Group>
+
             <Group title="The emoji above their heads">
               <ul className="grid grid-cols-2 gap-x-3 gap-y-1">
                 {Object.entries(STATE_EMOJI).map(([state, emoji]) => (

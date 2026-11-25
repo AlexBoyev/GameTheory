@@ -1,6 +1,7 @@
 /** Play, pause, step, speed and reset - the observer's hands. */
 
 import { SPEED_PRESETS, speedLabel, useSimControls } from '@/app/useSimControls';
+import { paceSummary } from '@/lib/eta';
 import { ResetDialog } from '@/ui/ResetDialog';
 import { Button } from '@/ui/primitives';
 import { usePerfStore } from '@/state/perfStore';
@@ -51,6 +52,7 @@ export function ControlBar(): React.ReactElement {
   const shotFailed = useScreenshotStore((state) => state.lastSucceeded);
 
   const skipRemaining = useSimStore((state) => state.skipRemaining);
+  const tick = useSimStore((state) => state.tick);
   const running = status === 'running';
   const skipping = skipRemaining > 0;
 
@@ -62,6 +64,11 @@ export function ControlBar(): React.ReactElement {
   const actualMultiple = ticksPerSecond / TICKS_PER_SECOND_AT_1X;
   const behind =
     running && targetTicksPerSecond > 0 && ticksPerSecond < targetTicksPerSecond * 0.75;
+
+  // "How long to day 10?" is the question people actually have, and a tick
+  // rate does not answer it. Quoted from the measured rate, which falls as
+  // the population grows, so it says "at this rate" and means it.
+  const pace = paceSummary(tick, ticksPerSecond);
 
   return (
     <>
@@ -121,11 +128,13 @@ export function ControlBar(): React.ReactElement {
           <span
             className={`px-1 font-mono text-[10px] ${behind ? 'text-amber-400' : 'text-slate-400'}`}
             title={
-              behind
+              (behind
                 ? `Asked for ${speed}x, managing about ${actualMultiple.toFixed(0)}x. ` +
                   'The island is larger than this machine can tick that fast; it runs ' +
                   'as fast as it can rather than falling behind. Fewer agents go faster.'
-                : 'Simulation ticks per second (trailing 1s average, measured by the engine)'
+                : 'Simulation ticks per second (trailing 1s average, measured by the engine)') +
+              (pace === null ? '' : `
+${pace}`)
             }
           >
             {ticksPerSecond.toFixed(0)} tps{behind ? ` · ${actualMultiple.toFixed(0)}x` : ''}

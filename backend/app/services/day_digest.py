@@ -16,6 +16,11 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any
 
+COLLAPSE_SURVIVORS = 10
+"""At or below this, the story of the day is the collapse, whatever else
+happened. A card reading "3 deaths on the island" when four people are left
+is technically true and useless."""
+
 WINTER_NOTE = "Winter: berry bushes stop regrowing until spring"
 """True by construction - `balance.WINTER_REGROWTH_FACTOR` is 0.0."""
 
@@ -72,6 +77,10 @@ def _headline(counts: Counter[str], facts: DayFacts, deaths: int) -> str:
     on a day with four hundred rumours, and a scoring function that can be
     out-shouted by volume would bury it.
     """
+    if facts.population == 0:
+        return "The island is empty"
+    if facts.population <= COLLAPSE_SURVIVORS:
+        return f"The island is nearly empty: {_plural(facts.population, 'survivor')} left"
     if counts["war_declared"]:
         return f"War: {_plural(counts['war_declared'], 'declaration')} between tribes"
     if counts["coup"]:

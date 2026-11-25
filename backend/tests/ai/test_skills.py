@@ -6,7 +6,8 @@ Each skill gets: what stops it running, and what changes when it does.
 import numpy as np
 import pytest
 
-from app.ai.skills.base import SkillCategory, SkillStatus
+from app.ai.skills.base import NoParams, SkillCategory, SkillStatus
+from app.ai.skills.helpers import MAX_RETARGETS
 from app.ai.skills.hunting import HuntParams, HuntRabbit
 from app.ai.skills.movement import Flee, FleeParams, MoveTo, MoveToParams, Wander
 from app.ai.skills.registry import SkillRegistry
@@ -197,6 +198,7 @@ def test_gathering_moves_food_from_the_bush_to_the_inventory(
 
 
 def test_gather_fails_when_its_target_vanishes(world: World, skills: SkillRegistry) -> None:
+    """With nowhere else to go. If there is another bush it walks on instead."""
     agent = centre_agent(world)
     clear_resources(world)
     bush = place(world, ResourceKind.BERRY_BUSH, (0.5, 0.0))
@@ -206,6 +208,69 @@ def test_gather_fails_when_its_target_vanishes(world: World, skills: SkillRegist
     del world.resources[bush.id]
 
     assert skill.step(run, world, 0.1) is SkillStatus.FAILED
+
+
+def test_a_gatherer_beaten_to_the_bush_walks_to_the_next_one(
+    world: World, skills: SkillRegistry
+) -> None:
+    """Two thirds of trips used to end here, standing still (MAX_RETARGETS).
+
+    Giving up meant the brain re-scored every skill and almost always chose
+    this one again, pointed at the next-nearest bush. Walking there is the
+    same outcome without the deliberation.
+    """
+    agent = centre_agent(world)
+    clear_resources(world)
+    first = place(world, ResourceKind.BERRY_BUSH, (0.5, 0.0))
+    second = place(world, ResourceKind.BERRY_BUSH, (2.0, 0.0))
+    skill = skills.require("Gather")
+    run = skill.start(agent, world, Gather.Params())
+    assert run.state["node"] == first.id
+
+    first.amount = 0.0  # somebody else got there first
+
+    assert skill.step(run, world, 0.1) is SkillStatus.RUNNING
+    assert run.state["node"] == second.id
+    assert run.state["arrived"] is False, "it has to walk to the new one"
+
+
+def test_a_gatherer_gives_up_rather_than_touring_the_island(
+    world: World, skills: SkillRegistry
+) -> None:
+    """An agent in a picked-clean region should do something else."""
+    agent = centre_agent(world)
+    clear_resources(world)
+    bushes = [
+        place(world, ResourceKind.BERRY_BUSH, (0.5 + index, 0.0))
+        for index in range(MAX_RETARGETS + 2)
+    ]
+    skill = skills.require("Gather")
+    run = skill.start(agent, world, Gather.Params())
+
+    status = SkillStatus.RUNNING
+    for bush in bushes:
+        bush.amount = 0.0
+        status = skill.step(run, world, 0.1)
+
+    assert status is SkillStatus.FAILED
+    assert run.state["retargets"] == MAX_RETARGETS
+
+
+def test_a_woodcutter_beaten_to_the_tree_walks_to_the_next_one(
+    world: World, skills: SkillRegistry
+) -> None:
+    agent = centre_agent(world)
+    clear_resources(world)
+    first = place(world, ResourceKind.TREE, (0.5, 0.0))
+    second = place(world, ResourceKind.TREE, (3.0, 0.0))
+    skill = skills.require("GatherWood")
+    run = skill.start(agent, world, NoParams())
+    assert run.state["node"] == first.id
+
+    first.amount = 0.0
+
+    assert skill.step(run, world, 0.1) is SkillStatus.RUNNING
+    assert run.state["node"] == second.id
 
 
 # --------------------------------------------------------------------- Drink

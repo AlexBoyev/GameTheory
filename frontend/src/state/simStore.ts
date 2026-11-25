@@ -56,6 +56,14 @@ export interface SimStoreState {
   skipRemaining: number;
   /** The newest day card, or null once it has been shown and dismissed. */
   dayReport: DayData | null;
+  /**
+   * Every day card this world has produced, newest first.
+   *
+   * A card is up for ten seconds and then gone, which at MAX speed is about
+   * as long as a day takes - so looking away costs you the day. The log
+   * panel lists these and a click brings the card back.
+   */
+  dayHistory: DayData[];
   isNight: boolean;
   terrain: TerrainMeta | null;
   legend: Legend | null;
@@ -94,7 +102,17 @@ export interface SimStoreState {
   seedEvents: (items: EventItem[]) => void;
   /** Take the day card down (its timer ran out, or it was clicked away). */
   dismissDay: () => void;
+  /** Put a card from the history back on screen. */
+  showDay: (report: DayData) => void;
 }
+
+/**
+ * How many days of headlines the log keeps - two months of island history.
+ *
+ * All of them are listed (the strip scrolls); the cap is only so that a run
+ * left going overnight cannot grow the array without bound.
+ */
+export const MAX_DAY_HISTORY = 60;
 
 export const MAX_FEED_EVENTS = 300;
 
@@ -121,6 +139,7 @@ const INITIAL = {
   ticksPerSecond: 0,
   skipRemaining: 0,
   dayReport: null as DayData | null,
+  dayHistory: [] as DayData[],
   isNight: false,
   terrain: null,
   legend: null,
@@ -175,6 +194,8 @@ export const useSimStore = create<SimStoreState>((set) => ({
 
   dismissDay: () => set({ dayReport: null }),
 
+  showDay: (report) => set({ dayReport: report }),
+
   ingest: (envelope) => {
     switch (envelope.type) {
       case 'hello': {
@@ -202,6 +223,7 @@ export const useSimStore = create<SimStoreState>((set) => ({
           previousFrame: null,
           currentFrame: null,
           dayReport: null,
+          dayHistory: [],
         }));
         break;
       }
@@ -252,7 +274,16 @@ export const useSimStore = create<SimStoreState>((set) => ({
         break;
       }
       case 'day': {
-        set({ dayReport: envelope.data as unknown as DayData });
+        const report = envelope.data as unknown as DayData;
+        set((state) => ({
+          dayReport: report,
+          // Guard against a repeat of the same day: a reconnect replays
+          // nothing today, but a card listed twice would read as a bug.
+          dayHistory: [
+            report,
+            ...state.dayHistory.filter((entry) => entry.day !== report.day),
+          ].slice(0, MAX_DAY_HISTORY),
+        }));
         break;
       }
       case 'events': {

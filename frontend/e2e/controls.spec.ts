@@ -89,6 +89,38 @@ test.describe('control bar', () => {
     }).toPass({ timeout: 10_000 });
   });
 
+  test('a day-long skip reports progress and ends in a title card', async ({
+    page,
+    request,
+  }) => {
+    // A small island so a day is a few seconds rather than fifteen; the
+    // behaviour under test is the skip and the card, not the throughput.
+    const defaults = (await (await request.get('/api/sim/defaults')).json()) as Record<
+      string,
+      unknown
+    >;
+    await request.post('/api/sim/reset', {
+      data: { config: { ...defaults, population: 20 } },
+    });
+    await page.goto('/?menu=0&panels=log');
+
+    await page.getByTitle(/Fast-forward 2,400 ticks/).click();
+
+    // It must *report* the skip rather than freezing until it is done: this
+    // is the part that used to hold the world lock for the whole batch.
+    await expect(async () => {
+      const state = (await simState(request)) as { skip_remaining: number };
+      expect(state.skip_remaining).toBeGreaterThan(0);
+    }).toPass({ timeout: 5_000 });
+
+    // And the day that just ended announces itself.
+    await expect(page.getByText('Day 2', { exact: true })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTitle("Show this day's card again")).toBeVisible();
+
+    await request.post('/api/sim/reset', { data: { config: defaults } });
+    await pauseAt1x(request);
+  });
+
   test('reset builds a new world back at tick 0', async ({ page, request }) => {
     await page.getByTitle('Play / pause (Space)').click();
     await expect(async () => {

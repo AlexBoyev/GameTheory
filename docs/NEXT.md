@@ -1,20 +1,42 @@
 # What is left, in the order I would do it
 
-Written 2026-11-23, updated 2026-11-24, so a fresh session can pick up
+Written 2026-11-23, updated 2026-11-25, so a fresh session can pick up
 without re-deriving the state. `docs/REVIEW.md` has the reasoning behind each
 finding; this is the queue. Everything here was checked against the code.
 
 **Start here:** the repo is `F:\Projects\GameTheory`, published at
 https://github.com/AlexBoyev/GameTheory. One command runs everything:
 `python driver.py` (app), `python driver.py --check` (all nine checks),
-`python driver.py --bench`. Green at the last commit: 486 backend tests, 49
-frontend, 16 e2e, nine checks.
+`python driver.py --bench`.
 
 Recent, from using it rather than reading it: the engine froze outright at
-25x/50x (catch-up was bounded by tick count, not by time), the world ran
-before Start (it booted running, not ready), every preset silently
-overrode the population slider, and the two data-backed overlays drew
-nothing without saying so. All fixed; see `docs/REVIEW.md`.
+25x/50x, the world ran before Start, every preset silently overrode the
+population slider, and the two data-backed overlays drew nothing without
+saying so. Then a second round, all from one complaint ("too slow, and what
+am I even watching"):
+
+- **The loop slept 62% of the time**, at every speed including MAX, so the
+  published throughput ceiling was never what you got. Fixed; MAX is now
+  2.7-3x faster and sits at the raw pipeline's own rate.
+- **A step bigger than one slice froze the UI** - the same unbudgeted-batch
+  bug, in the one code path that had never been given a budget. Fixed; skips
+  are chunked, report progress, and Pause cancels them.
+- **Two thirds of gathering trips failed** because somebody emptied the node
+  during the walk, and the agent gave up rather than walking on. Fixed; it
+  costs nothing and pays twice (fewer decisions, more competent agents).
+- **A day passed with nothing to mark it.** Fixed: a title card per day, kept
+  in the log so a day you looked away for is still there.
+
+## 0. The honest next lever: the cost of a tick
+
+Now that the loop gives up nothing, speed is purely the cost of a tick, and
+that is dominated by one thing. Profiled at 300 agents: `query_radius` is 32%
+of self time and 45% cumulative, driven by `check()` and `considerations()`
+calls that each ask a spatial question. ADR 0005 records that per-tick
+memoisation of `nearest_resource` was tried and reverted (~4% for real
+staleness risk), so the lever is not caching the answers but *asking fewer
+questions* - the `Requirement` prefilter is the shape of the thing that
+worked before, and nothing yet prefilters on distance.
 
 ## 1. Things that look like gaps and are not
 

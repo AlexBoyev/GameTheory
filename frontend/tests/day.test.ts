@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { DayData, Envelope } from '@/api/types';
-import { useSimStore } from '@/state/simStore';
+import { MAX_DAY_HISTORY, useSimStore } from '@/state/simStore';
 
 function dayEnvelope(day: number, headline = 'War: 1 declaration between tribes'): Envelope {
   const data: DayData = {
@@ -55,6 +55,49 @@ describe('the day card', () => {
 
     expect(useSimStore.getState().dayReport?.day).toBe(4);
     expect(useSimStore.getState().dayReport?.headline).toContain('chiefs');
+  });
+});
+
+describe('the chronicle the log keeps', () => {
+  beforeEach(() => {
+    useSimStore.setState({ dayReport: null, dayHistory: [] });
+  });
+
+  it('remembers every day, newest first', () => {
+    useSimStore.getState().ingest(dayEnvelope(3));
+    useSimStore.getState().ingest(dayEnvelope(4, '2 chiefs overthrown'));
+
+    expect(useSimStore.getState().dayHistory.map((entry) => entry.day)).toEqual([4, 3]);
+  });
+
+  it('never lists the same day twice', () => {
+    useSimStore.getState().ingest(dayEnvelope(3));
+    useSimStore.getState().ingest(dayEnvelope(3, 'a second telling'));
+
+    const history = useSimStore.getState().dayHistory;
+    expect(history).toHaveLength(1);
+    expect(history[0]?.headline).toBe('a second telling');
+  });
+
+  it('is capped, and forgotten when a new world arrives', () => {
+    for (let day = 0; day < MAX_DAY_HISTORY + 10; day += 1) {
+      useSimStore.getState().ingest(dayEnvelope(day));
+    }
+    expect(useSimStore.getState().dayHistory).toHaveLength(MAX_DAY_HISTORY);
+
+    useSimStore.setState({ dayHistory: [] });
+    expect(useSimStore.getState().dayHistory).toHaveLength(0);
+  });
+
+  it('can put a card from the history back on screen', () => {
+    useSimStore.getState().ingest(dayEnvelope(3, 'War: 1 declaration between tribes'));
+    useSimStore.getState().dismissDay();
+    expect(useSimStore.getState().dayReport).toBeNull();
+
+    const [entry] = useSimStore.getState().dayHistory;
+    if (entry) useSimStore.getState().showDay(entry);
+
+    expect(useSimStore.getState().dayReport?.day).toBe(3);
   });
 });
 

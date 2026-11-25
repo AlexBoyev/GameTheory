@@ -13,7 +13,7 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 
 import { api } from '@/api/rest';
-import type { EventItem } from '@/api/types';
+import type { DayData, EventItem } from '@/api/types';
 import { useThrottledEvents } from '@/app/useThrottledEvents';
 import { EVENT_EMOJI } from '@/lib/stateIcons';
 import { Empty, Panel } from '@/ui/primitives';
@@ -22,6 +22,44 @@ import { useSimStore } from '@/state/simStore';
 
 /** More than this and you are not reading, you are watching a waterfall. */
 const VISIBLE_ROWS = 60;
+
+/** Day headlines shown before the strip starts scrolling - about a week. */
+const DAYS_BEFORE_SCROLL = 5;
+
+function Chronicle(): React.ReactElement | null {
+  const history = useSimStore((state) => state.dayHistory);
+  const showDay = useSimStore((state) => state.showDay);
+  if (history.length === 0) return null;
+
+  return (
+    <div className="shrink-0 border-b border-white/10 bg-white/[0.03] px-2 py-1.5">
+      {/* Scrolls rather than truncating: the whole point of keeping these is
+          that a day you looked away for is still reachable. */}
+      <ul
+        className="space-y-0.5 overflow-y-auto"
+        style={{ maxHeight: `${DAYS_BEFORE_SCROLL * 20}px` }}
+      >
+        {history.map((entry: DayData) => (
+          <li key={entry.day}>
+            <button
+              type="button"
+              onClick={() => showDay(entry)}
+              title="Show this day's card again"
+              className="flex w-full items-baseline gap-2 rounded px-1 py-0.5 text-left transition hover:bg-white/10"
+            >
+              <span className="shrink-0 font-mono text-[10px] tabular-nums text-amber-300/80">
+                d{entry.day + 1}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-[11px] text-slate-300">
+                {entry.headline}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 interface RowProps {
   event: EventItem;
@@ -84,7 +122,8 @@ export function EventFeed(): React.ReactElement {
   );
 
   return (
-    <Panel title="Event log" badge={`${recent.length}`} className="max-h-72 w-80">
+    <Panel title="Event log" badge={`${recent.length}`} className="max-h-96 w-80">
+      <Chronicle />
       {types.length > 2 && (
         <div className="flex shrink-0 flex-wrap gap-1 border-b border-white/10 px-2 py-1.5">
           {types.map((type) => (
