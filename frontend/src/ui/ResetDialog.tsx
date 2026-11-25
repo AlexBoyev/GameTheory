@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/api/rest';
 import type { Preset, WorldConfig } from '@/api/types';
 import { useSimControls } from '@/app/useSimControls';
+import { populationHint } from '@/lib/capacity';
 import { Button, Panel } from '@/ui/primitives';
 import { useSimStore } from '@/state/simStore';
 
@@ -47,7 +48,7 @@ const DIALS: Dial[] = [
     min: 10,
     max: 600,
     step: 10,
-  },
+  },  // its hint is rewritten per value by `speedCeiling`
   {
     key: 'scarcity',
     label: 'Scarcity',
@@ -231,7 +232,9 @@ export function ResetDialog({ onClose }: ResetDialogProps): React.ReactElement {
                 }}
                 className="w-full accent-emerald-400"
               />
-              <p className="text-[10px] text-slate-500">{dial.hint}</p>
+              <p className="text-[10px] text-slate-500">
+                {dial.key === 'population' ? populationHint(dials.population) : dial.hint}
+              </p>
             </div>
           ))}
 
