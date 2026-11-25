@@ -302,8 +302,35 @@ WebSocket `/ws/world` (typed envelopes `{type, tick, data}`):
 | S→C | `frame` | compact agent arrays `[id, x, z, heading, state, tribe, flags]`, resource deltas, time-of-day |
 | S→C | `events` | batched events (birth, death, betrayal, alliance, war, coup…) |
 | S→C | `metrics` | every N ticks |
+| S→C | `day` | the day card: headline, supporting lines and event counts for the day that just ended (see 8.1) |
 | S→C | `speech` | LLM `say` lines, emoji state changes |
 | C→S | `ping` | answered with `pong` |
+
+### 8.1 The day card
+
+A day is 2,400 ticks and the island fills it with hundreds of events that are
+individually unremarkable - measured on the default world, ~156 fights, ~625
+rumours, ~50 huts and a tribe or two a day. Watched live that reads as
+"nothing is happening" while a society forms, which was the single most
+common thing said about this project.
+
+So when the clock turns over, the server sends one `day` envelope: a headline
+about the day that ended, two to four supporting lines, and the raw counts.
+The headline is chosen by ordered rules rather than by a score (a war is the
+story of its day even against four hundred rumours), and the card says
+nothing about the day *ahead* except what the calendar guarantees - the
+season, and that winter stops berries regrowing. `DayChronicle` tallies from
+the broadcast feed's event hook and reports on the frame that first shows a
+new day; the client shows the card for ten seconds.
+
+### 8.2 Steps and skips
+
+`POST /sim/step` is also how you fast-forward: the UI offers half a day and a
+day. The engine runs them in time-budgeted chunks rather than one slice, so
+frames keep flowing, Pause still cancels, and `skip_remaining` (on the state
+endpoint and on every frame) says how many ticks are left. A short step still
+answers with the tick it produced; a long one answers as soon as it is clear
+it will take a while.
 
 **As built.** There is no `agent_detail` envelope and no agent subscription.
 The socket accepted `subscribe_agent`, stored the id, replied

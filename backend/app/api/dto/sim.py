@@ -22,6 +22,10 @@ class SimStateDTO(BaseModel):
     is_night: bool
     population: int
     ticks_per_second: float
+    skip_remaining: int = Field(
+        default=0,
+        description="Ticks still owed to a step. Non-zero means a skip is running.",
+    )
     placeholder: bool = Field(
         default=False,
         description="True while the Phase 1 placeholder world is driving frames.",
@@ -41,7 +45,12 @@ class StepRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    n: int = Field(default=1, ge=1, le=10_000)
+    n: int = Field(
+        default=1,
+        ge=1,
+        le=24_000,
+        description="Ticks to advance. A day is 2,400; the cap is ten days.",
+    )
 
 
 class ResetRequest(BaseModel):

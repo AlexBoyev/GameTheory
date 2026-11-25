@@ -10,6 +10,7 @@ import { useEffect, useRef } from 'react';
 import { useSimControls } from '@/app/useSimControls';
 import { ChartsPanel } from '@/ui/ChartsPanel';
 import { ControlBar } from '@/ui/ControlBar';
+import { DayCard } from '@/ui/DayCard';
 import { EventFeed } from '@/ui/EventFeed';
 import { GodPanel } from '@/ui/GodPanel';
 import { HelpOverlay } from '@/ui/HelpOverlay';
@@ -147,6 +148,7 @@ export function Hud(): React.ReactElement {
       </div>
 
       <ControlBar />
+      <DayCard />
       <HoverTooltip />
 
       {helpOpen && (

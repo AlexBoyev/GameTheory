@@ -39,6 +39,7 @@ export function useSimControls(): SimControls {
       population: next.population,
       day: next.day,
       season: next.season,
+      skipRemaining: next.skip_remaining,
     });
   }, []);
 

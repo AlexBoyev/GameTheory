@@ -100,6 +100,17 @@ export interface FrameData {
   resources?: number[];
   /** Ids of nodes that no longer exist (a rotted corpse, say). */
   removed?: number[];
+  /** Ticks still owed to a skip; 0 when none is running. */
+  skip?: number;
+}
+
+/** The `day` envelope: the title card for a day that has just begun. */
+export interface DayData {
+  day: number;
+  season: string;
+  headline: string;
+  lines: string[];
+  counts: Record<string, number>;
 }
 
 export interface SpeechData {

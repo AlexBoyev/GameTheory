@@ -20,6 +20,20 @@ const TICKS_PER_DAY = 2400;
 /** Jumps worth offering: a glance, a scene, and a decent chunk of a day. */
 const STEPS = [50, 100, 500] as const;
 
+/**
+ * Skips worth offering, in days.
+ *
+ * The interesting part of a run is days 8 to 20, where agents start dying of
+ * old age and strategies are inherited rather than merely played. Getting
+ * there in real time is minutes of watching, and the day is the unit the
+ * world actually changes in - so half a day and a day are the jumps, and the
+ * engine runs them in chunks with a progress bar rather than freezing.
+ */
+const SKIPS: ReadonlyArray<readonly [string, number]> = [
+  ['½ day', TICKS_PER_DAY / 2],
+  ['1 day', TICKS_PER_DAY],
+];
+
 export function ControlBar(): React.ReactElement {
   const controls = useSimControls();
   const status = useSimStore((state) => state.status);
@@ -36,7 +50,9 @@ export function ControlBar(): React.ReactElement {
   const requestShot = useScreenshotStore((state) => state.request);
   const shotFailed = useScreenshotStore((state) => state.lastSucceeded);
 
+  const skipRemaining = useSimStore((state) => state.skipRemaining);
   const running = status === 'running';
+  const skipping = skipRemaining > 0;
 
   // What the engine is actually delivering against what was asked for. A
   // big population simply cannot be ticked at 25x - measured, 300 agents
@@ -68,6 +84,24 @@ export function ControlBar(): React.ReactElement {
               +{count}
             </Button>
           ))}
+          {SKIPS.map(([label, count]) => (
+            <Button
+              key={label}
+              onClick={() => void controls.step(count)}
+              title={`Fast-forward ${count.toLocaleString()} ticks. Runs as fast as the machine can, showing progress; Pause cancels it.`}
+            >
+              {'»'} {label}
+            </Button>
+          ))}
+
+          {skipping && (
+            <span
+              className="px-1 font-mono text-[10px] text-sky-300"
+              title="Ticks still to run. Pause stops it where it is."
+            >
+              {'»'} {skipRemaining.toLocaleString()} left
+            </span>
+          )}
 
           <span className="mx-1 h-6 w-px bg-white/10" />
 

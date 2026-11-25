@@ -33,6 +33,7 @@ export function useSimPolling(enabled = true): void {
             isNight: state.is_night,
             seed: state.seed,
             population: state.population,
+            skipRemaining: state.skip_remaining,
           });
         }
       } catch {

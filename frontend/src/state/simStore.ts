@@ -11,6 +11,7 @@ import { create } from 'zustand';
 
 import type {
   ConnectionStatus,
+  DayData,
   Envelope,
   EventItem,
   FrameData,
@@ -45,6 +46,16 @@ export interface SimStoreState {
   population: number;
   /** Measured tick rate from `GET /api/sim/state` (trailing 1s average). */
   ticksPerSecond: number;
+  /**
+   * Ticks still owed to a skip, from the frame stream.
+   *
+   * On the frame rather than only on the 1 Hz state poll: a skip of a day
+   * takes tens of seconds and a progress bar that moves once a second looks
+   * stuck.
+   */
+  skipRemaining: number;
+  /** The newest day card, or null once it has been shown and dismissed. */
+  dayReport: DayData | null;
   isNight: boolean;
   terrain: TerrainMeta | null;
   legend: Legend | null;
@@ -81,6 +92,8 @@ export interface SimStoreState {
   clearWorld: () => void;
   /** Seed the feed from `GET /api/events` so a fresh tab is not empty. */
   seedEvents: (items: EventItem[]) => void;
+  /** Take the day card down (its timer ran out, or it was clicked away). */
+  dismissDay: () => void;
 }
 
 export const MAX_FEED_EVENTS = 300;
@@ -106,6 +119,8 @@ const INITIAL = {
   timeOfDay: 0.5,
   population: 0,
   ticksPerSecond: 0,
+  skipRemaining: 0,
+  dayReport: null as DayData | null,
   isNight: false,
   terrain: null,
   legend: null,
@@ -158,6 +173,8 @@ export const useSimStore = create<SimStoreState>((set) => ({
 
   seedEvents: (items) => set({ events: items.slice(0, MAX_FEED_EVENTS) }),
 
+  dismissDay: () => set({ dayReport: null }),
+
   ingest: (envelope) => {
     switch (envelope.type) {
       case 'hello': {
@@ -184,6 +201,7 @@ export const useSimStore = create<SimStoreState>((set) => ({
           population: data.state.population,
           previousFrame: null,
           currentFrame: null,
+          dayReport: null,
         }));
         break;
       }
@@ -226,10 +244,15 @@ export const useSimStore = create<SimStoreState>((set) => ({
             season: data.season,
             population: frame.agents.length / Math.max(1, data.stride),
             framesReceived: state.framesReceived + 1,
+            skipRemaining: data.skip ?? 0,
             resourceNodes: nodes,
             resourceVersion: version,
           };
         });
+        break;
+      }
+      case 'day': {
+        set({ dayReport: envelope.data as unknown as DayData });
         break;
       }
       case 'events': {

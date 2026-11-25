@@ -47,6 +47,10 @@ class SkillExecutionSystem:
         mind = self._minds.get(agent_id)
         if mind is not None and mind_cleared:
             mind.run = None
+            # A finished skill is the responsive case: decide again on the
+            # very next tick rather than serving out an idle backoff that was
+            # set before this run started (see `Mind.idle_until_s`).
+            mind.idle_until_s = 0.0
         if agent is None:
             return
         agent.current_skill = None

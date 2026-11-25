@@ -36,6 +36,20 @@ class Mind:
     run: SkillRun | None = None
     cooldowns: dict[str, float] = field(default_factory=dict)
     last_decision_s: float = -1.0
+    idle_until_s: float = 0.0
+    """Sim-time before which an agent with nothing to do will not ask again.
+
+    An agent whose last decision came to nothing - no skill was possible, or
+    the one that won failed its `check()` on the way in - had `run is None`,
+    which the decision system read as "decide now", every tick, forever.
+    Measured at 300 agents: 15.5 such retries per tick, 75% of all decisions
+    and about 38% of the entire tick budget, spent re-answering a question
+    whose inputs had moved by one tenth of a second.
+
+    Cleared the moment a skill ends (`SkillExecutionSystem`), so an agent
+    that just finished something decides immediately. This only slows down
+    asking again after a *failed* ask.
+    """
 
     intention: Intention | None = None
     """What the deliberative layer last decided to try, if anything.

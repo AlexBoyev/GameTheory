@@ -528,6 +528,57 @@ Worth keeping: *an intermittent test is a bug report with a bad summary.*
 This one was dismissed once as ordering flakiness and was a genuine defect
 that would have frozen a real session with no error anywhere.
 
+### ~~P1 - the engine slept 62% of the time, at every speed including MAX~~ (fixed)
+
+Found by asking why reaching day 8 took thirteen minutes at MAX with 300
+agents. Profiling the *world* was the wrong instinct - the tick loop was the
+problem. Each slice ran a batch of ticks capped at `MAX_BATCH_BUDGET_S`
+(12 ms) and then slept `CONTROL_SLICE_S` (20 ms), unconditionally. That sleep
+is right for a world keeping up with 1x, where pacing is the whole point, and
+wrong for every world that cannot: 12 ms of work per 32 ms of wall clock is a
+37% duty cycle, so MAX delivered a third of what the machine could do and the
+amber "behind" readout was reporting a limit the engine had imposed on
+itself.
+
+The loop now sleeps 2 ms instead whenever it is behind, at MAX, or running a
+skip. Still a yield - this thread holds the GIL while it ticks, and the event
+loop needs it to serve frames and read commands - but a yield rather than a
+nap. Measured at MAX: 120 agents 51 -> 156 tps, 300 agents 25 -> 66 tps. The
+raw pipeline rate at 300 agents is 65 tps, so the loop now gives up
+essentially nothing and the honest next lever is the cost of a tick itself.
+
+Worth keeping: *a performance number that looks like the machine is the limit
+is worth checking against what the machine actually does.* Nothing about the
+tick had changed; two thirds of the capacity was in the scheduler.
+
+### ~~P2 - a step bigger than one slice froze everything~~ (fixed)
+
+The same work, from the other end. `_run_steps` ran up to `MAX_TICKS_PER_SLICE`
+ticks in one go, holding the world lock, with no time budget - the exact bug
+that `MAX_BATCH_BUDGET_S` exists to prevent for running worlds. It did not
+matter while the only caller was a one-tick debug button. It mattered the
+moment the UI offered +500, which at 300 agents is nearly eight seconds of
+held lock: no frames, no commands read (so no cancelling it), against a
+websocket watchdog that gives up after six. The UI would have looked exactly
+as crashed as the bug above it.
+
+Skips are now chunked and resumable, `skip_remaining` is published on the
+state endpoint and on every frame, and Pause abandons what is left. That also
+changed what an acknowledgement means - `commands_applied` now says a command
+was *accepted*, not finished - which a full-suite run caught immediately when
+a step test that passed in isolation failed under load. It was right to.
+
+### Known, not fixed - two thirds of gathering trips fail
+
+Measured at 300 agents: `GatherWood` ends in failure 65% of the time and
+`Gather` 51%, after about ten ticks of walking. The cause is contention,
+not a bug - the node is emptied by somebody else while the agent is on its
+way - and it is arguably the commons working as intended. But it is also why
+decisions cost 45% of a tick: a failed trip means an immediate re-decide, and
+those are 75% of all decisions. Worth revisiting as *behaviour* (agents that
+re-target instead of giving up would be both faster and more competent)
+rather than as an optimisation.
+
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 
 Deliberate and documented (ADR 0004, `WorldConfig.llm_agents`): the

@@ -27,6 +27,7 @@ from app.core.settings import Settings
 from app.core.world_config import STRATEGY_NAMES, WorldConfig
 from app.services import envelopes
 from app.services.broadcast import BroadcastPump, Subscriber
+from app.services.day_digest import DayChronicle, DayFacts
 from app.services.engine_factory import EngineBundle, build_engine_bundle
 from app.services.envelopes import Envelope
 from app.services.god_tools import TOOLS, GodContext, Intervention, Outcome
@@ -57,6 +58,22 @@ COMMAND_TIMEOUT_S = 5.0
 
 COMMAND_POLL_S = 0.004
 
+SKIP_WAIT_LIMIT_S = 1.0
+"""How long `step` waits for its own ticks before answering anyway.
+
+`POST /sim/step` used to return the tick the step produced, because the
+engine ran every requested tick in one slice. Skips worth offering are now
+far bigger than one slice - a day is 2,400 ticks, a minute of ticking at 300
+agents - and the engine runs them in budgeted chunks so frames keep flowing
+and Pause still works. Which leaves the question of what the HTTP call
+should do while that happens.
+
+It waits, but only about as long as a person will wait for a button: short
+steps still answer with the tick they produced, and a long skip answers
+immediately with `skip_remaining` set, which is what the progress bar reads.
+Frames carry the tick meanwhile, so the UI is never behind regardless.
+"""
+
 
 @dataclass(frozen=True, slots=True)
 class TournamentReport:
@@ -86,6 +103,7 @@ class SimStateView:
     is_night: bool
     population: int
     ticks_per_second: float
+    skip_remaining: int = 0
     placeholder: bool = False
 
 
@@ -107,13 +125,14 @@ class SimulationService:
         self._engine = self._bundle.engine
         self._metrics = metrics
         self._archive = archive
+        self._chronicle = DayChronicle()
         self._last_sampled_tick = -1
         self._queries = WorldQueries(self._engine, self._bundle.minds, self._bundle.ledger)
 
         self._pump = BroadcastPump(
             settings.sim_broadcast_hz,
             on_frame=self._on_frame,
-            on_events=None if archive is None else archive.record_events,
+            on_events=self._on_events,
         )
         self._thread: threading.Thread | None = None
 
@@ -227,6 +246,7 @@ class SimulationService:
             is_night=snapshot.is_night,
             population=snapshot.population,
             ticks_per_second=snapshot.ticks_per_second,
+            skip_remaining=snapshot.skip_remaining,
         )
 
     def tournament(self) -> TournamentReport:
@@ -316,11 +336,27 @@ class SimulationService:
         return await self._submit(SetSpeed(multiplier))
 
     async def step(self, n: int = 1) -> SimStateView:
-        """Advance exactly `n` ticks and stay paused."""
+        """Advance `n` ticks and stay paused, waiting briefly for them.
+
+        See `SKIP_WAIT_LIMIT_S`: a short step answers with the tick it
+        produced, a long one answers with the ticks it still owes.
+        """
         if n < 1:
             msg = "step count must be >= 1"
             raise ValueError(msg)
-        return await self._submit(Step(n))
+        state = await self._submit(Step(n))
+        if self._engine.snapshot().skip_remaining == 0:
+            return state
+        return await self._await_skip()
+
+    async def _await_skip(self) -> SimStateView:
+        """Wait out a skip, giving up politely once it is clearly a long one."""
+        deadline = time.monotonic() + SKIP_WAIT_LIMIT_S
+        while self._engine.snapshot().skip_remaining > 0:
+            if time.monotonic() >= deadline:
+                break
+            await asyncio.sleep(COMMAND_POLL_S)
+        return self.state()
 
     async def reset(
         self,
@@ -334,6 +370,7 @@ class SimulationService:
         # broker also stamps a world uid, so a reply that is already on its
         # way back is dropped rather than applied to the new world.
         self._bundle.broker.clear()
+        self._chronicle.reset()
         if self._metrics is not None:
             self._metrics.clear()
         state = await self._submit(Reset(seed=seed, config=config))
@@ -392,6 +429,7 @@ class SimulationService:
         self._pump.clear()
         self._last_sampled_tick = -1
         self._bundle.broker.clear()
+        self._chronicle.reset()
         if self._metrics is not None:
             self._metrics.clear()
 
@@ -439,15 +477,56 @@ class SimulationService:
 
     # ----------------------------------------------------- per-frame policy
 
+    def _on_events(self, items: list[dict[str, Any]]) -> None:
+        """Everything that wants a copy of every event, in one place.
+
+        Runs on the event loop with the batch the feed just built: the
+        archive writes it to SQLite (through its own queue and thread) and
+        the chronicle tallies it for the day card. Neither may block.
+        """
+        self._chronicle.record(items)
+        if self._archive is not None:
+            self._archive.record_events(items)
+
     async def _on_frame(self, frame: WorldFrame) -> None:
         """What happens once per broadcast frame, besides broadcasting.
 
-        Both of these are *policies*, not transport, which is why they stayed
-        here when the pump moved out: one decides how often agents may think,
-        the other decides when to sample the charts.
+        All policy, not transport, which is why it stayed here when the pump
+        moved out: how often agents may think, when to sample the charts, and
+        whether the clock has turned over into a new day.
         """
         self._apply_speed_policy(frame.speed)
         await self._maybe_sample(frame.tick)
+        await self._maybe_announce_day(frame)
+
+    async def _maybe_announce_day(self, frame: WorldFrame) -> None:
+        """Broadcast the day card when the clock turns over.
+
+        Driven off frames rather than off a tick system because the report is
+        presentation, not simulation: nothing in the world behaves
+        differently for having been summarised. A skipped or very fast day
+        still turns exactly once - the chronicle ignores a day it has already
+        reported - and at 20 frames a second no day can pass unseen, since
+        the fastest measured day takes fifteen seconds.
+        """
+        if self._chronicle.seen(frame.day):
+            return
+
+        with self._engine.read_world() as world:
+            tribes = list(world.tribes.values())
+            facts = DayFacts(
+                day=frame.day,
+                season=frame.season,
+                population=world.population,
+                tribes=len(tribes),
+                tribes_at_war=sum(1 for tribe in tribes if tribe.at_war_with),
+            )
+
+        report = self._chronicle.turn(facts)
+        if report is None:
+            return
+        LOG.info("day.turned", day=report.day, headline=report.headline)
+        await self.broadcast(envelopes.day(frame.tick, report.as_dict()))
 
     def _apply_speed_policy(self, speed: float) -> None:
         """Tell the deliberative layer how often to think at this speed.

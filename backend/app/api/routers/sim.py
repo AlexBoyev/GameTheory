@@ -41,6 +41,7 @@ def _to_dto(state: SimStateView) -> SimStateDTO:
         is_night=state.is_night,
         population=state.population,
         ticks_per_second=state.ticks_per_second,
+        skip_remaining=state.skip_remaining,
         placeholder=state.placeholder,
     )
 
@@ -65,7 +66,13 @@ async def pause(simulation: SimulationDep) -> SimStateDTO:
 
 @router.post("/step", response_model=SimStateDTO, summary="Advance n ticks")
 async def step(request: StepRequest, simulation: SimulationDep) -> SimStateDTO:
-    """Advance exactly `n` ticks and stay paused."""
+    """Advance `n` ticks and stay paused.
+
+    Short steps answer with the tick they produced. A long skip - a day is
+    2,400 ticks - answers as soon as it is clear it will take a while, with
+    `skip_remaining` set; the engine keeps running it in the background and
+    frames carry the progress.
+    """
     try:
         return _to_dto(await simulation.step(request.n))
     except ValueError as exc:

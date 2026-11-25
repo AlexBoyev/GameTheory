@@ -95,7 +95,12 @@ export interface paths {
         put?: never;
         /**
          * Advance n ticks
-         * @description Advance exactly `n` ticks and stay paused.
+         * @description Advance `n` ticks and stay paused.
+         *
+         *     Short steps answer with the tick they produced. A long skip - a day is
+         *     2,400 ticks - answers as soon as it is clear it will take a while, with
+         *     `skip_remaining` set; the engine keeps running it in the background and
+         *     frames carry the progress.
          */
         post: operations["step_api_sim_step_post"];
         delete?: never;
@@ -137,10 +142,14 @@ export interface paths {
          * Build a new world
          * @description Rebuild the world; it stays paused at tick 0 so you can inspect it first.
          *
-         *     A `preset` names a file in `config/presets/`; an explicit `config` is the
-         *     base it applies to, so "Tribal Wars, but 400 agents" is one request. The
-         *     seed is never overridden by a preset - picking one must not throw away a
-         *     seed typed in beside it.
+         *     Three layers, applied in that order: `config` (or the defaults), then a
+         *     `preset` named from `config/presets/`, then `overrides`. That last layer
+         *     is what makes "Tribal Wars, but 400 agents" a single request - the
+         *     docstring claimed it before the layer existed, and the preset's own
+         *     population quietly won instead.
+         *
+         *     The seed is never overridden by a preset: picking one must not throw
+         *     away a seed typed in beside it.
          */
         post: operations["reset_api_sim_reset_post"];
         delete?: never;
@@ -1189,6 +1198,13 @@ export interface components {
             /** Preset */
             preset?: string | null;
             config?: components["schemas"]["WorldConfig"] | null;
+            /**
+             * Overrides
+             * @description Fields applied last, after any preset. What the dials send.
+             */
+            overrides?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * ShelterDTO
@@ -1242,6 +1258,12 @@ export interface components {
             population: number;
             /** Ticks Per Second */
             ticks_per_second: number;
+            /**
+             * Skip Remaining
+             * @description Ticks still owed to a step. Non-zero means a skip is running.
+             * @default 0
+             */
+            skip_remaining: number;
             /**
              * Placeholder
              * @description True while the Phase 1 placeholder world is driving frames.
@@ -1298,6 +1320,7 @@ export interface components {
         StepRequest: {
             /**
              * N
+             * @description Ticks to advance. A day is 2,400; the cap is ten days.
              * @default 1
              */
             n: number;

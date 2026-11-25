@@ -50,6 +50,10 @@ class WorldFrame:
     population: int
     status: str
     speed: float
+    skip_remaining: int = 0
+    """Ticks still owed to a skip. Carried on the frame rather than left to
+    the 1 Hz state poll so a progress bar moves while the skip runs."""
+
     resource_fullness: dict[int, float] = field(default_factory=dict)
 
 
@@ -132,7 +136,7 @@ def resource_fullness(world: World) -> dict[int, float]:
     return fullness
 
 
-def encode_frame(world: World, status: str, speed: float) -> WorldFrame:
+def encode_frame(world: World, status: str, speed: float, skip_remaining: int = 0) -> WorldFrame:
     """Build a `WorldFrame` from the current world state."""
     return WorldFrame(
         tick=world.clock.tick,
@@ -143,5 +147,6 @@ def encode_frame(world: World, status: str, speed: float) -> WorldFrame:
         population=world.population,
         status=status,
         speed=speed,
+        skip_remaining=skip_remaining,
         resource_fullness=resource_fullness(world),
     )

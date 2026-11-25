@@ -47,7 +47,8 @@ What works right now:
 | **Trust you earn and reputation you only hear about**, gossip, lies, lie detection | |
 | **Tribes** that are founded and joined, with leaders, storage, territory, coups that succeed, wars, peace deals and pacts between tribes | |
 | Shelters that get built, reproduction with trait blending, deaths with causes | |
-| Engine on a worker thread: pause / play / 1x-50x / MAX / step / reset | |
+| Engine on a worker thread: pause / play / 1x-50x / MAX / step / reset, and **fast-forward by half a day or a day** with a progress readout | |
+| **A title card for every day**: what the day that ended was about, and where the island stands now | |
 | Full UI: front screen with instructions, inspector, event feed with filters, charts, overlays, speech bubbles, URL state, help | |
 | 7 layering contracts, **419 backend tests**, 34 unit + **14 browser tests** | |
 
@@ -91,17 +92,35 @@ strategies are selected by.
 are for the **full pipeline** - encounters, gossip, tribes and the
 deliberative layer included:
 
-| Agents | Ticks/sec | vs realtime (1x = 10 ticks/s) | Phase 4 was |
-| --- | --- | --- | --- |
-| 100 | 350 | 35x | 341 |
-| 150 | 233 | 23x | - |
-| 300 | 98 | 9.8x | - |
-| 500 | 54 | 5.4x | 42 |
+| Agents | Ticks/sec | vs realtime (1x = 10 ticks/s) |
+| --- | --- | --- |
+| 100 | 251 | 25x |
+| 150 | 162 | 16x |
+| 300 | 64 | 6.4x |
+| 500 | 35 | 3.5x |
 
-That last column is the ceiling on the speed buttons, and it is why a big
-island cannot run at 50x: 300 agents top out near 10x. Ask for more and the
-engine runs as fast as it can rather than falling behind - the tps readout
-turns amber and shows what you are actually getting.
+That is the ceiling on the speed buttons, and it is why a big island cannot
+run at 50x: 300 agents top out near 6x. Ask for more and the engine runs as
+fast as it can rather than falling behind - the tps readout turns amber and
+shows what you are actually getting.
+
+### The engine used to throw two thirds of that away
+
+The loop ran a batch of ticks capped at 12 ms and then slept 20 ms, at every
+speed including MAX. So the ceiling above was never what you got: the engine
+spent 62% of its time asleep, and MAX delivered about a third of what the
+machine could do. It now sleeps 2 ms instead whenever it is behind, at MAX,
+or running a skip - still a yield (the event loop needs the GIL to serve
+frames), but not a nap.
+
+| At MAX | Before | After | A day (2,400 ticks) | Day 8 |
+| --- | --- | --- | --- | --- |
+| 120 agents | 51 tps | **156 tps** | 15 s | 2.1 min |
+| 300 agents | 25 tps | **66 tps** | 36 s | 4.9 min |
+
+66 tps at 300 agents is the raw pipeline's own rate, so the loop now gives up
+essentially nothing. Going faster from here means making a tick cheaper, not
+scheduling it better.
 
 500 and 1,000 agents got *faster* than Phase 4 despite the deliberative layer
 being added, because a property test found a real bug in the spatial hash on
@@ -244,6 +263,7 @@ fail the build if any of that stops being true.
 | --- | --- |
 | `Space` | Play / pause |
 | `.` | Step one tick |
+| Buttons | `+50` / `+100` / `+500` ticks, and `½ day` / `1 day` fast-forward |
 | `1` … `7` | Speed 1x, 2x, 5x, 10x, 25x, 50x, MAX |
 | `R` | New world (preset picker, seed, dials) |
 | Drag / scroll | Orbit and zoom |

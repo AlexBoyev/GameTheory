@@ -21,6 +21,19 @@ enough that a starving agent still eats instead of executing its plan. The
 whole deliberative layer is therefore safe to switch off mid-run.
 """
 
+IDLE_RETRY_SIM_S = 0.5
+"""How long an agent that found nothing to do waits before asking again.
+
+Five ticks at dt 0.1 - far below the time it takes anything in the world to
+change visibly, and far above the one tick it used to be. See
+`Mind.idle_until_s` for what that cost.
+"""
+
+IDLE_RETRY_SPREAD_TICKS = 5
+"""Extra per-agent ticks of wait, by id, so the retries do not all land on
+the same tick. Derived from the id rather than drawn from an RNG: the stagger
+must not consume random numbers, or it would change every seeded run."""
+
 COMMITMENT_BONUS = 0.25
 """Score added to whatever an agent is already doing, during a review.
 
@@ -64,16 +77,23 @@ class DecisionSystem:
             mind.last_decision_s = now
 
             if not decision.skill:
+                self._defer(agent, mind, now)
                 continue
             if mind.run is not None and mind.run.skill == decision.skill:
                 mind.trace = decision.options
                 continue
             self._begin(world, agent, mind, decision, now)
 
+    @staticmethod
+    def _defer(agent: Agent, mind: Mind, now: float) -> None:
+        """Stop an agent that found nothing to do from asking again next tick."""
+        stagger = (agent.id % IDLE_RETRY_SPREAD_TICKS) * 0.1
+        mind.idle_until_s = now + IDLE_RETRY_SIM_S + stagger
+
     def _needs_decision(self, mind: Mind, now: float) -> bool:
         """Whether this agent should decide now."""
         if mind.run is None:
-            return True
+            return now >= mind.idle_until_s
         skill = self._registry.get(mind.run.skill)
         if skill is not None and not type(skill).interruptible:
             return False
@@ -115,6 +135,7 @@ class DecisionSystem:
         if not is_ok(verdict):
             # The world moved between scoring and starting; wait for the next
             # decision rather than running a skill whose target is gone.
+            self._defer(agent, mind, now)
             mind.run = None
             agent.current_skill = None
             agent.state = AgentState.IDLE

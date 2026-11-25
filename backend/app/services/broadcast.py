@@ -197,6 +197,7 @@ class BroadcastPump:
             day=frame.day,
             season=frame.season,
             population=frame.population,
+            skip=frame.skip_remaining,
             resources=changed,
             removed=removed,
         )

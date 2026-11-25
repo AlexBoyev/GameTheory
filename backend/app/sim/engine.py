@@ -26,7 +26,22 @@ from app.sim.systems import SystemPipeline
 from app.sim.world import World, WorldBuilder
 
 CONTROL_SLICE_S = 0.02
-"""How often the loop wakes to look at commands - a 50 Hz control rate."""
+"""How often the loop wakes to look at commands when it has time to spare."""
+
+BUSY_SLICE_S = 0.002
+"""The sleep used instead when the engine is trying to go as fast as it can.
+
+The loop slept `CONTROL_SLICE_S` after *every* batch, including at MAX and
+while skipping, so a 12 ms batch was followed by 20 ms of doing nothing: 62%
+of the engine's time was spent asleep and MAX ran at a third of what the
+machine could do. Measured at 300 agents, a raw tick costs 15.3 ms, so the
+ceiling is ~65 tps; the loop delivered 24.5.
+
+Two milliseconds is still a yield, and it has to be: this thread holds the
+GIL while it ticks, and the event loop needs it to serve frames, answer REST
+and read commands - which is the difference between a world that runs fast
+and a world that looks crashed. It is a yield rather than a nap.
+"""
 
 MAX_BATCH_BUDGET_S = 0.012
 """How long one batch of ticks may run before yielding, at any speed.
@@ -82,7 +97,18 @@ class SetSpeed:
 
 @dataclass(frozen=True, slots=True)
 class Step:
-    """Advance exactly `n` ticks while paused."""
+    """Advance `n` ticks while paused, in time-budgeted chunks.
+
+    Chunked because the steps worth asking for are large: a day is 2,400
+    ticks, which at 300 agents is nearly a minute of ticking. Run in one go
+    that is a minute holding the world lock - no frames, no command reads, so
+    no way to cancel it - against a websocket that gives up after six
+    seconds. The UI would look crashed, which is exactly the bug that
+    `MAX_BATCH_BUDGET_S` exists to prevent for running worlds.
+
+    `EngineSnapshot.skip_remaining` reports what is left, so a long skip can
+    show progress and `Pause` can abandon it.
+    """
 
     n: int = 1
 
@@ -143,14 +169,22 @@ class EngineSnapshot:
     is_night: bool
     population: int
     ticks_per_second: float
+    skip_remaining: int
+    """Ticks still owed to a `Step`, so the UI can show a skip in progress."""
+
     births: int
     deaths: int
     resources: int
     commands_applied: int
-    """Lets a caller wait for its own command to have taken effect.
+    """Lets a caller wait for its own command to have been *accepted*.
 
-    Published at the end of a slice, after any ticks that command caused, so
-    "my step has been applied" also means "its ticks are visible".
+    Not for its work to be finished, which only matters for `Step`: a skip
+    of more than a batch is run in chunks over several slices, so the
+    acknowledgement means "the engine has taken this on" and
+    `skip_remaining` is what a caller waits on to know the ticks are in.
+    (It used to mean both, back when every requested tick ran in one slice -
+    which is the behaviour that froze the UI for a minute on a day-long
+    skip.)
     """
 
 
@@ -268,7 +302,7 @@ class SimulationEngine:
 
             now = self._pacer.monotonic()
             if self._step_remaining > 0:
-                self._run_steps()
+                self._run_steps(now)
             elif self._status is EngineStatus.RUNNING:
                 self._run_slice(now - last_slice, now)
             else:
@@ -280,18 +314,38 @@ class SimulationEngine:
             # should never be a second behind the world.
             self._publish()
             self._maybe_emit(now)
-            self._pacer.sleep(CONTROL_SLICE_S)
+            self._pacer.sleep(BUSY_SLICE_S if self._is_busy() else CONTROL_SLICE_S)
 
         self._status = EngineStatus.STOPPED
         self._publish()
 
-    def _run_steps(self) -> None:
-        """Run the ticks a `Step` command asked for, then stay paused."""
-        count = min(self._step_remaining, MAX_TICKS_PER_SLICE)
-        self._step_remaining -= count
+    def _is_busy(self) -> bool:
+        """Whether this loop should yield briefly rather than pace itself.
+
+        Three cases, all meaning "the user asked for ticks faster than the
+        machine hands them over": a skip in progress, MAX, and any finite
+        speed the engine is behind on. A speed it is *keeping up with* paces
+        itself through the debt, and should leave the core alone.
+        """
+        if self._step_remaining > 0:
+            return True
+        if self._status is not EngineStatus.RUNNING:
+            return False
+        return self._speed == MAX_SPEED or self._tick_debt >= 1.0
+
+    def _run_steps(self, now: float) -> None:
+        """Run as many of a `Step`'s ticks as fit in one batch, staying paused."""
+        deadline = now + MAX_BATCH_BUDGET_S
+        done = 0
         with self._lock:
-            for _ in range(count):
+            while (
+                self._step_remaining > 0
+                and done < MAX_TICKS_PER_SLICE
+                and self._pacer.monotonic() < deadline
+            ):
                 self._tick()
+                self._step_remaining -= 1
+                done += 1
 
     def _run_slice(self, elapsed: float, now: float) -> None:
         """Run the ticks that `elapsed` real seconds have earned."""
@@ -421,7 +475,9 @@ class SimulationEngine:
 
         if self._on_frame is not None:
             with self._lock:
-                frame = encode_frame(self._world, self._status.value, self._speed)
+                frame = encode_frame(
+                    self._world, self._status.value, self._speed, self._step_remaining
+                )
             self._on_frame(frame)
 
         if self._pending_events and self._on_events is not None:
@@ -455,6 +511,7 @@ class SimulationEngine:
             is_night=world.clock.is_night,
             population=world.population,
             ticks_per_second=round(self._measured_tps, 1),
+            skip_remaining=self._step_remaining,
             births=world.births,
             deaths=world.deaths,
             resources=len(world.resources),

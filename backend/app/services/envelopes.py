@@ -28,6 +28,7 @@ __all__ = [
     "RESOURCE_STRIDE",
     "Envelope",
     "MessageType",
+    "day",
     "error",
     "events",
     "frame",
@@ -44,6 +45,7 @@ class MessageType(StrEnum):
     FRAME = "frame"
     EVENTS = "events"
     METRICS = "metrics"
+    DAY = "day"
     SPEECH = "speech"
     STATE = "state"
     ERROR = "error"
@@ -92,6 +94,11 @@ def events(tick: int, items: list[dict[str, Any]]) -> Envelope:
 def metrics(tick: int, payload: dict[str, Any]) -> Envelope:
     """Build a `metrics` envelope."""
     return Envelope(MessageType.METRICS, tick, payload)
+
+
+def day(tick: int, payload: dict[str, Any]) -> Envelope:
+    """Build the `day` envelope: the title card for a day that just began."""
+    return Envelope(MessageType.DAY, tick, payload)
 
 
 def speech(tick: int, agent_id: int, text: str, ttl_s: float = 6.0) -> Envelope:

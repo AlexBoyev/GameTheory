@@ -92,7 +92,12 @@ def test_step_advances_exactly_n_ticks(engine: SimulationEngine) -> None:
     before = engine.snapshot().tick
 
     sequence = engine.submit(Step(7))
-    assert wait_until(lambda: applied(engine, sequence))
+    # Waiting on the acknowledgement alone is not enough any more: a step
+    # runs in time-budgeted chunks, so being accepted and being finished are
+    # two different moments, and under load the first chunk ran four of the
+    # seven ticks. Nor is waiting on `skip_remaining == 0` alone - it reads
+    # zero before the engine has picked the command up at all. Both, then.
+    assert wait_until(lambda: applied(engine, sequence) and engine.snapshot().skip_remaining == 0)
 
     assert engine.snapshot().tick == before + 7
     assert engine.snapshot().status is EngineStatus.PAUSED
@@ -107,6 +112,33 @@ def test_steps_accumulate(engine: SimulationEngine) -> None:
     assert wait_until(lambda: engine.snapshot().tick >= before + 7)
     assert applied(engine, sequence)
     assert engine.snapshot().tick == before + 7
+
+
+def test_a_long_skip_runs_in_chunks_and_can_be_cancelled(
+    engine: SimulationEngine,
+) -> None:
+    """A skip bigger than a batch must not hold the world hostage.
+
+    A day is 2,400 ticks. Run in one slice that is a lock held for tens of
+    seconds: no frames, no commands read, and a websocket that gives up
+    after six - a UI that looks crashed. So the engine owes the ticks, says
+    how many are left, and Pause is still heard while it works.
+    """
+    engine.submit(Pause())
+    assert wait_until(lambda: engine.snapshot().skip_remaining == 0)
+    before = engine.snapshot().tick
+
+    engine.submit(Step(100_000))
+    assert wait_until(lambda: engine.snapshot().skip_remaining > 0)
+    assert wait_until(lambda: engine.snapshot().tick > before), "it should be ticking"
+
+    sequence = engine.submit(Pause())
+    assert wait_until(lambda: applied(engine, sequence)), "Pause is heard mid-skip"
+    assert engine.snapshot().skip_remaining == 0, "and abandons what it owed"
+
+    settled = engine.snapshot().tick
+    assert wait_until(lambda: engine.snapshot().tick == settled)
+    assert engine.snapshot().tick < before + 100_000
 
 
 def test_speed_zero_pauses(engine: SimulationEngine) -> None:
