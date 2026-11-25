@@ -27,7 +27,45 @@ am I even watching"):
 - **A day passed with nothing to mark it.** Fixed: a title card per day, kept
   in the log so a day you looked away for is still there.
 
-## 0. The honest next lever: the cost of a tick
+## 0. The open question: the island is below replacement
+
+Chased all the way down on 2026-11-25 and left deliberately unfixed,
+because the fix is a judgement about what this simulation should be and
+that is not mine to make silently.
+
+Everybody starts adult (18-50) and ages three years a sim-day, so the
+oldest founder dies on day 7.3 and the youngest on day 18: the entire
+founding cast is gone by day 18. About 86 children arrive to replace 120
+adults, so the island is below replacement, and whether one is still
+inhabited at day 30 is chance - three seeds ended at 215, 16 and 5 with
+identical settings.
+
+The funnel, measured on well-fed adults of breeding age: 39% have somebody
+of breeding age within reach, 26% have met them before, 4.4% trust each
+other at 0.20, 2.1% at the default 0.35. Half of all `Reproduce` refusals
+are "not well fed enough" and 70% of those are agents who are not hungry
+at all but carry less than the two units of food the check wants. When a
+child is possible the brain chooses it half the time, so utility is not
+the bottleneck.
+
+None of that is a bug: cooperating is +0.12 trust and defecting -0.22, and
+most pairs never meet twice. It is the trust model's own consequence. The
+levers, in the order I would try them:
+
+1. `reproduction_min_trust` (now world config, default unchanged at 0.35,
+   with a dial). 0.20 roughly doubles the share of adults with a partner
+   at hand. **Measure the day-30 spread over three seeds before changing
+   the default.**
+2. `Reproduce.MIN_FOOD` (2.0 against a median carried 0.27). The belly
+   gate never binds; this one does.
+3. `age_years_per_day` (3.0). Slower ageing buys more fertile days, at the
+   cost of the thing the number was chosen for - a watchable lifetime.
+
+**The rule this produced:** past about day 10, three seeds is the minimum
+and the spread *is* the result. A single-seed run of this world will
+support any conclusion you like.
+
+## 1. The other honest lever: the cost of a tick
 
 Now that the loop gives up nothing, speed is purely the cost of a tick, and
 that is dominated by one thing. Profiled at 300 agents: `query_radius` is 32%
@@ -38,7 +76,7 @@ staleness risk), so the lever is not caching the answers but *asking fewer
 questions* - the `Requirement` prefilter is the shape of the thing that
 worked before, and nothing yet prefilters on distance.
 
-## 1. Things that look like gaps and are not
+## 2. Things that look like gaps and are not
 
 Do not "fix" these; each was checked and is deliberate.
 
@@ -60,7 +98,7 @@ Do not "fix" these; each was checked and is deliberate.
 - `llm_agents` defaults to 4, so default runs are not bit-reproducible.
   Deliberate, documented in ADR 0004 and `docs/REVIEW.md`.
 
-## 2. Still needs Alex, not Claude
+## 3. Still needs Alex, not Claude
 
 - **Deal with `F:\Projects\TheoryGames`.** Left by the rename, and *not* quite
   empty: it still holds a `.idea` folder, so deleting it throws away that
