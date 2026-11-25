@@ -422,3 +422,37 @@ def test_flee_ends_when_the_threat_is_gone(world: World) -> None:
     bully.alive = False
 
     assert skill.step(run, world, 0.1) is SkillStatus.DONE
+
+
+# ---------------------------------------------------------------- Reproduce
+
+
+def test_the_trust_a_child_needs_comes_from_the_world_config(
+    world: World, skills: SkillRegistry
+) -> None:
+    """The one number that decides whether an island grows or dies out.
+
+    Measured on the default world: 2.1% of well-fed adults of breeding age
+    have a trusted partner within reach at any moment, which is 4.8 births
+    a day against a founding generation that is gone by day 18. Lowering it
+    is the lever, so it has to be reachable from the config rather than
+    frozen into the class.
+    """
+    first, second = world.living_agents()[:2]
+    for agent in (first, second):
+        agent.age = 30.0
+        agent.inventory.food = 5.0
+        agent.needs.hunger = 90.0
+    second.position = first.position
+    world.agent_index.insert(second.id, *second.position)
+
+    skill = skills.require("Reproduce")
+    minds = skill.services.minds
+    minds.require(first.id).memory.relationship(second.id).trust = 0.25
+    minds.require(second.id).memory.relationship(first.id).trust = 0.25
+
+    world.config = world.config.model_copy(update={"reproduction_min_trust": 0.35})
+    assert not is_ok(skill.check(first, world, type(skill).Params()))
+
+    world.config = world.config.model_copy(update={"reproduction_min_trust": 0.20})
+    assert is_ok(skill.check(first, world, type(skill).Params()))

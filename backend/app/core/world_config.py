@@ -97,6 +97,29 @@ class WorldConfig(BaseModel):
     a full life inside a session someone would actually sit through, without
     touching the food economy or the payoff matrices.
     """
+    reproduction_min_trust: float = Field(
+        default=0.35,
+        ge=0.0,
+        le=1.0,
+        description="Mutual trust two agents need before they will have a child.",
+    )
+    """The single number that decides whether an island grows or dies out.
+
+    Measured on the default world, of well-fed adults of breeding age: 39%
+    have somebody of breeding age within reach, 26% have met them before,
+    4.4% trust each other at 0.20 - and 2.1% at the default 0.35. So births
+    run at about 4.8 a day while the founding generation dies off between
+    day 7 and day 18, which is roughly 86 children against 120 adults. The
+    default island is below replacement, and whether one survives to day 30
+    is decided by chance (three seeds ended at 215, 16 and 5).
+
+    That is not a bug - it falls out of the trust model, where cooperating
+    is worth +0.12 and defecting -0.22, so a pair needs about ten meetings
+    to become close and most pairs never meet twice. But it is the kind of
+    thing an observer should be able to turn, so here it is: lower it and
+    the island breeds, raise it and only the closest pairs do.
+    """
+
     season_start: Season = "spring"
 
     strategy_mix: dict[StrategyName, float] = Field(

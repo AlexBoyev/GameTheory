@@ -1625,6 +1625,12 @@ export interface components {
              */
             age_years_per_day: number;
             /**
+             * Reproduction Min Trust
+             * @description Mutual trust two agents need before they will have a child.
+             * @default 0.35
+             */
+            reproduction_min_trust: number;
+            /**
              * Season Start
              * @default spring
              * @enum {string}

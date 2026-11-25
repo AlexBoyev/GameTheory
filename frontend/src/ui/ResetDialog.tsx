@@ -31,6 +31,7 @@ interface Dial {
     | 'population'
     | 'scarcity'
     | 'age_years_per_day'
+    | 'reproduction_min_trust'
     | 'initial_tribes'
     | 'llm_agents'
     | 'mutation_rate';
@@ -61,10 +62,21 @@ const DIALS: Dial[] = [
   {
     key: 'age_years_per_day',
     label: 'Ageing speed',
-    hint: 'Years lived per day. 3 holds the population steady; 4 and above thins it.',
+    // Measured, after the old hint ("3 holds the population steady") turned
+    // out to be wrong: at 3 the founding generation is gone by day 18 and
+    // about 86 children arrive to replace 120 adults.
+    hint: 'Years lived per day. At 3 the first generation is gone by day 18.',
     min: 0.5,
     max: 8,
     step: 0.5,
+  },
+  {
+    key: 'reproduction_min_trust',
+    label: 'Trust to have a child',
+    hint: 'At the default 0.35, 2% of well-fed adults have a partner they trust that much.',
+    min: 0,
+    max: 1,
+    step: 0.05,
   },
   {
     key: 'initial_tribes',
@@ -112,6 +124,7 @@ export function ResetDialog({ onClose }: ResetDialogProps): React.ReactElement {
     population: currentConfig?.population ?? 120,
     scarcity: currentConfig?.scarcity ?? 1,
     age_years_per_day: currentConfig?.age_years_per_day ?? 3,
+    reproduction_min_trust: currentConfig?.reproduction_min_trust ?? 0.35,
     initial_tribes: currentConfig?.initial_tribes ?? 0,
     llm_agents: currentConfig?.llm_agents ?? 4,
     mutation_rate: currentConfig?.mutation_rate ?? 0.05,

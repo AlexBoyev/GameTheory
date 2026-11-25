@@ -85,6 +85,10 @@ class Reproduce(Skill):
 
     MIN_FOOD = 2.0
     MIN_TRUST = 0.35
+    """Default only. The live value is `WorldConfig.reproduction_min_trust`,
+    because this one number decides whether an island grows or dies out and
+    is therefore worth being able to turn - see its docstring."""
+
     MIN_AGE = 18.0
     MAX_AGE = 48.0
 
@@ -112,6 +116,7 @@ class Reproduce(Skill):
         """A nearby adult who trusts us and whom we trust."""
         minds = self.services.minds
         mine = minds.require(agent.id).memory
+        needed = world.config.reproduction_min_trust
         for other in nearby_agents(world, agent):
             if not (self.MIN_AGE <= other.age <= self.MAX_AGE):
                 continue
@@ -119,7 +124,7 @@ class Reproduce(Skill):
             theirs = minds.require(other.id).memory.social.get(agent.id)
             if ours is None or theirs is None:
                 continue
-            if ours.trust >= self.MIN_TRUST and theirs.trust >= self.MIN_TRUST:
+            if ours.trust >= needed and theirs.trust >= needed:
                 return other
         return None
 
