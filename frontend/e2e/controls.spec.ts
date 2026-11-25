@@ -114,7 +114,8 @@ test.describe('control bar', () => {
     }).toPass({ timeout: 5_000 });
 
     // And the day that just ended announces itself.
-    await expect(page.getByText('Day 2', { exact: true })).toBeVisible({ timeout: 60_000 });
+    // A 20-agent day is a few seconds; the per-test budget is 30.
+    await expect(page.getByText('Day 2', { exact: true })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTitle("Show this day's card again")).toBeVisible();
 
     await request.post('/api/sim/reset', { data: { config: defaults } });
