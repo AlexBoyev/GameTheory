@@ -20,6 +20,7 @@ import { useSimControls } from '@/app/useSimControls';
 import { populationHint } from '@/lib/capacity';
 import { Button, Panel } from '@/ui/primitives';
 import { useSimStore } from '@/state/simStore';
+import { useUiStore } from '@/state/uiStore';
 
 export interface ResetDialogProps {
   onClose: () => void;
@@ -151,7 +152,22 @@ export function ResetDialog({ onClose }: ResetDialogProps): React.ReactElement {
           [...touched].map((key) => [key, dials[key]]),
         ),
       });
-      if (autostart) await controls.play();
+      if (autostart) {
+        await controls.play();
+        // Get the front screen out of the way if it is up. Building a world
+        // with "start immediately" ticked is an instruction to run it, and
+        // the menu both covers the island and promises to pause it - so
+        // leaving it open ran the new world behind a screen saying it was
+        // paused, ageing while you read.
+        useUiStore.getState().set('menuOpen', false);
+        useUiStore.getState().set('started', true);
+      } else {
+        // A world built and left at tick 0 has not started, whatever the
+        // last one did - so the front screen offers Start again rather than
+        // Resume, which would be offering to resume something that has
+        // never run.
+        useUiStore.getState().set('started', false);
+      }
       onClose();
     } finally {
       setBusy(false);

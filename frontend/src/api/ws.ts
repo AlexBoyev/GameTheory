@@ -5,6 +5,16 @@
  * sleep and a Vite reload, so reconnection is not optional: the socket retries
  * with exponential backoff plus jitter (so many tabs do not stampede) and
  * resets its delay once a connection survives long enough to be real.
+ *
+ * Retrying on `close` is not enough, because a socket can be open and dead.
+ * Vite proxies this socket in development, and when the backend side resets
+ * (`ECONNRESET` in its log) the browser side is left open: no `close` event,
+ * so no retry, and the UI freezes on its last frame while REST polling keeps
+ * working - which looks exactly like a crashed backend and is not one. The
+ * server sends frames at the broadcast rate whether the world is running or
+ * paused, so silence is itself the signal: `STALE_AFTER_MS` without a
+ * message means the pipe is gone, and the watchdog closes it to start the
+ * normal retry path.
  */
 
 import type { ConnectionStatus, Envelope } from '@/api/types';
@@ -28,6 +38,18 @@ export const BACKOFF_BASE_MS = 300;
 export const BACKOFF_MAX_MS = 10_000;
 const STABLE_AFTER_MS = 5_000;
 
+export const STALE_AFTER_MS = 6_000;
+/**
+ * Silence that means the socket is dead rather than quiet.
+ *
+ * Frames arrive about twenty times a second while connected, so six seconds
+ * is hundreds of missed ones - far outside any stall worth tolerating, and
+ * well clear of a browser throttling a backgrounded tab, which pauses
+ * timers rather than the socket.
+ */
+
+export const WATCHDOG_INTERVAL_MS = 2_000;
+
 /** Delay before retry `attempt` (0-based), with +-25% jitter. */
 export function backoffDelay(attempt: number, random: () => number = Math.random): number {
   const exponential = Math.min(BACKOFF_MAX_MS, BACKOFF_BASE_MS * 2 ** attempt);
@@ -50,7 +72,9 @@ export function createWorldSocket(options: WorldSocketOptions): WorldSocket {
   let status: ConnectionStatus = 'idle';
   let disposed = false;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let watchdog: ReturnType<typeof setInterval> | null = null;
   let openedAt = 0;
+  let lastMessageAt = 0;
 
   const setStatus = (next: ConnectionStatus): void => {
     status = next;
@@ -72,10 +96,12 @@ export function createWorldSocket(options: WorldSocketOptions): WorldSocket {
 
     socket.onopen = (): void => {
       openedAt = Date.now();
+      lastMessageAt = Date.now();
       setStatus('open');
     };
 
     socket.onmessage = (event: MessageEvent<string>): void => {
+      lastMessageAt = Date.now();
       try {
         const envelope = JSON.parse(event.data) as Envelope;
         options.onEnvelope(envelope);
@@ -86,6 +112,10 @@ export function createWorldSocket(options: WorldSocketOptions): WorldSocket {
 
     socket.onclose = (): void => {
       socket = null;
+      if (watchdog !== null) {
+        clearInterval(watchdog);
+        watchdog = null;
+      }
       if (disposed) {
         setStatus('closed');
         return;
@@ -99,6 +129,14 @@ export function createWorldSocket(options: WorldSocketOptions): WorldSocket {
       // `onclose` always follows, which is where retrying is handled.
       socket?.close();
     };
+
+    // Open is not the same as alive. Closing a silent socket makes `onclose`
+    // fire, which is the one path that knows how to retry.
+    watchdog = setInterval(() => {
+      if (socket === null || socket.readyState !== WebSocket.OPEN) return;
+      if (Date.now() - lastMessageAt < STALE_AFTER_MS) return;
+      socket.close();
+    }, WATCHDOG_INTERVAL_MS);
   }
 
   connect();
@@ -115,6 +153,7 @@ export function createWorldSocket(options: WorldSocketOptions): WorldSocket {
     close() {
       disposed = true;
       if (retryTimer) clearTimeout(retryTimer);
+      if (watchdog !== null) clearInterval(watchdog);
       socket?.close();
       socket = null;
       setStatus('closed');

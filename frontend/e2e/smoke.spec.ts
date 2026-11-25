@@ -53,13 +53,20 @@ test.describe('shell', () => {
   });
 
   test('connects to the world socket and receives frames', async ({ page, request }) => {
-    // Start it explicitly: the other specs leave the engine paused, and a
-    // test that depends on what ran before it is not a test.
-    await request.post('/api/sim/start', { data: {} });
+    // Load first, then start, then confirm it is running before measuring.
+    //
+    // Starting before the navigation looks tidier and races: the previous
+    // spec's page fires `pause` as it closes (Escape opens the menu, which
+    // pauses), and that request can land *after* this one's start. The
+    // engine is right to honour it; the test was wrong to assume order
+    // across pages that share one backend.
     await page.goto('/?menu=0');
-
-    // "live" appears only once the socket is open.
     await expect(page.getByText('live')).toBeVisible({ timeout: 15_000 });
+    await request.post('/api/sim/start', { data: {} });
+    await expect(async () => {
+      const state = (await (await request.get('/api/sim/state')).json()) as { status: string };
+      expect(state.status).toBe('running');
+    }).toPass({ timeout: 10_000 });
 
     // The tick counter must move on its own.
     const tick = page.locator('span.font-mono').first();

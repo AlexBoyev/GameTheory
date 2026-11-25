@@ -498,6 +498,36 @@ records a third attempt (per-tick memoisation, ~4%, reverted in ADR 0005).
 Anything better than a few percent here is structural - fewer decisions per
 tick, or scoring vectorised across agents - not a tweak.
 
+### ~~P1 - the socket could be open and dead, and the UI froze forever~~ (fixed)
+
+Found by refusing to accept a flaky test twice. One e2e case - "connects to
+the world socket and receives frames" - failed intermittently, passed in
+isolation, and passed again on a clean stack. The first time I put it down
+to ordering and moved on, which was wrong: it was reproducible by running
+the two specs in sequence, and the diagnostic was unambiguous. The backend
+advanced from tick 768 to 867 while the page's tick stayed at 757 for eight
+seconds, with the status indicator still reading "live".
+
+Vite proxies the websocket in development. When the backend side of that
+proxy resets - `ECONNRESET`, plainly in its log - the browser side is left
+*open*. No `close` event fires, so the client's reconnection, which hangs
+off `onclose`, never runs. REST polling keeps working on its own path, so
+speed and status keep updating while the world sits frozen on its last
+frame. It looks exactly like a crashed backend and is not one; this is very
+likely what was reported as "backend disconnected" at high speed.
+
+The client now watches for silence rather than waiting to be told. Frames
+arrive about twenty times a second whether the world runs or is paused, so
+six seconds without a message means the pipe is gone: the watchdog closes
+the socket, which fires `onclose`, which is the one path that knows how to
+retry. Two tests cover it - a silent socket is closed and reconnected, a
+chatty one is left alone indefinitely - and the e2e suite went from
+intermittent to 16/16 twice over.
+
+Worth keeping: *an intermittent test is a bug report with a bad summary.*
+This one was dismissed once as ordering flakiness and was a genuine defect
+that would have frozen a real session with no error anywhere.
+
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 
 Deliberate and documented (ADR 0004, `WorldConfig.llm_agents`): the
