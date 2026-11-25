@@ -11,6 +11,9 @@ import { useUiStore } from '@/state/uiStore';
 
 const QUALITIES: Quality[] = ['low', 'med', 'high'];
 
+/** Ticks a second at 1x: the engine runs 1/dt of them, and dt is 0.1. */
+const TICKS_PER_SECOND_AT_1X = 10;
+
 export function ControlBar(): React.ReactElement {
   const controls = useSimControls();
   const status = useSimStore((state) => state.status);
@@ -28,6 +31,15 @@ export function ControlBar(): React.ReactElement {
   const shotFailed = useScreenshotStore((state) => state.lastSucceeded);
 
   const running = status === 'running';
+
+  // What the engine is actually delivering against what was asked for. A
+  // big population simply cannot be ticked at 25x - measured, 300 agents
+  // tops out near 10x - and the honest thing is to say so rather than let
+  // the speed buttons imply a promise the machine cannot keep.
+  const targetTicksPerSecond = speed > 0 ? speed * TICKS_PER_SECOND_AT_1X : 0;
+  const actualMultiple = ticksPerSecond / TICKS_PER_SECOND_AT_1X;
+  const behind =
+    running && targetTicksPerSecond > 0 && ticksPerSecond < targetTicksPerSecond * 0.75;
 
   return (
     <>
@@ -59,10 +71,16 @@ export function ControlBar(): React.ReactElement {
           <span className="mx-1 h-6 w-px bg-white/10" />
 
           <span
-            className="px-1 font-mono text-[10px] text-slate-400"
-            title="Simulation ticks per second (trailing 1s average, measured by the engine)"
+            className={`px-1 font-mono text-[10px] ${behind ? 'text-amber-400' : 'text-slate-400'}`}
+            title={
+              behind
+                ? `Asked for ${speed}x, managing about ${actualMultiple.toFixed(0)}x. ` +
+                  'The island is larger than this machine can tick that fast; it runs ' +
+                  'as fast as it can rather than falling behind. Fewer agents go faster.'
+                : 'Simulation ticks per second (trailing 1s average, measured by the engine)'
+            }
           >
-            {ticksPerSecond.toFixed(0)} tps
+            {ticksPerSecond.toFixed(0)} tps{behind ? ` · ${actualMultiple.toFixed(0)}x` : ''}
           </span>
           <span
             className={`px-1 font-mono text-[10px] ${fps > 0 && fps < 30 ? 'text-amber-400' : 'text-slate-400'}`}

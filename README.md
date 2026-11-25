@@ -93,9 +93,15 @@ deliberative layer included:
 
 | Agents | Ticks/sec | vs realtime (1x = 10 ticks/s) | Phase 4 was |
 | --- | --- | --- | --- |
-| 100 | 283 | 28x | 341 |
-| 500 | 50 | 5.0x | 42 |
-| 1000 | 22 | 2.2x | 17 |
+| 100 | 350 | 35x | 341 |
+| 150 | 233 | 23x | - |
+| 300 | 98 | 9.8x | - |
+| 500 | 54 | 5.4x | 42 |
+
+That last column is the ceiling on the speed buttons, and it is why a big
+island cannot run at 50x: 300 agents top out near 10x. Ask for more and the
+engine runs as fast as it can rather than falling behind - the tps readout
+turns amber and shows what you are actually getting.
 
 500 and 1,000 agents got *faster* than Phase 4 despite the deliberative layer
 being added, because a property test found a real bug in the spatial hash on

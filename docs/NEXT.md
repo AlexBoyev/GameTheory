@@ -4,21 +4,17 @@ Written 2026-11-23, updated 2026-11-24, so a fresh session can pick up
 without re-deriving the state. `docs/REVIEW.md` has the reasoning behind each
 finding; this is the queue. Everything here was checked against the code.
 
-**Start here:** the repo is `F:\Projects\GameTheory`. One command runs
-everything: `python driver.py` (app), `python driver.py --check` (all nine
-checks), `python driver.py --bench`. Green as of the last commit: 484 backend tests, 49 frontend, nine checks,
-16 e2e. Published at https://github.com/AlexBoyev/GameTheory - every commit
-authored as `102894008+AlexBoyev@users.noreply.github.com`, and the local
-`user.email` is set to match so it stays that way.
+**Start here:** the repo is `F:\Projects\GameTheory`, published at
+https://github.com/AlexBoyev/GameTheory. One command runs everything:
+`python driver.py` (app), `python driver.py --check` (all nine checks),
+`python driver.py --bench`. Green at the last commit: 486 backend tests, 49
+frontend, 16 e2e, nine checks.
 
-**There is no outstanding implementation work.** Everything SPEC asks for is
-built, and the three open questions from the last pass are closed: the
-half-built `subscribe_agent` channel was retired, deaths by cause is
-measured and shown, and ageing speed is a dial in the new-world dialog
-defaulting to a measured 3.0. What follows is a list of false leads, so
-nobody re-reports them, and two things only Alex can do.
-
----
+Recent, from using it rather than reading it: the engine froze outright at
+25x/50x (catch-up was bounded by tick count, not by time), the world ran
+before Start (it booted running, not ready), every preset silently
+overrode the population slider, and the two data-backed overlays drew
+nothing without saying so. All fixed; see `docs/REVIEW.md`.
 
 ## 1. Things that look like gaps and are not
 

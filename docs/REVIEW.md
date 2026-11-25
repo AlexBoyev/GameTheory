@@ -459,6 +459,45 @@ throughout, which is the lesson worth keeping: a bound of 4,096 ticks was
 loose enough to be no bound at all. There is now a test that the batch stops
 when its *time* is up.
 
+### P2 - the engine cannot reach 25x with a large island, and now says so
+
+Measured with the project's own bench, pure engine, 400 ticks:
+
+| agents | ticks/s | fastest honest speed |
+| --- | --- | --- |
+| 100 | 350 | ~35x |
+| 150 | 233 | ~23x |
+| 300 | 98 | ~10x |
+| 500 | 54 | ~5x |
+
+So "25x with 400 agents" was never deliverable - it is three to five times
+over capacity. Before the pacing fix above that overload froze the backend;
+now it simply runs slower, and the control bar says which: the tps readout
+turns amber and reads `25 tps - 3x` when the engine is below three quarters
+of what the speed button asked for. A number you can see beats a promise
+the machine cannot keep.
+
+**Two micro-optimisations measured and rejected.** `query_radius` really is
+the hot spot - 33% of a tick at 300 agents, 820 calls per tick - but not for
+the reason the shape of the code suggests:
+
+- *Row-major buckets* (`{row: {column: [...]}}` instead of a `(column, row)`
+  tuple key, so the row lookup hoists out of the column loop and empty rows
+  skip their span). No change: 38.5ms against 39.1ms, inside noise, and
+  `dict.get` calls went *up* 8%, because a row probe is added per row while
+  only a tuple allocation is removed.
+- *Fusing the self-exclusion* into the scan so `neighbours` stops building a
+  second list. Also no change - 78.2 tps against a 79.9 tps baseline whose
+  own spread was 76-84 - because it puts a branch in the innermost loop,
+  which runs per candidate rather than per call.
+
+Both were reverted. The cost is the number of candidate points scanned, and
+that is set by density and by how many queries the scoring pass makes, not
+by key construction or an extra list pass. `nearest_resource`'s docstring
+records a third attempt (per-tick memoisation, ~4%, reverted in ADR 0005).
+Anything better than a few percent here is structural - fewer decisions per
+tick, or scoring vectorised across agents - not a tweak.
+
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 
 Deliberate and documented (ADR 0004, `WorldConfig.llm_agents`): the
