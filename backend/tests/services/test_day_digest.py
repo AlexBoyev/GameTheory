@@ -105,7 +105,7 @@ def test_the_population_line_reads_as_a_change() -> None:
 
 
 def test_a_collapse_outranks_whatever_else_happened() -> None:
-    """"3 deaths" is technically true and useless when four people are left."""
+    """Reporting 3 deaths is true and useless when four people are left."""
     chronicle = DayChronicle()
     chronicle.turn(facts(4, population=60))
     chronicle.record(events(war_declared=2, death=3))

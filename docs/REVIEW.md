@@ -465,10 +465,14 @@ Measured with the project's own bench, pure engine, 400 ticks:
 
 | agents | ticks/s | fastest honest speed |
 | --- | --- | --- |
-| 100 | 350 | ~35x |
-| 150 | 233 | ~23x |
-| 300 | 98 | ~10x |
-| 500 | 54 | ~5x |
+| 100 | 251 | ~25x |
+| 150 | 162 | ~16x |
+| 300 | 64 | ~6x |
+| 500 | 35 | ~3.5x |
+
+(Re-measured 2026-11-25. The earlier table read 350/233/98/54 on a quieter
+machine; the ratios are what matter, and they hold. The gathering fix below
+has since moved the 300-agent figure to ~91.)
 
 So "25x with 400 agents" was never deliverable - it is three to five times
 over capacity. Before the pacing fix above that overload froze the backend;
@@ -568,16 +572,54 @@ changed what an acknowledgement means - `commands_applied` now says a command
 was *accepted*, not finished - which a full-suite run caught immediately when
 a step test that passed in isolation failed under load. It was right to.
 
-### Known, not fixed - two thirds of gathering trips fail
+### ~~Two thirds of gathering trips fail~~ (fixed, with a caveat worth reading)
 
-Measured at 300 agents: `GatherWood` ends in failure 65% of the time and
-`Gather` 51%, after about ten ticks of walking. The cause is contention,
-not a bug - the node is emptied by somebody else while the agent is on its
-way - and it is arguably the commons working as intended. But it is also why
-decisions cost 45% of a tick: a failed trip means an immediate re-decide, and
-those are 75% of all decisions. Worth revisiting as *behaviour* (agents that
-re-target instead of giving up would be both faster and more competent)
-rather than as an optimisation.
+Measured at 300 agents: `GatherWood` ended in failure 65% of the time and
+`Gather` 51%, after about ten ticks of walking. The cause is contention, not
+a bug - somebody empties the node while the agent is on its way - and that
+part is the commons working as intended. What was not working is what
+happened next: the agent stopped, the brain re-scored thirty-odd skills, and
+almost always chose the same skill and the next-nearest node. Those
+re-decisions were 75% of all decisions and about 45% of a tick.
+
+Both gatherers now walk on, up to `MAX_RETARGETS` (3) times. Wood failures
+fell 87%, food failures 73%, decisions 20.7 -> 15.6 per tick, and raw
+throughput went from 137 to 236 tps at 120 agents and 65 to 91 at 300. That
+confirms the prediction in the finding above it - that anything past a few
+percent here would have to be structural, "fewer decisions per tick", rather
+than a tweak to the spatial hash.
+
+**The behavioural case is mixed, and saying so matters.** On seed 1337 at
+ten days it looked unambiguous - 138 alive against 121, 92 huts against 82,
+48 births against 29, first death later rather than earlier. Across six
+worlds (three seeds x two island sizes) it is not: more huts in four of six,
+less starvation in five of six, but *fewer* agents alive at day ten in four
+of six, by six to sixteen. Feeding them better earlier means more births
+earlier, and a bigger population competes harder for the same island.
+
+The long window is where it tells. Thirty days on seed 1337: without
+re-targeting the island peaks at 133 on day 6 and withers to 33 by day 30;
+with it, it dips to 109 by day 18 and recovers to 215. The dip is the
+founding cohort dying of old age together, which is the same event the
+front screen now tells people to watch for around day 8 - and whether a
+society survives its first generation turns out to depend on whether its
+gatherers give up when they find an empty bush.
+
+Three further things the sweep exposed, all worth keeping in mind:
+
+- *One seed is an anecdote.* The single-seed result here would have been
+  published as a clean win. The six-world sweep took twenty minutes and
+  changed the claim.
+- *A behaviour change moves every world off its old trajectory.* The
+  reachability test (seed 101, 6,000 ticks, pinned by measurement) failed
+  immediately: no war inside the window, so `OfferPeace` was never scored.
+  That is a re-measurement, not a regression - the same build has 31 wars
+  and 31 truces in a 24,000-tick run - and its docstring says exactly that.
+  Re-pinned to seed 42, with the sweep recorded.
+- *The numbers in the UI are claims.* The front screen quotes "the first hut
+  goes up around tick 200"; after this change it is 216, wars start on day 2
+  rather than 1.5, and the first death is a killing on day 4. All re-measured
+  and updated. A quoted number that was true last week is worse than none.
 
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 

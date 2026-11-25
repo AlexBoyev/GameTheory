@@ -105,15 +105,17 @@ export function MainMenu({ started, onStart, onNewWorld, onHelp }: MainMenuProps
             What happens, and when
           </h2>
           <p className="text-[12px] leading-relaxed text-slate-300">
-            A day is 2,400 ticks. Measured on the default island: they are trading and fighting
-            within the first minute, the first hut goes up around tick 200, the first tribe is
-            founded by tick 600, and somebody is challenged for its leadership shortly after.
-            Wars and raids start around day 1.5. Old age takes the first of them near day 8 — that
-            is when strategies start being inherited rather than just played.
+            A day is 2,400 ticks. Measured on the default island: they are trading inside ten
+            seconds and fighting inside twenty, the first hut goes up around tick 220, the first
+            tribe is founded by tick 650 and its leader is challenged within a minute of that.
+            Wars begin on day 2 and raids on day 3. The first death is a killing on day 4; old
+            age takes somebody on day 8 — and that is when strategies start being inherited
+            rather than merely played.
           </p>
           <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
-            Most of it is small and constant: hundreds of encounters a day, each one a game being
-            played. Open the charts (C) to see the shape of it, or the log (L) to read it.
+            Most of it is small and constant: ~500 cooperations, ~540 rumours and ~126 fights a
+            day, each one a game being played. Open the charts (C) to see the shape of it, or the
+            log (L) to read it - and watch for the title card at each new day.
           </p>
         </section>
 

@@ -37,17 +37,32 @@ from app.sim.events import EventType
 from app.sim.world import World
 from app.sim.worldgen import IslandWorldBuilder
 
-SEED = 101
+SEED = 42
 TICKS = 6000
 """Chosen together, by measurement rather than taste.
 
-Six seeds were run at this length with exactly the sweep below. This pair is
-the one where the whole tribe machinery turns: every skill wanted by
-somebody, a war declared and settled, 21 pacts signed, two coups actually
-won, and the widest gap between a leader and the member best placed to
-replace them. Four thousand ticks was not enough - no seed produced both a
-war and a winnable coup that early. Changing either means re-measuring, not
-guessing; the sweep prints what is missing.
+The pair has to be one where the whole tribe machinery turns inside the
+window: every skill wanted by somebody, a war declared *and* settled (which
+is the only way `OfferPeace` is ever scored), pacts signed, a coup won, and
+a challenger who gets far enough above their leader to win one. Four
+thousand ticks is not enough - no seed produces both a war and a winnable
+coup that early.
+
+Re-measured on 2026-11-25, because it had to be: making gatherers walk to
+the next bush instead of giving up moved every world off its old
+trajectory, and seed 101 stopped producing a war inside the window. It did
+not stop producing one at all - a 24,000-tick run of the default world has
+31 wars and 31 truces - which is the distinction this file exists to make,
+and is why the failure was a re-measurement and not a bug.
+
+Today's sweep, same criteria: seeds 23, 42, 99 and 1337 all pass; 7, 11, 77
+and 101 miss (7 on the coup margin, the rest on `OfferPeace`). 42 is taken
+for the widest leader-to-challenger gap (0.207 against a 0.05 margin) and
+for not being the default seed, since a test that only passes on the seed
+everything else uses proves less.
+
+Changing behaviour means re-measuring this, not guessing; the sweep prints
+what is missing.
 """
 
 PLAN_ONLY = frozenset({"MoveTo"})

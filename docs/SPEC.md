@@ -309,10 +309,11 @@ WebSocket `/ws/world` (typed envelopes `{type, tick, data}`):
 ### 8.1 The day card
 
 A day is 2,400 ticks and the island fills it with hundreds of events that are
-individually unremarkable - measured on the default world, ~156 fights, ~625
-rumours, ~50 huts and a tribe or two a day. Watched live that reads as
-"nothing is happening" while a society forms, which was the single most
-common thing said about this project.
+individually unremarkable - measured on the default world, ~126 fights, ~537
+rumours, ~500 cooperations and a tribe or two a day, with 65 huts standing by
+the end of day one. Watched live that reads as "nothing is happening" while a
+society forms, which was the single most common thing said about this
+project.
 
 So when the clock turns over, the server sends one `day` envelope: a headline
 about the day that ended, two to four supporting lines, and the raw counts.
