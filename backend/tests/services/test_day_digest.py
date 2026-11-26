@@ -280,3 +280,27 @@ def test_a_bloody_day_leads_even_once_the_world_has_a_history() -> None:
     assert report is not None
     assert "9 killings" in report.headline
     assert "the usual" in report.headline
+
+
+def test_a_restored_world_is_not_a_new_one() -> None:
+    """Loading a snapshot resets the chronicle; the island is still on day 13.
+
+    The opening card would otherwise announce strangers washing ashore on
+    a world with tribes, wars and a graveyard - a lie told by the one
+    feature whose job is saying what is going on.
+    """
+    chronicle = DayChronicle()
+
+    report = chronicle.turn(facts(12, population=117, tribes=9, tribes_at_war=2))
+
+    assert report is not None
+    assert "strangers" not in report.headline
+    assert report.headline == "Day 13, picked up where it left off"
+    assert "117 alive, 9 tribes, 2 at war" in report.lines[0]
+
+    # And the next day is reported normally, against this as the baseline.
+    chronicle.record(events(gossip=400))
+    next_day = chronicle.turn(facts(13, population=115, tribes=9, tribes_at_war=2))
+    assert next_day is not None
+    assert "picked up" not in next_day.headline
+    assert "115 alive (-2 overnight)" in next_day.lines[1]

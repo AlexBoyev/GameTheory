@@ -132,6 +132,26 @@ class DayChronicle:
         self._day, self._season, self._population = facts.day, facts.season, facts.population
         self._counts.clear()
 
+        if first and facts.day > 0:
+            # A world can be new to the chronicle without being new: loading
+            # a snapshot resets this and the island is on day thirteen.
+            # Announcing strangers washing ashore would be a lie told by a
+            # feature whose whole job is saying what is going on.
+            return DayReport(
+                day=facts.day,
+                season=facts.season,
+                headline=f"Day {facts.day + 1}, picked up where it left off",
+                lines=(
+                    f"{facts.population} alive, "
+                    f"{plural(facts.tribes, 'tribe')}, "
+                    f"{self._war_state(counts, facts)}",
+                    "Yesterday happened without anybody watching; the log starts here.",
+                    self._season_line(facts, changed=False)
+                    or f"{facts.season.capitalize()} on the island",
+                ),
+                counts={},
+            )
+
         if first:
             return DayReport(
                 day=facts.day,
