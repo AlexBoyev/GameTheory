@@ -67,7 +67,7 @@ class Perception:
 
         visible_agents = tuple(
             other_id
-            for other_id in world.agent_index.neighbours(agent_id, self.vision_radius)
+            for other_id in world.neighbours_within(agent_id, self.vision_radius)
             if (other := world.agents.get(other_id)) is not None and other.alive
         )
 
@@ -77,7 +77,7 @@ class Perception:
         water_distance = float("inf")
         food_distance = float("inf")
 
-        for node_id in world.resource_index.query_radius(x, z, self.vision_radius):
+        for node_id in world.resources_within(agent_id, (x, z), self.vision_radius):
             node = world.resources.get(node_id)
             if node is None or node.depleted:
                 continue

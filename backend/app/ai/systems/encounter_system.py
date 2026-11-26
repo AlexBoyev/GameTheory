@@ -63,7 +63,11 @@ class EncounterSystem:
         check_pairs = world.clock.tick % CHECK_INTERVAL_TICKS == 0
 
         for agent in agents:
-            neighbours = world.agent_index.neighbours(agent.id, INTERACTION_RADIUS)
+            # Through the world's memo, like every other spatial question:
+            # the decision phase has already asked this for the agents that
+            # deliberated this tick, and a second path to the index is how
+            # a cache quietly stops covering half the calls.
+            neighbours = world.neighbours_within(agent.id, INTERACTION_RADIUS)
             if not neighbours:
                 continue
 
