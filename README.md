@@ -113,6 +113,30 @@ run at 50x: 300 agents top out near 6x. Ask for more and the engine runs as
 fast as it can rather than falling behind - the tps readout turns amber and
 shows what you are actually getting.
 
+### What it costs to leave running
+
+An hour at MAX, sampled every minute, watching the real stack rather than
+a pipeline:
+
+| | at the start | day 35 | day 60 |
+| --- | --- | --- | --- |
+| alive | 120 | 95 | 368 |
+| resident memory | 105 MB | 128 MB | 290 MB |
+| per agent | 0.88 MB | 1.35 MB | 0.79 MB |
+
+About **0.8 MB per agent**, tracking the *peak* population rather than the
+current one - memory does not come back when the island shrinks, because
+the dead stay in `world.agents` for the inspector and the living keep
+their relationships with them. Budget accordingly: a 1,000-agent island
+wants the better part of a gigabyte, and will be ticking at single-digit
+speeds anyway.
+
+Nothing leaked over the hour: the event feed stayed healthy, the archive
+grew about half a megabyte a minute and then flattened as its per-run
+event cap took hold, and the day cards kept arriving through all sixty
+days. The island itself fell from 120 to 62 by day 25 and climbed back to
+368 by day 60, which is the boom-and-bust this world does.
+
 ### The engine used to throw two thirds of that away
 
 The loop ran a batch of ticks capped at 12 ms and then slept 20 ms, at every
