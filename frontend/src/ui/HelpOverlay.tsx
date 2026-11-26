@@ -55,6 +55,41 @@ export function HelpOverlay({ onClose, backendOrigin }: HelpOverlayProps): React
               </p>
             </section>
 
+            <Group title="Things worth trying">
+              <p className="text-[11px] leading-relaxed text-slate-400">
+                The island runs itself, so the experiments are yours. The god tools (K) are the
+                only way to touch a running world, and each one asks a different question:
+              </p>
+              <ul className="mt-1.5 space-y-1 text-[11px] leading-relaxed text-slate-400">
+                <li>
+                  <span className="text-slate-300">Drought, around day 10.</span> Scarcity is
+                  what turns a Prisoner&apos;s Dilemma from a formality into a decision. Watch the
+                  cooperation chart, and whether tribes share or raid.
+                </li>
+                <li>
+                  <span className="text-slate-300">Plague a tribe.</span> It kills without
+                  blame, so you see how a society handles loss that nobody can be punished for -
+                  and whether a leader survives it.
+                </li>
+                <li>
+                  <span className="text-slate-300">Smite the chief.</span> The clearest test of
+                  whether a tribe is a structure or one person: watch who the members follow
+                  next, and how many tribes it splits into.
+                </li>
+                <li>
+                  <span className="text-slate-300">Drop food on one corner.</span> An unearned
+                  windfall somebody has to be near. Inequality and trust are on the same chart,
+                  which is the point.
+                </li>
+                <li>
+                  <span className="text-slate-300">Change one dial and run the same seed.</span>{' '}
+                  Past about day 10 this world is chaotic - the same island with one gatherer
+                  behaving differently ended at 215 people on one run and 16 on another - so
+                  compare three seeds, not one, and treat the spread as the answer.
+                </li>
+              </ul>
+            </Group>
+
             <Group title="Watching it at a sensible pace">
               <p className="text-[11px] leading-relaxed text-slate-400">
                 A day is 2,400 ticks, and days are the unit this world changes in. The first
