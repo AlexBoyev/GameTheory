@@ -18,8 +18,8 @@ from typing import Any
 
 from app.services.day_facts import DayFacts
 from app.services.day_headline import (
-    AVERAGE_WINDOW_DAYS,
-    MIN_DAYS_FOR_AVERAGE,
+    MIN_DAYS_FOR_COMPARISON,
+    RECENT_WINDOW_DAYS,
     headline,
     plural,
 )
@@ -82,7 +82,7 @@ class DayChronicle:
 
     def __init__(self) -> None:
         self._counts: Counter[str] = Counter()
-        self._recent: deque[Counter[str]] = deque(maxlen=AVERAGE_WINDOW_DAYS)
+        self._recent: deque[Counter[str]] = deque(maxlen=RECENT_WINDOW_DAYS)
         self._deaths: Counter[str] = Counter()
         self._day: int | None = None
         self._season: str | None = None
@@ -204,11 +204,11 @@ class DayChronicle:
     def _recent_peaks(self) -> dict[str, float] | None:
         """The busiest each kind of thing has recently been.
 
-        The peak of the last `AVERAGE_WINDOW_DAYS` rather than their mean -
+        The peak of the last `RECENT_WINDOW_DAYS` rather than their mean -
         see that constant for the fifty-day run that made the difference
         matter.
         """
-        if len(self._recent) < MIN_DAYS_FOR_AVERAGE:
+        if len(self._recent) < MIN_DAYS_FOR_COMPARISON:
             return None
         peaks: dict[str, float] = {}
         for day in self._recent:

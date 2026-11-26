@@ -88,10 +88,10 @@ many of*, which is what `_spike` measures.
 SPIKE = 1.6
 """How far above anything recent a count has to be to lead."""
 
-MIN_DAYS_FOR_AVERAGE = 2
+MIN_DAYS_FOR_COMPARISON = 2
 """Days of history before ratios mean anything. Until then, fixed rules."""
 
-AVERAGE_WINDOW_DAYS = 7
+RECENT_WINDOW_DAYS = 7
 """How many days "recent" means.
 
 "Usual" was the *lifetime mean* for one night, and a fifty-day run showed
