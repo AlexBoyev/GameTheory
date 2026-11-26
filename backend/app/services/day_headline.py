@@ -47,6 +47,9 @@ class Notable:
 NOTABLE: tuple[Notable, ...] = (
     Notable("killed", "killing", floor=3),
     Notable("starved", "death by hunger", "deaths by hunger", floor=3),
+    Notable("died_of_thirst", "death from thirst", "deaths from thirst", floor=3),
+    Notable("plagued", "death from the plague", "deaths from the plague", floor=2),
+    Notable("smitten", "struck down from the sky", floor=1),
     Notable("war_declared", "war declared", "wars declared", floor=2),
     Notable("raid", "raid", floor=2),
     Notable("coup", "chief overthrown", "chiefs overthrown", floor=5),

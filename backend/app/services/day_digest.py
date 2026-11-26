@@ -23,6 +23,21 @@ from app.services.day_headline import (
     plural,
 )
 
+CAUSE_KEYS = {
+    "combat": "killed",
+    "starvation": "starved",
+    "dehydration": "died_of_thirst",
+    "plague": "plagued",
+    "smite": "smitten",
+}
+"""Death causes that can lead a day, under the names `NOTABLE` uses.
+
+Every cause but old age, which has its own absolute rule because a
+generation ending is the story of its day. Leaving the god-tool causes out
+was a real gap: a plague that killed fourteen people could be headlined by
+that day's alliances, because nothing was counting it.
+"""
+
 WINTER_NOTE = "Winter: berry bushes stop regrowing until spring"
 """True by construction - `balance.WINTER_REGROWTH_FACTOR` is 0.0."""
 
@@ -118,10 +133,9 @@ class DayChronicle:
         self._deaths = cumulative
         # Deaths compete for the headline on the same terms as everything
         # else, so they go into the same tally the averages are kept over.
-        if deaths["combat"]:
-            counts["killed"] = deaths["combat"]
-        if deaths["starvation"]:
-            counts["starved"] = deaths["starvation"]
+        for cause, key in CAUSE_KEYS.items():
+            if deaths[cause]:
+                counts[key] = deaths[cause]
         averages = (
             {kind: total / self._days for kind, total in self._totals.items()}
             if self._days >= MIN_DAYS_FOR_AVERAGE

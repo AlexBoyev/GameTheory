@@ -304,3 +304,25 @@ def test_a_restored_world_is_not_a_new_one() -> None:
     assert next_day is not None
     assert "picked up" not in next_day.headline
     assert "115 alive (-2 overnight)" in next_day.lines[1]
+
+
+def test_a_plague_leads_its_day() -> None:
+    """A god tool that kills fourteen people is the story of that day.
+
+    Only combat and starvation were counted, so a plague could be
+    headlined by the day's alliances - the same gap that let a bloody day
+    hide behind its gossip, left open for every cause the observer causes
+    themselves.
+    """
+    chronicle = DayChronicle()
+    chronicle.turn(facts(0))
+    for day in (1, 2, 3):
+        chronicle.record(events(gossip=500, alliance=20))
+        chronicle.turn(facts(day))
+
+    chronicle.record(events(gossip=500, alliance=20))
+    report = chronicle.turn(facts(4, population=106, deaths_by_cause={"plague": 14}))
+
+    assert report is not None
+    assert "14 deaths from the plague" in report.headline
+    assert "Died: 14 of plague" in report.lines
