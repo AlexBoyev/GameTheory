@@ -45,6 +45,7 @@ class Notable:
 
 
 NOTABLE: tuple[Notable, ...] = (
+    Notable("aged_out", "death of old age", "deaths of old age", floor=3),
     Notable("killed", "killing", floor=3),
     Notable("starved", "death by hunger", "deaths by hunger", floor=3),
     Notable("died_of_thirst", "death from thirst", "deaths from thirst", floor=3),
@@ -85,10 +86,26 @@ many of*, which is what `_spike` measures.
 """
 
 SPIKE = 1.6
-"""How far above its own running average a count has to be to lead."""
+"""How far above anything recent a count has to be to lead."""
 
 MIN_DAYS_FOR_AVERAGE = 2
 """Days of history before ratios mean anything. Until then, fixed rules."""
+
+AVERAGE_WINDOW_DAYS = 7
+"""How many days "recent" means.
+
+"Usual" was the *lifetime mean* for one night, and a fifty-day run showed
+why that is wrong: alliances grow as the island does - 99 a day, then 110,
+129, 172, 197, 315 - so against a lifetime mean they were five times the
+usual every single day, and six of twelve consecutive cards led with them.
+
+A trailing mean is better and still not right: anything growing at a fifth
+a day is genuinely double its week-old self, for ever. So the baseline is
+the *peak* of the window rather than its mean - today has to beat anything
+the island has recently managed, which is what "unusual" means for a
+series that trends. A real spike still clears it easily; steady growth
+does not.
+"""
 
 
 def plural(count: int, singular: str, plural: str | None = None) -> str:
@@ -98,25 +115,25 @@ def plural(count: int, singular: str, plural: str | None = None) -> str:
 
 
 def _multiple(ratio: float) -> str:
-    """How a person would say "2.9 times as many"."""
+    """How a person would say "2.9 times as many as any recent day"."""
     if ratio >= 4.0:
-        return f"{ratio:.0f}x the usual"
+        return f"{ratio:.0f}x any recent day"
     if ratio >= 2.6:
-        return "triple the usual"
+        return "triple any recent day"
     if ratio >= 1.9:
-        return "double the usual"
-    return "well above the usual"
+        return "double any recent day"
+    return "more than any recent day"
 
 
-def _spike(counts: Counter[str], averages: Mapping[str, float]) -> str | None:
-    """The day's biggest outlier against its own history, if it has one."""
+def _spike(counts: Counter[str], peaks: Mapping[str, float]) -> str | None:
+    """The day's biggest outlier against anything recent, if it has one."""
     best: tuple[float, str] | None = None
     for notable in NOTABLE:
         count = counts[notable.kind]
         if count < notable.floor:
             continue
-        average = averages.get(notable.kind, 0.0)
-        ratio = count / average if average >= 1.0 else float("inf")
+        peak = peaks.get(notable.kind, 0.0)
+        ratio = count / peak if peak >= 1.0 else float("inf")
         if ratio < SPIKE:
             continue
         said = f"{plural(count, notable.singular, notable.plural)}"
@@ -131,7 +148,7 @@ def headline(
     counts: Counter[str],
     facts: DayFacts,
     deaths: Counter[str],
-    averages: Mapping[str, float] | None = None,
+    peaks: Mapping[str, float] | None = None,
 ) -> str:
     """The one line worth leading with.
 
@@ -145,7 +162,7 @@ def headline(
         return "The island is empty"
     if facts.population <= COLLAPSE_SURVIVORS:
         return f"The island is nearly empty: {plural(facts.population, 'survivor')} left"
-    if deaths["old_age"] >= COHORT_DEATHS:
+    if deaths["old_age"] >= COHORT_DEATHS and facts.founders_alive > 0:
         # The die-off lasts about ten days, and saying the same sentence ten
         # times is the monotony these rules exist to avoid. The first day is
         # the news; after that the running total is.
@@ -155,11 +172,11 @@ def headline(
                 f"The founding generation is going: {plural(deaths['old_age'], 'death')} of old age"
             )
         return f"{deaths['old_age']} more founders gone - {so_far} of old age so far"
-    if averages is not None:
+    if peaks is not None:
         # With history, the question is only what was unusual. Falling
         # through to the fixed rules here is what made every card lead with
         # a coup: they fire on *any* count, and this island has coups daily.
-        return _spike(counts, averages) or _ordinary_day(counts)
+        return _spike(counts, peaks) or _ordinary_day(counts)
 
     # No history yet - the first two days of a world. Fixed order, and the
     # only place it is still right, because nothing has a usual yet.

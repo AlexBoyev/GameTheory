@@ -12,18 +12,20 @@ prediction: the only honest thing to say about a day that has not happened
 yet is what the calendar guarantees (a season, and what the season does).
 """
 
-from collections import Counter
+from collections import Counter, deque
 from dataclasses import dataclass, field
 from typing import Any
 
 from app.services.day_facts import DayFacts
 from app.services.day_headline import (
+    AVERAGE_WINDOW_DAYS,
     MIN_DAYS_FOR_AVERAGE,
     headline,
     plural,
 )
 
 CAUSE_KEYS = {
+    "old_age": "aged_out",
     "combat": "killed",
     "starvation": "starved",
     "dehydration": "died_of_thirst",
@@ -76,12 +78,11 @@ class DayChronicle:
     only: the archive is what remembers history.
     """
 
-    __slots__ = ("_counts", "_day", "_days", "_deaths", "_population", "_season", "_totals")
+    __slots__ = ("_counts", "_day", "_deaths", "_population", "_recent", "_season")
 
     def __init__(self) -> None:
         self._counts: Counter[str] = Counter()
-        self._totals: Counter[str] = Counter()
-        self._days = 0
+        self._recent: deque[Counter[str]] = deque(maxlen=AVERAGE_WINDOW_DAYS)
         self._deaths: Counter[str] = Counter()
         self._day: int | None = None
         self._season: str | None = None
@@ -97,8 +98,7 @@ class DayChronicle:
     def reset(self) -> None:
         """Forget everything: a new world is a new chronicle."""
         self._counts.clear()
-        self._totals.clear()
-        self._days = 0
+        self._recent.clear()
         self._deaths.clear()
         self._day = None
         self._season = None
@@ -129,20 +129,20 @@ class DayChronicle:
         # Deaths come from the world's cumulative tally, so the day's figure
         # is the difference since the last turn (see `DayFacts`).
         cumulative = Counter(facts.deaths_by_cause)
-        deaths = cumulative - self._deaths
+        # On the first turn the chronicle has no idea what happened before
+        # it started, and a restored world arrives with a graveyard: taking
+        # the difference against nothing would report 140 deaths of old age
+        # as having happened overnight, and leave that in the window the
+        # next week of "usual" is measured against.
+        deaths = Counter() if first else cumulative - self._deaths
         self._deaths = cumulative
         # Deaths compete for the headline on the same terms as everything
         # else, so they go into the same tally the averages are kept over.
         for cause, key in CAUSE_KEYS.items():
             if deaths[cause]:
                 counts[key] = deaths[cause]
-        averages = (
-            {kind: total / self._days for kind, total in self._totals.items()}
-            if self._days >= MIN_DAYS_FOR_AVERAGE
-            else None
-        )
-        self._totals.update(counts)
-        self._days += 1
+        peaks = self._recent_peaks()
+        self._recent.append(Counter(counts))
         self._day, self._season, self._population = facts.day, facts.season, facts.population
         self._counts.clear()
 
@@ -196,10 +196,26 @@ class DayChronicle:
         return DayReport(
             day=facts.day,
             season=facts.season,
-            headline=headline(counts, facts, deaths, averages),
+            headline=headline(counts, facts, deaths, peaks),
             lines=tuple(lines),
             counts=dict(counts),
         )
+
+    def _recent_peaks(self) -> dict[str, float] | None:
+        """The busiest each kind of thing has recently been.
+
+        The peak of the last `AVERAGE_WINDOW_DAYS` rather than their mean -
+        see that constant for the fifty-day run that made the difference
+        matter.
+        """
+        if len(self._recent) < MIN_DAYS_FOR_AVERAGE:
+            return None
+        peaks: dict[str, float] = {}
+        for day in self._recent:
+            for kind, count in day.items():
+                if count > peaks.get(kind, 0.0):
+                    peaks[kind] = float(count)
+        return peaks
 
     @staticmethod
     def _toll(deaths: Counter[str]) -> str:

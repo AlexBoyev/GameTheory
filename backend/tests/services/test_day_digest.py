@@ -17,6 +17,9 @@ def facts(day: int, **overrides: object) -> DayFacts:
         "population": 100,
         "tribes": 0,
         "tribes_at_war": 0,
+        # The founding cast is still around unless a test says otherwise:
+        # old age only leads a day while they are the ones dying.
+        "founders_alive": 100,
         "deaths_by_cause": {},
     }
     base.update(overrides)
@@ -109,7 +112,7 @@ def test_a_headline_reports_the_unusual_not_the_dramatic() -> None:
     spike = chronicle.turn(facts(5))
     assert spike is not None
     assert "96 chiefs overthrown" in spike.headline
-    assert "triple the usual" in spike.headline
+    assert "triple any recent day" in spike.headline
 
 
 def test_the_first_thing_a_world_has_ever_done_is_news() -> None:
@@ -125,7 +128,7 @@ def test_the_first_thing_a_world_has_ever_done_is_news() -> None:
 
     assert report is not None
     assert "2 wars declared" in report.headline
-    assert "usual" not in report.headline, "nothing to compare it against"
+    assert "recent" not in report.headline, "nothing to compare it against"
 
 
 def test_a_spike_below_its_floor_is_noise() -> None:
@@ -279,7 +282,7 @@ def test_a_bloody_day_leads_even_once_the_world_has_a_history() -> None:
 
     assert report is not None
     assert "9 killings" in report.headline
-    assert "the usual" in report.headline
+    assert "any recent day" in report.headline
 
 
 def test_a_restored_world_is_not_a_new_one() -> None:
@@ -344,3 +347,57 @@ def test_every_headline_phrase_survives_being_pluralised() -> None:
     ]
 
     assert not unsafe, f"these need an explicit plural: {unsafe}"
+
+
+def test_old_age_stops_being_the_story_once_the_founders_are_gone() -> None:
+    """A fifty-day run was still announcing "4 more founders gone" on day 47.
+
+    The founding generation is dead by about day 18. Everybody ageing out
+    after that was born on the island, so old age becomes an ordinary
+    cause competing with everything else rather than the story of the day.
+    """
+    chronicle = DayChronicle()
+    chronicle.turn(facts(40, population=200, deaths_by_cause={"old_age": 140}))
+    # A few ordinary days, one old-age death each: that is the "usual" the
+    # next day is measured against.
+    for index, day in enumerate((41, 42, 43), start=1):
+        chronicle.record(events(gossip=500, alliance=30))
+        chronicle.turn(
+            facts(
+                day,
+                population=200,
+                founders_alive=0,
+                deaths_by_cause={"old_age": 140 + index},
+            )
+        )
+
+    chronicle.record(events(gossip=500, alliance=30))
+    report = chronicle.turn(
+        facts(44, population=196, founders_alive=0, deaths_by_cause={"old_age": 147})
+    )
+
+    assert report is not None
+    assert "founders" not in report.headline
+    assert "4 deaths of old age" in report.headline
+
+
+def test_a_growing_island_does_not_spike_against_its_own_past_forever() -> None:
+    """Alliances led six of twelve consecutive days in a fifty-day run.
+
+    They grow as the island does - 99 a day, then 110, 129, 172 - so
+    against a lifetime average they are "5x the usual" permanently. The
+    average has to be recent for growth to stop reading as news.
+    """
+    chronicle = DayChronicle()
+    chronicle.turn(facts(0))
+    alliances = 20
+    headlines = []
+    for day in range(1, 16):
+        alliances = int(alliances * 1.2)  # a steadily growing island
+        chronicle.record(events(gossip=400, alliance=alliances))
+        report = chronicle.turn(facts(day, population=150))
+        assert report is not None
+        headlines.append(report.headline)
+
+    led_by_alliances = [line for line in headlines[-8:] if "alliance" in line]
+    assert not led_by_alliances, f"steady growth kept leading: {led_by_alliances}"

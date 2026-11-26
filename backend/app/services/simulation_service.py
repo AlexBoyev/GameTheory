@@ -521,6 +521,7 @@ class SimulationService:
                 population=world.population,
                 tribes=len(tribes),
                 tribes_at_war=sum(1 for tribe in tribes if tribe.at_war_with),
+                founders_alive=sum(1 for agent in world.living_agents() if agent.born_tick == 0),
                 deaths_by_cause=dict(world.deaths_by_cause),
             )
 

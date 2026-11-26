@@ -19,6 +19,15 @@ class DayFacts:
     population: int
     tribes: int
     tribes_at_war: int
+    founders_alive: int = 0
+    """How many of the original cast are still breathing.
+
+    Old age leads a day only while they are dying, which is the one turn
+    the project is about. After that it is an ordinary cause competing
+    with the rest - a fifty-day run was still announcing "4 more founders
+    gone" on day 47, thirty days after the last founder died.
+    """
+
     deaths_by_cause: Mapping[str, int] = field(default_factory=dict)
     """Cumulative totals from the world, not a count of events.
 
