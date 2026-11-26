@@ -72,9 +72,22 @@ most pairs never meet twice. It is the trust model's own consequence. The
 levers, in the order I would try them:
 
 1. `reproduction_min_trust` (now world config, default unchanged at 0.35,
-   with a dial). 0.20 roughly doubles the share of adults with a partner
-   at hand. **Measure the day-30 spread over three seeds before changing
-   the default.**
+   with a dial). **Measured, three seeds, thirty days** - the only lever
+   that improved every world it was tried on:
+
+   | seed | day 30 at 0.35 | at 0.20 | births |
+   | --- | --- | --- | --- |
+   | 1337 | 215 | 463 | 264 -> 609 |
+   | 7 | 16 | 46 | 28 -> 77 |
+   | 99 | 5 | 14 | 18 -> 60 |
+
+   Births roughly triple and every seed ends with more people alive. It
+   does *not* make survival reliable - 7 and 99 still end far below the
+   120 they started with - so this buys a better-odds island, not a stable
+   one. My recommendation if you want the default island to usually
+   survive: 0.20, and say in the dial's hint that trust is cheaper here.
+   Left at 0.35 because it changes what every future run feels like, and
+   that is your call rather than mine.
 2. `Reproduce.MIN_FOOD` (2.0 against a median carried 0.27). The belly
    gate never binds; this one does.
 3. `age_years_per_day` (3.0). Slower ageing buys more fertile days, at the

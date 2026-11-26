@@ -676,13 +676,20 @@ and `nearest_resource` re-tests that every call; ADR 0005 rejected caching
 the answer for exactly that reason and still should. Node positions never
 move, which is why the scan underneath is safe.
 
-**+10.7%**, measured by switching the two implementations at their choke
-points in twelve interleaved blocks (76.3 against 68.9 tps, medians) -
-interleaved because another measurement was running on the same machine
-and a straight before/after would have measured that instead. An earlier
-attempt at the same question read +0.9% because the harness monkeypatched
-`nearby_agents` in four modules and three others imported it directly;
-switching one method on `World` instead is what made the arms honest.
+**+10.7% under load, +17% to +19% on an idle machine**, measured by
+switching the two implementations at their choke points and interleaving
+the arms. Two things that measurement taught, both worth more than the
+number:
+
+- *An earlier attempt read +0.9%* because the harness monkeypatched
+  `nearby_agents` in four modules and three others imported it directly.
+  Half the "raw" arm was still cached. A null result can be the harness.
+- *Absolute throughput on this laptop drifts about 20% over hours.* The
+  project bench read 251 tps at 100 agents early in the night and 205 six
+  hours later, on the same build with the machine idle both times - while
+  an interleaved A/B on that same slow machine still showed the memo worth
+  +19%. Before-and-after numbers taken hours apart are not evidence here;
+  interleaved ones are.
 
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 

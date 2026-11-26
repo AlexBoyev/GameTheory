@@ -94,10 +94,18 @@ deliberative layer included:
 
 | Agents | Ticks/sec | vs realtime (1x = 10 ticks/s) |
 | --- | --- | --- |
-| 100 | 251 | 25x |
-| 150 | 162 | 16x |
+| 100 | 205 | 20x |
+| 150 | 136 | 14x |
 | 300 | 64 | 6.4x |
-| 500 | 35 | 3.5x |
+| 500 | 32 | 3.2x |
+
+**Treat the absolute numbers as a range, not a reading.** The same bench on
+the same build measured 251/162/64/35 earlier the same night and
+205/136/64/32 six hours later, with the machine idle both times - this
+laptop's sustained clock drifts about 20% as it warms up. Anything measured
+as a *difference* here is therefore measured by interleaving the two
+implementations in one process and taking medians, never by running one
+before the other.
 
 That is the ceiling on the speed buttons, and it is why a big island cannot
 run at 50x: 300 agents top out near 6x. Ask for more and the engine runs as
@@ -118,9 +126,15 @@ frames), but not a nap.
 | 120 agents | 51 tps | **156 tps** | 15 s | 2.1 min |
 | 300 agents | 25 tps | **66 tps** | 36 s | 4.9 min |
 
-66 tps at 300 agents is the raw pipeline's own rate, so the loop now gives up
-essentially nothing. Going faster from here means making a tick cheaper, not
-scheduling it better.
+66 tps at 300 agents was the raw pipeline's own rate at the time, so the loop
+gives up essentially nothing. Going faster from there meant making a tick
+cheaper, which is what the next two changes did - both measured by
+interleaved A/B rather than before-and-after:
+
+| change | at 300 agents |
+| --- | --- |
+| Gatherers walk to the next bush instead of giving up | 25% fewer decisions a tick |
+| Memoising the spatial question each skill asks separately | +17% |
 
 500 and 1,000 agents got *faster* than Phase 4 despite the deliberative layer
 being added, because a property test found a real bug in the spatial hash on
