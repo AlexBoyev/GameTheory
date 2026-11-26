@@ -147,6 +147,10 @@ class World:
     """
     _living: list[Agent] | None = None
     _living_tick: int = -1
+    _neighbours: dict[tuple[int, float], list[int]] = field(default_factory=dict)
+    _neighbours_state: tuple[int, int] = (-1, -1)
+    _resource_scans: dict[tuple[int, float], list[int]] = field(default_factory=dict)
+    _resource_scan_state: tuple[int, int, int] = (-1, -1, -1)
 
     @property
     def population(self) -> int:
@@ -175,6 +179,57 @@ class World:
         self._living = [agent for _, agent in sorted(self.agents.items()) if agent.alive]
         self._living_tick = self.clock.tick
         return self._living
+
+    def neighbours_within(self, agent_id: int, radius: float) -> list[int]:
+        """Ids within `radius` of `agent_id`, memoised while it stays true.
+
+        The brain scores every social skill and each one asks who is nearby
+        on its own account, so the same question arrives five to seven times
+        per deciding agent: measured at 300 agents, 132 calls a tick against
+        20 distinct questions.
+
+        Valid while the tick and the index are unchanged - which covers
+        movement (`MovementSystem` rebuilds the index), births and deaths,
+        without anyone having to remember to say so. The returned list is
+        shared, so treat it as read-only, the way `living_agents()` is.
+        """
+        state = (self.clock.tick, self.agent_index.version)
+        if self._neighbours_state != state:
+            self._neighbours.clear()
+            self._neighbours_state = state
+        found = self._neighbours.get((agent_id, radius))
+        if found is None:
+            found = self.agent_index.neighbours(agent_id, radius)
+            self._neighbours[(agent_id, radius)] = found
+        return found
+
+    def resources_within(self, agent_id: int, radius: float) -> list[int]:
+        """Resource ids within `radius` of `agent_id`, memoised the same way.
+
+        These are the expensive scans - vision is 18 units and landmark 54,
+        against 4 for the agent queries above - and 56% of them repeat
+        inside a tick, because three or four skills each ask what is in
+        reach while the brain scores them.
+
+        Only the *scan* is memoised, never the answer: which node is nearest
+        and edible depends on amounts that change mid-tick as agents eat,
+        and callers re-test that every time. ADR 0005 rejected caching the
+        answer for exactly that reason; node positions, by contrast, never
+        move, so the set of ids in range changes only when a node is added
+        or removed, which bumps the index version.
+        """
+        state = (self.clock.tick, self.agent_index.version, self.resource_index.version)
+        if self._resource_scan_state != state:
+            self._resource_scans.clear()
+            self._resource_scan_state = state
+        found = self._resource_scans.get((agent_id, radius))
+        if found is None:
+            position = self.agent_index.position_of(agent_id)
+            if position is None:
+                return []
+            found = self.resource_index.query_radius(position[0], position[1], radius)
+            self._resource_scans[(agent_id, radius)] = found
+        return found
 
     def invalidate_living(self) -> None:
         """Drop the cached living-agent list after a birth or a death."""

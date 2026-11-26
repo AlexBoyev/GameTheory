@@ -642,6 +642,48 @@ Three further things the sweep exposed, all worth keeping in mind:
   rather than 1.5, and the first death is a killing on day 4. All re-measured
   and updated. A quoted number that was true last week is worse than none.
 
+### ~~The same spatial question, asked five times a decision~~ (fixed)
+
+The note left under the speed finding said anything past a few percent
+here had to be structural - "fewer decisions per tick, or scoring
+vectorised across agents" - rather than a tweak to the hash. Half right.
+There was a third option, and counting found it: the brain scores every
+skill, and each skill asks the spatial index what is nearby *on its own
+account*.
+
+Measured at 300 agents:
+
+| question | calls/tick | distinct | repeated |
+| --- | --- | --- | --- |
+| `nearby_agents` (radius 4) | 132 | 20 | 85% |
+| `nearest_resource` (radius 18 and 54) | 101 | 44 | 56% |
+
+Five to seven asks of the same question per deciding agent, and the
+resource ones are the expensive scans - vision is 18 units and landmark 54
+against 4 for neighbours.
+
+Both are now memoised on `World`, and the invalidation is the part worth
+copying. `SpatialHash` carries a `version` that every mutation bumps, and a
+cache entry is valid while `(tick, index version)` is unchanged. That
+covers movement, births, deaths, corpses appearing and nodes expiring
+without any call site having to remember to say so - the failure mode of
+hand-placed invalidation being that it works until somebody adds a sixth
+call site.
+
+Only the *scan* is cached, never the answer. Which bush is nearest and
+still has berries depends on amounts that change mid-tick as agents eat,
+and `nearest_resource` re-tests that every call; ADR 0005 rejected caching
+the answer for exactly that reason and still should. Node positions never
+move, which is why the scan underneath is safe.
+
+**+10.7%**, measured by switching the two implementations at their choke
+points in twelve interleaved blocks (76.3 against 68.9 tps, medians) -
+interleaved because another measurement was running on the same machine
+and a straight before/after would have measured that instead. An earlier
+attempt at the same question read +0.9% because the harness monkeypatched
+`nearby_agents` in four modules and three others imported it directly;
+switching one method on `World` instead is what made the arms honest.
+
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 
 Deliberate and documented (ADR 0004, `WorldConfig.llm_agents`): the

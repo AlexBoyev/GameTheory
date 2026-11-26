@@ -22,9 +22,14 @@ class TargetParams(BaseModel):
 
 
 def nearby_agents(world: World, agent: Agent, radius: float = INTERACTION_RADIUS) -> list[Agent]:
-    """Living neighbours within `radius`, in stable id order."""
+    """Living neighbours within `radius`, in stable id order.
+
+    Through `World.neighbours_within`, which memoises the spatial query for
+    the rest of the tick: the brain asks this once per social skill it
+    scores, which measured at five to seven times per deciding agent.
+    """
     found: list[Agent] = []
-    for other_id in sorted(world.agent_index.neighbours(agent.id, radius)):
+    for other_id in sorted(world.neighbours_within(agent.id, radius)):
         other = world.agents.get(other_id)
         if other is not None and other.alive:
             found.append(other)

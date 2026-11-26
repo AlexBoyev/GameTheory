@@ -70,18 +70,22 @@ def nearest_resource(
 ) -> ResourceNode | None:
     """Return the closest non-depleted node of one of `kinds`, or `None`.
 
-    Not memoised, though a third of these calls within a tick are the same
-    question asked twice. Caching them per tick was tried and reverted: the
-    world changes *during* a tick (a skill depletes a node, a god tool drops
-    food), so a cached answer goes stale in a way nothing would notice at
-    runtime - and the measured gain was about 4%, inside the noise. See
-    ADR 0005.
+    The *answer* is still computed every time, because the world changes
+    during a tick - a skill depletes a node, a god tool drops food - and a
+    cached answer would go stale in a way nothing would notice at runtime
+    (ADR 0005, where caching it was tried and reverted for ~4%).
+
+    What is memoised is the *scan* underneath: which node ids lie within
+    `radius`. Nodes never move, so that set changes only when one is added
+    or removed, and `World.resources_within` notices. The kind and depletion
+    tests below still run on every call. Measured at 300 agents: 101 of
+    these a tick, 56% of them repeats.
     """
     x, z = agent.position
     best: ResourceNode | None = None
     best_distance = float("inf")
 
-    for node_id in sorted(world.resource_index.query_radius(x, z, radius)):
+    for node_id in sorted(world.resources_within(agent.id, radius)):
         node = world.resources.get(node_id)
         if node is None or node.kind not in kinds or node.depleted:
             continue

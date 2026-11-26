@@ -32,7 +32,7 @@ class SpatialHash:
     order, so results are deterministic for a given insertion sequence.
     """
 
-    __slots__ = ("_cells", "_positions", "cell_size")
+    __slots__ = ("_cells", "_positions", "cell_size", "version")
 
     def __init__(self, cell_size: float) -> None:
         if cell_size <= 0:
@@ -41,6 +41,15 @@ class SpatialHash:
         self.cell_size = cell_size
         self._cells: dict[Cell, list[Entry]] = {}
         self._positions: dict[int, tuple[float, float]] = {}
+        self.version = 0
+        """Bumped by every change to the contents.
+
+        Anything memoising a query result can compare this instead of being
+        told to invalidate, which is the difference between a cache that is
+        correct and one that is correct until somebody adds a call site and
+        forgets. Positions are the other half of a query, so a cache keyed
+        on an agent also has to notice the tick turning over.
+        """
 
     def __len__(self) -> int:
         return len(self._positions)
@@ -52,6 +61,7 @@ class SpatialHash:
         """Drop all entries, keeping the configured cell size."""
         self._cells.clear()
         self._positions.clear()
+        self.version += 1
 
     def cell_of(self, x: float, z: float) -> Cell:
         """Return the cell coordinates containing `(x, z)`."""
@@ -63,6 +73,7 @@ class SpatialHash:
 
     def insert(self, item_id: int, x: float, z: float) -> None:
         """Insert or move `item_id` to `(x, z)`."""
+        self.version += 1
         previous = self._positions.get(item_id)
         new_cell = self.cell_of(x, z)
 
@@ -83,12 +94,14 @@ class SpatialHash:
 
     def remove(self, item_id: int) -> None:
         """Remove `item_id` if present."""
+        self.version += 1
         position = self._positions.pop(item_id, None)
         if position is not None:
             self._remove_from_cell(self.cell_of(*position), item_id)
 
     def rebuild(self, items: Iterator[tuple[int, float, float]]) -> None:
         """Clear and re-insert everything - cheaper than moving every agent."""
+        self.version += 1
         cells: dict[Cell, list[Entry]] = {}
         positions: dict[int, tuple[float, float]] = {}
         cell_size = self.cell_size
