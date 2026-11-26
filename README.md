@@ -51,7 +51,7 @@ What works right now:
 | **A title card for every day**: what the day that ended was about - chosen for what was *unusual*, against that world's own running average - and where the island stands now. The log keeps every headline; clicking one brings the card back | |
 | Charts that show the turn the project is about: population against **"born here"**, so you can watch the founding generation hand over around day 18, and deaths by cause | |
 | Full UI: front screen with instructions, inspector, event feed with filters, charts, overlays, speech bubbles, URL state, help | |
-| 7 layering contracts, **419 backend tests**, 34 unit + **14 browser tests** | |
+| 7 layering contracts, **518 backend tests**, 76 unit + **17 browser tests** | |
 
 `GET /api/sim/state` reports `"placeholder": false`. Determinism is
 machine-checked: same seed, same world, to the bit, after 1,000 ticks of the
