@@ -691,6 +691,41 @@ number:
   +19%. Before-and-after numbers taken hours apart are not evidence here;
   interleaved ones are.
 
+### What a long run actually accumulates (measured, nothing to fix yet)
+
+Everything above was measured in runs of a few thousand ticks. A session
+someone leaves going is a different question, so: twenty sim-days of the
+default world, counting what grows.
+
+| day | alive | `world.agents` | minds | resource nodes | relationships | with the dead |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 121 | 121 | 121 | 211 | 1,099 | 0 |
+| 8 | 148 | 165 | 148 | 211 | 5,836 | 498 |
+| 20 | 117 | 237 | 117 | 211 | 6,929 | 2,216 |
+
+Two things grow without a bound: `world.agents` keeps the dead (the
+inspector and the event feed both reach for them by id), and living agents
+keep relationships with people who have died - a third of all
+relationships by day 20. Minds *are* pruned with their agents, and
+resource nodes are stable.
+
+Neither is urgent. A twenty-five minute soak of the real stack at MAX
+(twelve sim-days) saw resident memory climb from 132 MB to 171 MB and then
+flatten, which is the population growing rather than a leak, and the event
+feed stayed healthy throughout. Extrapolated, a day of continuous running
+is tens of megabytes of remembered dead - untidy rather than dangerous,
+and arguably correct: an agent that forgot the dead would forget who
+killed its friend.
+
+**The archive, same question.** `prune_events` caps the event table at
+20,000 rows *per run*, which it does correctly - the biggest runs in a
+development database sit at 19,800. Across runs there is no cap: 180 runs,
+222,412 events, 37 MB. And 115 of those 180 runs recorded nothing at all,
+because every backend start, reload and reset opens a row whether or not
+the world ever ticks. Opening the row lazily was tried and reverted: it
+changes a documented contract and four tests to tidy a table that no
+endpoint exposes and no screen shows.
+
 ### P3 - `llm_agents` defaults to 4, so default runs are not bit-reproducible
 
 Deliberate and documented (ADR 0004, `WorldConfig.llm_agents`): the
