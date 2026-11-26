@@ -101,6 +101,14 @@ export function ChartsPanel(): React.ReactElement {
         colour: '#e2e8f0',
         values: points.map((point) => point.population),
       },
+      {
+        // The gap between the two lines is the founding generation, and it
+        // closes by about day 18: everybody who washed up on the island is
+        // dead and everybody alive was born into it.
+        label: 'born here',
+        colour: '#38bdf8',
+        values: points.map((point) => point.extra?.born_here ?? 0),
+      },
     ],
     [points],
   );

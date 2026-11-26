@@ -2,9 +2,12 @@
 
 import pytest
 
+from app.ai.gametheory.ledger import SocialLedger
+from app.ai.minds import MindRegistry
 from app.core.settings import Settings
 from app.services.metric_point import MetricPoint
 from app.services.metrics_service import MetricsService, gini
+from app.sim.world import World
 
 
 def service(settings: Settings, every: int = 100) -> MetricsService:
@@ -96,3 +99,22 @@ def test_clear_drops_the_series_for_a_rebuilt_world(settings: Settings) -> None:
 
     assert metrics.series() == []
     assert metrics.latest is None
+
+
+def test_born_here_separates_the_founders_from_their_children(
+    settings: Settings, world: World
+) -> None:
+    """The generational handover, which was not visible anywhere before.
+
+    Founders arrive with `born_tick` 0. By about day 18 none of them is
+    alive, so this number becomes the whole population - and that turn is
+    the point of the project, strategies being inherited rather than
+    merely played.
+    """
+    first, second = world.living_agents()[:2]
+    assert first.born_tick == 0, "the founding cast arrives at tick 0"
+    second.born_tick = 5_000
+
+    point = service(settings).sample(world, SocialLedger(), MindRegistry())
+
+    assert point.extra["born_here"] == 1

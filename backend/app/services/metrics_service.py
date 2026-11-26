@@ -141,6 +141,13 @@ class MetricsService:
                 game: round(rate, 4) for game, rate in ledger.cooperation_rates().items()
             },
             extra={
+                # Founders have `born_tick` 0, so this is the generational
+                # handover in one number: it starts at zero, and by day 18
+                # it is the whole population, because nobody who washed up
+                # on the island is still alive. That turn is the point of
+                # the project - strategies being inherited rather than
+                # merely played - and it was not visible anywhere.
+                "born_here": sum(1 for agent in world.living_agents() if agent.born_tick > 0),
                 "tribes": len(world.tribes),
                 "shelters": len(world.shelters),
                 "betrayals": ledger.betrayals,
