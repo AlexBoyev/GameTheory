@@ -219,6 +219,15 @@ class World:
         answer for exactly that reason; node positions, by contrast, never
         move, so the set of ids in range changes only when a node is added
         or removed, which bumps the index version.
+
+        `position` is deliberately not part of the key, which rests on an
+        invariant worth stating: `MovementSystem` is the only place in the
+        codebase that assigns `agent.position`, and it rebuilds the index
+        immediately afterwards. So an agent's position and the index agree
+        everywhere a query can be made, and the agent-index version
+        standing in for "nobody has moved" is sound. Break that - move an
+        agent anywhere else without reindexing - and this cache starts
+        answering questions about where somebody used to be.
         """
         state = (self.clock.tick, self.agent_index.version, self.resource_index.version)
         if self._resource_scan_state != state:
