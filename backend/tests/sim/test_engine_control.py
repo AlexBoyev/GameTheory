@@ -354,3 +354,33 @@ def test_a_slice_stops_when_its_time_is_up_even_with_debt_owing() -> None:
 def test_negative_elapsed_time_earns_nothing() -> None:
     """A clock that goes backwards must not rewind or explode the debt."""
     assert ticks_for(1.0, -5.0) == 0
+
+
+def test_the_loop_only_yields_briefly_when_it_is_behind(engine: SimulationEngine) -> None:
+    """The policy that made MAX three times faster, stated directly.
+
+    The loop used to sleep 20 ms after every batch at every speed, so a
+    12 ms batch was followed by 20 ms of nothing and MAX delivered a third
+    of what the machine could do. It now sleeps 2 ms instead whenever the
+    user has asked for ticks faster than they are arriving - and only
+    then, because a speed the engine is keeping up with should leave the
+    core alone.
+    """
+    engine.submit(Pause())
+    assert wait_until(lambda: engine.snapshot().status is EngineStatus.PAUSED)
+    assert not engine._is_busy(), "a paused world is not in a hurry"
+
+    engine.submit(SetSpeed(1.0))
+    assert wait_until(lambda: engine.snapshot().speed == 1.0)
+    assert not engine._is_busy(), "a speed it keeps up with paces itself"
+
+    engine.submit(SetSpeed(MAX_SPEED))
+    assert wait_until(lambda: engine.snapshot().speed == MAX_SPEED)
+    assert engine._is_busy(), "MAX means as fast as the machine allows"
+
+    engine.submit(Pause())
+    assert wait_until(lambda: engine.snapshot().status is EngineStatus.PAUSED)
+    engine.submit(Step(50_000))
+    assert wait_until(lambda: engine.snapshot().skip_remaining > 0)
+    assert engine._is_busy(), "a skip is a request to get there quickly"
+    engine.submit(Pause())
