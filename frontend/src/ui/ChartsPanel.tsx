@@ -43,6 +43,15 @@ const GAME_COLOURS: Record<string, string> = {
   public_goods: '#facc15',
 };
 
+const CAUSE_COLOURS: Record<string, string> = {
+  old_age: '#a78bfa',
+  combat: '#f87171',
+  starvation: '#fbbf24',
+  dehydration: '#38bdf8',
+  plague: '#4ade80',
+  smite: '#e879f9',
+};
+
 function seriesFrom(
   points: MetricPoint[],
   keys: string[],
@@ -69,6 +78,14 @@ export function ChartsPanel(): React.ReactElement {
     return [...seen].sort();
   }, [points]);
 
+  const causeKeys = useMemo(() => {
+    const seen = new Set<string>();
+    for (const point of points) {
+      for (const key of Object.keys(point.deaths_by_cause ?? {})) seen.add(key);
+    }
+    return [...seen].sort();
+  }, [points]);
+
   const gameKeys = useMemo(() => {
     const seen = new Set<string>();
     for (const point of points) {
@@ -86,6 +103,21 @@ export function ChartsPanel(): React.ReactElement {
       },
     ],
     [points],
+  );
+
+  // Cumulative, because that is what the world reports - so the shape to
+  // look for is the cliff from day 8 to day 18, when the founding
+  // generation ages out together and the island finds out whether its
+  // children can replace it.
+  const deaths = useMemo(
+    () =>
+      seriesFrom(
+        points,
+        causeKeys,
+        (point, key) => point.deaths_by_cause?.[key] ?? 0,
+        CAUSE_COLOURS,
+      ),
+    [points, causeKeys],
   );
 
   const strategies = useMemo(
@@ -169,6 +201,14 @@ export function ChartsPanel(): React.ReactElement {
         <div className="space-y-1 pt-1">
           <Chart title="Population" ticks={ticks} series={population} />
           <Chart title="Strategy shares" ticks={ticks} series={strategies} height={130} />
+          {deaths.length > 0 && (
+            <Chart
+              title="Deaths by cause (running total)"
+              ticks={ticks}
+              series={deaths}
+              height={130}
+            />
+          )}
           <Chart title="Average payoff per strategy" ticks={ticks} series={payoffs} height={130} />
           <Chart
             title="Cooperation rate by game"

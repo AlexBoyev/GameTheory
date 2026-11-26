@@ -24,15 +24,21 @@ const STEPS = [50, 100, 500] as const;
 /**
  * Skips worth offering, in days.
  *
- * The interesting part of a run is days 8 to 20, where agents start dying of
- * old age and strategies are inherited rather than merely played. Getting
- * there in real time is minutes of watching, and the day is the unit the
- * world actually changes in - so half a day and a day are the jumps, and the
- * engine runs them in chunks with a progress bar rather than freezing.
+ * The interesting part of a run is days 8 to 20, where the founding
+ * generation ages out and strategies start being inherited rather than
+ * merely played. Getting there in real time is minutes of watching, and the
+ * day is the unit the world actually changes in - so these are the jumps,
+ * and the engine runs them in chunks with a progress bar rather than
+ * freezing.
+ *
+ * A week is here because nothing is lost by skipping it any more: every day
+ * it passes through still leaves its card in the log, so you arrive at day 8
+ * able to read what happened on the way.
  */
 const SKIPS: ReadonlyArray<readonly [string, number]> = [
   ['½ day', TICKS_PER_DAY / 2],
   ['1 day', TICKS_PER_DAY],
+  ['1 week', TICKS_PER_DAY * 7],
 ];
 
 export function ControlBar(): React.ReactElement {
