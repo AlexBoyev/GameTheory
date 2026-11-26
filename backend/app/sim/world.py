@@ -203,7 +203,9 @@ class World:
             self._neighbours[(agent_id, radius)] = found
         return found
 
-    def resources_within(self, agent_id: int, radius: float) -> list[int]:
+    def resources_within(
+        self, agent_id: int, position: tuple[float, float], radius: float
+    ) -> list[int]:
         """Resource ids within `radius` of `agent_id`, memoised the same way.
 
         These are the expensive scans - vision is 18 units and landmark 54,
@@ -224,9 +226,9 @@ class World:
             self._resource_scan_state = state
         found = self._resource_scans.get((agent_id, radius))
         if found is None:
-            position = self.agent_index.position_of(agent_id)
-            if position is None:
-                return []
+            # From the caller's own position, not the index's copy of it:
+            # the two agree, but an agent already removed from the index
+            # (it died this tick) would otherwise silently scan nothing.
             found = self.resource_index.query_radius(position[0], position[1], radius)
             self._resource_scans[(agent_id, radius)] = found
         return found

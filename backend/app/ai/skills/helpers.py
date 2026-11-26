@@ -85,7 +85,7 @@ def nearest_resource(
     best: ResourceNode | None = None
     best_distance = float("inf")
 
-    for node_id in sorted(world.resources_within(agent.id, radius)):
+    for node_id in sorted(world.resources_within(agent.id, agent.position, radius)):
         node = world.resources.get(node_id)
         if node is None or node.kind not in kinds or node.depleted:
             continue
