@@ -97,16 +97,36 @@ levers, in the order I would try them:
 and the spread *is* the result. A single-seed run of this world will
 support any conclusion you like.
 
-## 1. The other honest lever: the cost of a tick
+## 1. The other honest lever: the cost of a tick (largely taken)
 
-Now that the loop gives up nothing, speed is purely the cost of a tick, and
-that is dominated by one thing. Profiled at 300 agents: `query_radius` is 32%
-of self time and 45% cumulative, driven by `check()` and `considerations()`
-calls that each ask a spatial question. ADR 0005 records that per-tick
-memoisation of `nearest_resource` was tried and reverted (~4% for real
-staleness risk), so the lever is not caching the answers but *asking fewer
-questions* - the `Requirement` prefilter is the shape of the thing that
-worked before, and nothing yet prefilters on distance.
+Two structural wins have been taken since this was written, both by
+counting rather than by profiling harder:
+
+- *Gatherers that walk on instead of giving up* - 25% fewer decisions a
+  tick, because a failed trip meant an immediate re-decide.
+- *Memoising the spatial question* - 211 of 685 scans a tick now served
+  from a per-tick memo on `World`, +13% to +19% depending on the world.
+
+Where that leaves the profile at 300 agents: `DecisionSystem` 39% (was
+51%), `PerceptionSystem` 21%, `EncounterSystem` 14%, everything else in
+single figures. The remaining spatial work is genuine misses - each agent
+asking its own question once - so there is no third helping of the same
+trick.
+
+What is left, in descending order of how much I would trust it:
+
+1. **Perception cadence.** It runs every 5 ticks per agent and costs 21%
+   of a tick, all of it two vision-radius scans. Every 10 ticks would
+   halve it for one sim-second of staleness. Its own docstring argues half
+   a second is invisible; a full second might also be, but that is a
+   behaviour claim and needs three seeds, not an assertion.
+2. **Scoring vectorised across agents.** The honest big one, and a
+   rewrite: the brain scores ~25 skills for ~15 agents a tick, one Python
+   call at a time.
+3. **Nothing in the spatial hash itself.** Three attempts are recorded in
+   `docs/REVIEW.md`, all measured and all reverted. The cost is the number
+   of candidate points scanned; key construction and list passes are not
+   where it lives.
 
 ## 2. Things that look like gaps and are not
 
