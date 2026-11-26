@@ -326,3 +326,21 @@ def test_a_plague_leads_its_day() -> None:
     assert report is not None
     assert "14 deaths from the plague" in report.headline
     assert "Died: 14 of plague" in report.lines
+
+
+def test_every_headline_phrase_survives_being_pluralised() -> None:
+    """A guard, because "3 struck down from the skys" shipped once.
+
+    Anything with a space in it is a phrase rather than a noun, and the
+    naive "add an s" cannot be trusted with those - so a phrase has to say
+    what its plural is.
+    """
+    from app.services.day_headline import NOTABLE
+
+    unsafe = [
+        notable.singular
+        for notable in NOTABLE
+        if " " in notable.singular and notable.plural is None
+    ]
+
+    assert not unsafe, f"these need an explicit plural: {unsafe}"
