@@ -400,7 +400,13 @@ InstancedMesh for agents & vegetation; interpolate positions between frames; tar
 ---
 
 ## 10. Metrics
-Every N ticks: population (total / by tribe / by strategy), births, deaths by cause, cooperation rate per game type, average payoff per strategy, food Gini, trust-graph density, alliances, wars, betrayals, lies told / caught, LLM calls. Stored in SQLite, streamed via WS.
+Every N ticks: population (total / by tribe / by strategy / **born in-world**), births, deaths by cause, cooperation rate per game type, average payoff per strategy, food Gini, trust-graph density, alliances, wars, betrayals, lies told / caught, LLM calls. Stored in SQLite, streamed via WS.
+
+`born_here` counts the living whose `born_tick` is non-zero, which is the
+generational handover in one number: zero at the start, the whole
+population by about day 18, because everybody who washed up on the island
+has died of old age by then. It is charted against total population, since
+the gap between the two lines *is* the founding generation.
 
 "Every N ticks" means *at least* N ticks have elapsed since the last sample — not `tick % N == 0`. Sampling runs on the broadcast thread (so the engine never pays for it), and the broadcast only sees the ticks that land on a 20 Hz frame; at 25× those are ~12 ticks apart, so a divisibility test misses nearly every window. Coups are reported as attempts and successes separately — most challenges fail. See ADR 0003.
 
@@ -412,6 +418,11 @@ SQLite (SQLModel) in `./data/gametheory.db` (Docker volume): runs, metrics, snap
 **As built.** `RunArchive` owns all four of those except snapshots, which
 `SnapshotService` writes directly. A run opens wherever a world is born -
 startup, reset, restore - and metrics and events are stamped with its id.
+The event cap is **per run** (20,000 rows, trimmed to 15,000), so one run
+cannot grow without bound but the table does across runs: a development
+database with 180 runs held 222,412 events in 37 MB, and 115 of those runs
+had recorded nothing at all, because a restart opens a row whether or not
+the world ticks. Measured rather than fixed - see `docs/REVIEW.md`.
 Writing happens on a dedicated daemon thread behind a bounded queue, so
 neither the engine thread nor the event loop ever waits on the disk; a full
 queue drops jobs rather than applying back pressure to the simulation. Reads

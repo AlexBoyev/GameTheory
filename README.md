@@ -48,7 +48,8 @@ What works right now:
 | **Tribes** that are founded and joined, with leaders, storage, territory, coups that succeed, wars, peace deals and pacts between tribes | |
 | Shelters that get built, reproduction with trait blending, deaths with causes | |
 | Engine on a worker thread: pause / play / 1x-50x / MAX / step / reset, and **fast-forward by half a day or a day** with a progress readout | |
-| **A title card for every day**: what the day that ended was about, and where the island stands now | |
+| **A title card for every day**: what the day that ended was about - chosen for what was *unusual*, against that world's own running average - and where the island stands now. The log keeps every headline; clicking one brings the card back | |
+| Charts that show the turn the project is about: population against **"born here"**, so you can watch the founding generation hand over around day 18, and deaths by cause | |
 | Full UI: front screen with instructions, inspector, event feed with filters, charts, overlays, speech bubbles, URL state, help | |
 | 7 layering contracts, **419 backend tests**, 34 unit + **14 browser tests** | |
 
